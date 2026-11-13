@@ -370,6 +370,53 @@ function setupMinesweeper(w) {
   initBoard();
 }
 
+// In-skin modal prompt — Electron renderers do not support window.prompt().
+function hostPrompt(title, message, defaultValue) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:100200;display:flex;align-items:center;justify-content:center;';
+    const dlg = document.createElement('div');
+    dlg.style.cssText = 'width:340px;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;box-shadow:2px 2px 0 #000;font-family:MS Sans Serif,Tahoma,sans-serif;font-size:11px;';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding:4px 8px;font-weight:bold;color:#fff;background:linear-gradient(90deg,#000080,#1084d0);border-bottom:1px solid #000;';
+    bar.textContent = title;
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:12px;';
+    const label = document.createElement('div');
+    label.style.cssText = 'margin-bottom:6px;';
+    label.textContent = message;
+    const input = document.createElement('input');
+    input.className = 'hostprompt-input';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:3px 5px;font-family:Tahoma;font-size:11px;border:2px inset #fff;';
+    input.value = defaultValue || '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;margin-top:12px;';
+    const mkBtn = (text, cls) => {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.className = cls;
+      b.style.cssText = 'min-width:70px;padding:3px 10px;border:2px solid;border-color:#fff #404040 #404040 #fff;background:#c0c0c0;font-family:Tahoma;font-size:11px;';
+      return b;
+    };
+    const ok = mkBtn('OK', 'hostprompt-ok');
+    const cancel = mkBtn('Cancel', 'hostprompt-cancel');
+    row.append(ok, cancel);
+    body.append(label, input, row);
+    dlg.append(bar, body);
+    overlay.appendChild(dlg);
+    document.body.appendChild(overlay);
+    const done = (val) => { overlay.remove(); resolve(val); };
+    ok.addEventListener('click', () => done(input.value.trim()));
+    cancel.addEventListener('click', () => done(null));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') done(input.value.trim());
+      if (e.key === 'Escape') done(null);
+    });
+    overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) done(null); });
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  });
+}
+
 // REAL FILESYSTEM EXPLORER (shared engine.fs backend)
 async function fsList(target) {
   if (DTM && DTM.fs && DTM.fs.list) {
@@ -455,7 +502,7 @@ function setupExplorer(win, initialPath) {
 
   const newFolderBtn = win.querySelector('#exp-newfolder');
   if (newFolderBtn) newFolderBtn.addEventListener('click', async () => {
-    const name = prompt('Name for the new folder:', 'New Folder');
+    const name = await hostPrompt('New Folder', 'Name for the new folder:', 'New Folder');
     if (!name) return;
     try {
       await DTM.fs.mkdir(`${currentPath}\\${name}`);
@@ -469,7 +516,7 @@ function setupExplorer(win, initialPath) {
   if (renameBtn) renameBtn.addEventListener('click', async () => {
     const item = getSelected();
     if (!item) return;
-    const name = prompt('Rename to:', item.name);
+    const name = await hostPrompt('Rename', 'Rename to:', item.name);
     if (!name || name === item.name) return;
     try {
       await DTM.fs.rename(item.path, name);
@@ -833,8 +880,8 @@ menu.addEventListener('click',e=>{
   else if(key==='settings') openApp('display');
   else if(key==='find') openApp('explorer');
   else if(key==='run'){
-    const v=prompt('Type the name of a program to open in Win95 (or a real Windows program e.g. calc, notepad, mspaint):','notepad');
-    if(v) {
+    hostPrompt('Run', 'Type the name of a program to open in Win95 (or a real Windows program e.g. calc, notepad, mspaint):', 'notepad').then(v => {
+      if(!v) return;
       const lower = v.toLowerCase().trim();
       if (lower === 'calc' || lower === 'calc.exe') {
         if (DTM && confirm('Launch real Windows Calculator?')) {
@@ -843,7 +890,7 @@ menu.addEventListener('click',e=>{
         }
       }
       openApp(lower.includes('paint')?'paint':lower.includes('display')?'display':lower.includes('mine')?'minesweeper':lower.includes('exp')?'explorer':'notepad');
-    }
+    });
   }
   else if(apps[key]) openApp(key);
 });

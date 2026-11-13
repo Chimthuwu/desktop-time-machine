@@ -7,7 +7,7 @@
 <title>Windows 98 — Desktop Time Machine</title>
 <style>
 :root {
-  --win98-bg: #0054e3;
+  --win98-bg: #008080; /* classic Windows 98 teal desktop */
   --gray: #c0c0c0;
   --dark: #808080;
   --darker: #404040;
@@ -81,7 +81,7 @@ body { background: var(--win98-bg); }
 /* Start Menu */
 .start-menu { position: absolute; bottom: 38px; left: 3px; width: 300px; background: var(--gray); border: 2px solid; border-color: white #404040 #404040 white; z-index: 10001; display: none; box-shadow: 2px 2px 0 #000; }
 .start-menu.open { display: flex; }
-.start-side { width: 34px; background: linear-gradient(#808080, #000080); color: #ddd; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 20px; font-weight: bold; letter-spacing: 1px; padding: 8px 5px; justify-content: flex-end; }
+.start-side { width: 34px; background: linear-gradient(to bottom, #000080, #1084d0); color: #ddd; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 20px; font-weight: bold; letter-spacing: 1px; padding: 8px 5px; justify-content: flex-end; text-shadow: 1px 1px 0 #000; }
 .start-items { flex: 1; padding: 4px; position: relative; }
 .start-item { height: 38px; display: flex; align-items: center; gap: 10px; padding: 4px 8px; cursor: default; position: relative; }
 .start-item:hover { background: var(--navy); color: white; }
@@ -548,14 +548,15 @@ function hostPrompt(title, message, defaultValue) {
     input.value = defaultValue || '';
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;margin-top:12px;';
-    const mkBtn = (text) => {
+    const mkBtn = (text, cls) => {
       const b = document.createElement('button');
       b.textContent = text;
+      b.className = cls;
       b.style.cssText = 'min-width:70px;padding:3px 10px;border:2px solid;border-color:#fff #404040 #404040 #fff;background:#d4d0c8;font-family:Tahoma;font-size:11px;';
       return b;
     };
-    const ok = mkBtn('OK');
-    const cancel = mkBtn('Cancel');
+    const ok = mkBtn('OK', 'hostprompt-ok');
+    const cancel = mkBtn('Cancel', 'hostprompt-cancel');
     row.append(ok, cancel);
     body.append(label, input, row);
     dlg.append(bar, body);
@@ -808,7 +809,7 @@ function attachEditorFileOps(w, ta, opts) {
 
   async function saveAs() {
     if (!DTM || !DTM.fs) { alert('Filesystem is unavailable in this host.'); return false; }
-    const entered = prompt('Save As — full Windows path:', filePath || opts.defaultName);
+    const entered = await hostPrompt('Save As', 'Full Windows path:', filePath || opts.defaultName);
     if (!entered) return false;
     try {
       await DTM.fs.write(entered, ta.value);
@@ -829,7 +830,7 @@ function attachEditorFileOps(w, ta, opts) {
 
   async function open() {
     if (!DTM || !DTM.fs) { alert('Filesystem is unavailable in this host.'); return; }
-    const entered = prompt('Open — full Windows path:', filePath || '');
+    const entered = await hostPrompt('Open', 'Full Windows path:', filePath || '');
     if (!entered) return;
     try {
       const text = await DTM.fs.read(entered);
@@ -881,9 +882,9 @@ function attachEditorFileOps(w, ta, opts) {
 
   let findText = '';
   let findPos = 0;
-  const find = (next) => {
+  const find = async (next) => {
     if (!next || !findText) {
-      const q = prompt('Find what:');
+      const q = await hostPrompt('Find', 'Find what:', findText || '');
       if (!q) return;
       findText = q;
       findPos = 0;

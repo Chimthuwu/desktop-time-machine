@@ -634,6 +634,53 @@ Press F8 at any time to travel between operating system eras!</textarea>
   }
 };
 
+// In-skin modal prompt — Electron renderers do not support window.prompt().
+function hostPrompt(title, message, defaultValue) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:100200;display:flex;align-items:center;justify-content:center;';
+    const dlg = document.createElement('div');
+    dlg.style.cssText = 'width:340px;background:#d8d8d8;border:1px solid #666;box-shadow:3px 3px 8px rgba(0,0,0,.4);font-family:Geneva,Chicago,Tahoma,sans-serif;font-size:12px;';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding:5px 10px;font-weight:bold;color:#000;background:linear-gradient(#f0f0f0,#c8c8c8);border-bottom:1px solid #999;';
+    bar.textContent = title;
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:12px;';
+    const label = document.createElement('div');
+    label.style.cssText = 'margin-bottom:6px;';
+    label.textContent = message;
+    const input = document.createElement('input');
+    input.className = 'hostprompt-input';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:3px 6px;font-family:Geneva,Tahoma;font-size:12px;border:1px solid #777;background:#fff;';
+    input.value = defaultValue || '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:12px;';
+    const mkBtn = (text, cls) => {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.className = cls;
+      b.style.cssText = 'min-width:70px;padding:3px 12px;border:1px solid #777;background:#e8e8e8;font-family:Geneva,Tahoma;font-size:12px;';
+      return b;
+    };
+    const ok = mkBtn('OK', 'hostprompt-ok');
+    const cancel = mkBtn('Cancel', 'hostprompt-cancel');
+    row.append(ok, cancel);
+    body.append(label, input, row);
+    dlg.append(bar, body);
+    overlay.appendChild(dlg);
+    document.body.appendChild(overlay);
+    const done = (val) => { overlay.remove(); resolve(val); };
+    ok.addEventListener('click', () => done(input.value.trim()));
+    cancel.addEventListener('click', () => done(null));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') done(input.value.trim());
+      if (e.key === 'Escape') done(null);
+    });
+    overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) done(null); });
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  });
+}
+
 // REAL HOST FILESYSTEM FINDER (shared engine.fs backend, Platinum interface)
 function setupFinder(w) {
   let currentPath = '';
@@ -666,7 +713,7 @@ function setupFinder(w) {
       newBtn.textContent = 'New Folder';
       newBtn.style.cssText = 'background:#ddd;border:2px solid;border-color:#fff #444 #444 #fff;padding:2px 10px;cursor:pointer;margin-left:8px;';
       newBtn.onclick = async () => {
-        const name = prompt('Name for the new folder:', 'New Folder');
+        const name = await hostPrompt('New Folder', 'Name for the new folder:', 'New Folder');
         if (!name) return;
         try {
           await DTM.fs.mkdir(`${currentPath}\\${name}`);

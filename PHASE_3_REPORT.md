@@ -186,6 +186,28 @@ No stale state, no memory leaks, no duplicate listeners
 | `07-win98-apps.png` | ✅ VERIFIED | **Notepad, Paint, Explorer, Calculator all open with Win98 chrome** |
 | `08-era-switcher-three.png` | ✅ VERIFIED | **Era Switcher showing all 3 skins: Win95, Mac OS 8, Win98** |
 | `09-repeated-switching-win95.png` | ✅ VERIFIED | Win95 intact after multi-cycle switching |
+| `10-win98-start-menu.png` | ✅ VERIFIED | Start menu open, Programs → Accessories nested submenu expanded |
+| `11-win98-explorer.png` | ✅ VERIFIED | Explorer browsing the real host filesystem |
+| `12-win98-paint.png` | ✅ VERIFIED | Paint with drawn strokes on canvas |
+| `13-win98-multiple-windows.png` | ✅ VERIFIED | Multiple windows layered with active/inactive titlebars |
+
+Screenshots are inspected programmatically (pixel analysis: dimensions, unique-color counts, signature palette presence — e.g. the Win98 desktop frame measures 93.6% classic teal `#008080`, the Start-menu frame contains the `#000080`→`#1084d0` banner gradient and 21.7% `#c0c0c0` face color).
+
+### Deep Interaction Verification (`test/phase3-win98-deep.js`) — 2026-11-14
+```
+Exit Code: 0 ✅
+PHASE3-DEEP: 47/47 passed
+```
+Drives the real Electron app with real browser-level mouse input (CDP `Input.dispatchMouseEvent`) and exercises behaviour the standard suites do not cover:
+
+- **Real input:** Start menu opens on click; Programs submenu opens on hover; Accessories nested submenu opens on nested hover; Notepad launches from the nested submenu — all via genuine mouse move/press/release, not DOM `.click()`.
+- **Real filesystem roundtrip:** Explorer lists the real home directory (157 objects); navigates to a fresh temp dir; **New Folder creates a real directory on disk**; **Rename renames it on disk** (verified with `fs.existsSync` from the test process).
+- **Notepad real file ops:** File ▸ Save opens the in-skin Save As dialog, **writes a real file to disk**, title updates to the saved filename, File ▸ Open reloads the real file's contents from disk, Edit ▸ Undo reverts the text.
+- **Apps:** Paint draws (966 pixels change) and switches tools; Minesweeper reveals cells, flags on right-click, resets; Calculator computes 9×8=72.
+- **Window management:** minimize hides, taskbar button restores, title-bar drag moves the window, focus/z-order switches between windows.
+- **Security live:** Run dialog launches `calc` via the whitelist; entering an unknown command is **blocked by the main-process whitelist** (IPC rejection logged) and the skin shows "Unknown command"; renderer has no `require`/`process`; protected-path writes are blocked.
+- **Shell/dialogs:** Control Panel lists 14 applets, Display Properties switches 4 tabs, Help viewer opens with clickable topics, Shut Down dialog opens.
+- Test files are cleaned up afterward (spec requirement).
 
 ---
 
@@ -254,13 +276,25 @@ No stale state, no memory leaks, no duplicate listeners
 
 ## Desktop Shortcut
 
-**Created:** `C:\Users\<user>\Desktop\Desktop Time Machine.lnk`
+**Created:** `C:\Users\<user>\Desktop\Desktop Time Machine.lnk` (replaced 2026-11-14; the old `.bat` launcher shortcut is backed up at `%TEMP%\Desktop Time Machine.lnk.bak`)
 
-**Target:** `Z:\github\skinsos\launch-dtm.bat`  
-**Working Directory:** `Z:\github\skinsos`  
-**Launch Command:** `node node_modules\.bin\electron.cmd .`
+**Target:** `node_modules\electron\dist\electron.exe`
+**Arguments:** `.` (the project root)
+**Working Directory:** `Z:\github\skinsos`
 
-The shortcut launches the full Desktop Time Machine application with all three skins available.
+Direct-Electron launch — no console window flashes at startup. The app boots muted by default (`app.commandLine.appendSwitch('mute-audio')` in the main process).
+
+---
+
+## 2026-11-14 Re-verification Addendum
+
+The skin was re-verified against the Phase 3 spec after the shared real-filesystem backend landed (`electron/main/filesystem-service.js`, wired through `engine.fs` for all skins). Changes made during re-verification:
+
+- **Notepad / WordPad real file operations** — File and Edit menus were static labels; now New/Open/Save/Save As/Cut/Copy/Paste/Undo/Find are wired to `attachEditorFileOps()` reading and writing the real host filesystem through `engine.fs`.
+- **`window.prompt()` remediation** — Electron renderers do not support `prompt()` (it throws). An in-skin modal (`hostPrompt`) now handles New Folder, Rename (Win98 + Win95 + Mac OS 8), Notepad/WordPad Save As/Open/Find, and the Win95 Start ▸ Run dialog.
+- **Authentic desktop color** — Win98 desktop background restored to classic teal `#008080` (was an anachronistic bright blue).
+- **Start banner gradient** — the vertical "Windows 98" sidebar now uses the authentic `#000080`→`#1084d0` gradient with text shadow.
+- **No other skins were redesigned**; Win95 and Mac OS 8 changes are limited to the same `hostPrompt` helper for their New Folder/Rename flows (Win95's Run dialog was broken under Electron and now works).
 
 ---
 
