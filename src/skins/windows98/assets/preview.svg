@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="192" viewBox="0 0 256 192">
+  <!-- Windows 98 Preview Image -->
+  <defs>
+    <linearGradient id="win98Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000080"/>
+      <stop offset="100%" style="stop-color:#1084d0"/>
+    </linearGradient>
+    <linearGradient id="titlebarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#000080"/>
+      <stop offset="100%" style="stop-color:#1084d0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Desktop background (Windows 98 teal) -->
+  <rect width="256" height="192" fill="#0054e3"/>
+  
+  <!-- Subtle pattern overlay -->
+  <pattern id="noise" width="4" height="4" patternUnits="userSpaceOnUse">
+    <rect x="0" y="0" width="2" height="2" fill="#0044cc" opacity="0.3"/>
+    <rect x="2" y="2" width="2" height="2" fill="#0066ff" opacity="0.3"/>
+  </pattern>
+  <rect width="256" height="192" fill="url(#noise)"/>
+  
+  <!-- Desktop Icons -->
+  <g font-family="Tahoma, sans-serif" font-size="10" fill="white" text-anchor="middle">
+    <!-- My Computer -->
+    <g transform="translate(16, 16)">
+      <rect x="0" y="0" width="44" height="48" rx="2" fill="none"/>
+      <text x="22" y="38" font-size="20">💻</text>
+      <text x="22" y="50" font-size="8">My Computer</text>
+    </g>
+    <!-- My Documents -->
+    <g transform="translate(16, 72)">
+      <rect x="0" y="0" width="44" height="48" rx="2" fill="none"/>
+      <text x="22" y="38" font-size="20">📁</text>
+      <text x="22" y="50" font-size="8">My Documents</text>
+    </g>
+    <!-- Network Neighborhood -->
+    <g transform="translate(16, 128)">
+      <rect x="0" y="0" width="44" height="48" rx="2" fill="none"/>
+      <text x="22" y="38" font-size="20">🌐</text>
+      <text x="22" y="50" font-size="8">Network</text>
+    </g>
+    <!-- Recycle Bin -->
+    <g transform="translate(70, 16)">
+      <rect x="0" y="0" width="44" height="48" rx="2" fill="none"/>
+      <text x="22" y="38" font-size="20">🗑️</text>
+      <text x="22" y="50" font-size="8">Recycle Bin</text>
+    </g>
+    <!-- Internet Explorer -->
+    <g transform="translate(70, 72)">
+      <rect x="0" y="0" width="44" height="48" rx="2" fill="none"/>
+      <text x="22" y="38" font-size="20">🌐</text>
+      <text x="22" y="50" font-size="8">Internet</text>
+    </g>
+  </g>
+  
+  <!-- Taskbar -->
+  <rect y="154" width="256" height="38" fill="#c0c0c0"/>
+  <rect y="154" width="256" height="2" fill="white"/>
+  
+  <!-- Start Button -->
+  <rect x="4" y="157" width="60" height="30" rx="2" fill="#c0c0c0" stroke="#fff" stroke-width="1"/>
+  <rect x="5" y="158" width="58" height="28" fill="none" stroke="#404040" stroke-width="1"/>
+  <text x="34" y="178" font-family="Tahoma, sans-serif" font-size="11" font-weight="bold" fill="black" text-anchor="middle">⊞ Start</text>
+  
+  <!-- Quick Launch -->
+  <rect x="70" y="158" width="50" height="28" rx="2" fill="#c0c0c0" stroke="white" stroke-width="1"/>
+  <rect x="71" y="159" width="48" height="26" fill="none" stroke="#808080" stroke-width="1"/>
+  <text x="77" y="177" font-size="14" text-anchor="middle">🖥️</text>
+  <text x="87" y="177" font-size="14" text-anchor="middle">🌐</text>
+  <text x="97" y="177" font-size="14" text-anchor="middle">📧</text>
+  <text x="107" y="177" font-size="14" text-anchor="middle">🗂️</text>
+  
+  <!-- Task Buttons Area -->
+  <rect x="125" y="158" width="80" height="28" rx="2" fill="#c0c0c0" stroke="white" stroke-width="1"/>
+  <rect x="126" y="159" width="78" height="26" fill="none" stroke="#808080" stroke-width="1"/>
+  <text x="165" y="177" font-family="Tahoma, sans-serif" font-size="9" font-weight="bold" fill="black" text-anchor="middle">💻 My Computer</text>
+  
+  <!-- System Tray -->
+  <rect x="210" y="157" width="42" height="30" rx="2" fill="#c0c0c0" stroke="#808080" stroke-width="1"/>
+  <text x="231" y="178" font-family="Tahoma, sans-serif" font-size="11" fill="black" text-anchor="middle">4:20 PM</text>
+  
+  <!-- Sample Window (Notepad) -->
+  <g transform="translate(140, 30)">
+    <rect x="0" y="0" width="100" height="60" fill="#c0c0c0" stroke="white" stroke-width="2"/>
+    <rect x="1" y="1" width="98" height="22" fill="url(#titlebarGradient)"/>
+    <text x="50" y="17" font-family="Tahoma, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">📝 Untitled - Notepad</text>
+    <rect x="1" y="24" width="98" height="35" fill="white" stroke="#808080" stroke-width="1"/>
+    <text x="50" y="42" font-family="Tahoma, sans-serif" font-size="8" fill="black" text-anchor="middle">Windows 98 on DTM</text>
+  </g>
+  
+  <!-- Windows 98 Logo -->
+  <text x="248" y="190" font-family="Tahoma, sans-serif" font-size="8" fill="#aaa" text-anchor="end">Windows 98</text>
+</svg>

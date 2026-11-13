@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Skin Name - Desktop Time Machine</title>
+  <link rel="stylesheet" href="desktop.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="dtm-desktop" id="desktop">
+    <!-- Desktop Icons -->
+    <div class="dtm-desktop-icons" id="desktopIcons">
+      <div class="dtm-icon" data-app="welcome">
+        <div class="dtm-icon-image">📄</div>
+        <div class="dtm-icon-label">Welcome</div>
+      </div>
+      <div class="dtm-icon" data-app="explorer">
+        <div class="dtm-icon-image">📁</div>
+        <div class="dtm-icon-label">File Explorer</div>
+      </div>
+      <div class="dtm-icon" data-app="settings">
+        <div class="dtm-icon-image">⚙️</div>
+        <div class="dtm-icon-label">Settings</div>
+      </div>
+    </div>
+
+    <!-- Example Taskbar / Dock / Panel (replace with your OS's equivalent) -->
+    <div class="dtm-taskbar" id="taskbar">
+      <div class="dtm-taskbar-start" id="startButton">
+        <span class="dtm-start-icon">🏠</span>
+        <span class="dtm-start-text">Start</span>
+      </div>
+      <div class="dtm-taskbar-apps" id="taskbarApps"></div>
+      <div class="dtm-taskbar-clock" id="clock">00:00</div>
+    </div>
+
+    <!-- Example Start Menu (replace with your OS's application launcher) -->
+    <div class="dtm-start-menu hidden" id="startMenu">
+      <div class="dtm-start-menu-header">
+        <span>Applications</span>
+      </div>
+      <div class="dtm-start-menu-items" id="startMenuItems">
+        <button class="dtm-start-menu-item" data-app="welcome">Welcome</button>
+        <button class="dtm-start-menu-item" data-app="explorer">File Explorer</button>
+        <button class="dtm-start-menu-item" data-app="settings">Settings</button>
+        <hr class="dtm-start-menu-divider">
+        <button class="dtm-start-menu-item" data-action="about">About This Environment</button>
+        <button class="dtm-start-menu-item" data-action="switch">Switch Environment…</button>
+      </div>
+    </div>
+
+    <!-- Context Menu (right-click) -->
+    <div class="dtm-context-menu hidden" id="contextMenu">
+      <button class="dtm-context-item" data-action="new-folder">New Folder</button>
+      <button class="dtm-context-item" data-action="new-file">New Text File</button>
+      <button class="dtm-context-item" data-action="refresh">Refresh</button>
+      <hr class="dtm-context-divider">
+      <button class="dtm-context-item" data-action="properties">Properties</button>
+    </div>
+
+    <!-- Example Window Container -->
+    <div class="dtm-windows-layer" id="windowsLayer"></div>
+  </div>
+
+  <script type="module" src="desktop.js"></script>
+</body>
+</html>

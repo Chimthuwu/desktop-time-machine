@@ -1,0 +1,31 @@
+{
+  "id": "windows95",
+  "name": "Windows 95",
+  "era": "1995",
+  "period": "1995",
+  "version": "1.0.0",
+  "description": "The landmark 32-bit operating system that introduced the Start button, taskbar, grey 3D bevels, and modern desktop paradigm.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "🪟",
+  "themeColor": "#008080",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "filesystem",
+    "application-launcher",
+    "desktop-icons",
+    "start-menu",
+    "taskbar",
+    "screensaver"
+  ],
+  "meta": {
+    "developer": "Microsoft",
+    "releaseDate": "1995-08-24",
+    "successor": "Windows 98",
+    "kernelFamily": "Win9x",
+    "historicalNote": "First Windows version to include the Start button and taskbar. Sold 7 million copies in five weeks."
+  }
+}

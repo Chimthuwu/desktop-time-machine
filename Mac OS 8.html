@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mac OS 8 — Classic Desktop</title>
+<style>
+:root {
+  --sys-font: "Geneva", "Charcoal", "Lucida Grande", "Helvetica Neue", sans-serif;
+  --platinum: #dddddd;
+  --platinum-dark: #888888;
+  --platinum-light: #f4f4f4;
+  --black: #000000;
+  --blue: #0000aa;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; width: 100%; height: 100%; overflow: hidden;
+  font-family: var(--sys-font); font-size: 12px; color: var(--black);
+  user-select: none;
+}
+
+/* AUTHENTIC 50% GREY DITHER PATTERN */
+body {
+  background-color: #888;
+  background-image: 
+    linear-gradient(45deg, #777 25%, transparent 25%, transparent 75%, #777 75%, #777),
+    linear-gradient(45deg, #777 25%, #888 25%, #888 75%, #777 75%, #777);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+}
+
+/* STARTUP SCREEN */
+#boot-screen {
+  position: fixed; inset: 0; background: #888; z-index: 999999;
+  display: flex; justify-content: center; align-items: center; flex-direction: column;
+  transition: opacity 0.8s;
+}
+.happy-mac { font-size: 80px; filter: drop-shadow(2px 2px 0 #000); }
+
+/* MENU BAR */
+.menubar {
+  position: absolute; top: 0; left: 0; right: 0; height: 22px;
+  background: #ffffff; border-bottom: 1px solid #000;
+  display: flex; align-items: center; padding: 0 10px; z-index: 10000;
+  font-weight: bold; font-size: 13px;
+}
+.menu-item { padding: 2px 8px; cursor: default; position: relative; }
+.menu-item:hover { background: var(--blue); color: #fff; }
+.apple-logo { font-size: 16px; padding: 0 12px 0 6px; }
+.menu-clock { margin-left: auto; padding-right: 15px; font-weight: normal; }
+
+/* MENU DROPDOWNS */
+.menu-dropdown {
+  display: none; position: absolute; top: 22px; left: 0;
+  background: #ffffff; border: 1px solid #000; border-top: none;
+  width: 220px; padding: 0; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); z-index: 10001;
+}
+.menu-dropdown.open { display: block; }
+.menu-dropdown .am-item { padding: 4px 20px; cursor: default; font-size: 12px; display: flex; justify-content: space-between; }
+.menu-dropdown .am-item:hover { background: var(--blue); color: #fff; }
+.am-sep { height: 1px; background: #aaa; margin: 4px 0; }
+
+/* DESKTOP */
+.desktop { position: absolute; inset: 22px 0 0 0; padding: 20px; overflow: hidden; }
+.desktop-icons { position: relative; width: 100%; height: 100%; pointer-events: none; }
+.desktop-icon { 
+  position: absolute; display: flex; flex-direction: column; align-items: center; 
+  width: 75px; cursor: default; pointer-events: auto; 
+}
+.icon-img { font-size: 42px; line-height: 45px; padding: 2px; border: 1px solid transparent; filter: drop-shadow(1px 1px 0 #fff); pointer-events: none; }
+.icon-label { color: #000; font-size: 12px; text-align: center; margin-top: 2px; padding: 1px 4px; border-radius: 2px; pointer-events: none; }
+.desktop-icon.selected .icon-img { background: var(--blue); border: 1px dotted #fff; filter: none; }
+.desktop-icon.selected .icon-label { background: var(--blue); color: #fff; }
+
+/* TRASH */
+.trash-bin {
+  position: absolute; bottom: 35px; right: 20px; display: flex; flex-direction: column; align-items: center; cursor: default;
+}
+.trash-bin .icon-img { font-size: 50px; }
+.trash-bin.selected .icon-img { background: var(--blue); border: 1px dotted #fff; }
+.trash-bin.selected .icon-label { background: var(--blue); color: #fff; }
+
+/* CONTROL STRIP */
+.control-strip {
+  position: absolute; bottom: 0; left: 0; height: 28px;
+  background: var(--platinum); border-top: 1px solid #fff; border-right: 1px solid #000;
+  display: flex; align-items: center; padding: 0 5px; gap: 2px; z-index: 9999;
+  border-top-right-radius: 8px; box-shadow: 1px -1px 0 #000;
+}
+.cs-apple { font-size: 16px; padding: 0 6px; cursor: pointer; }
+.cs-apple:hover { background: #000; color: #fff; }
+.cs-drag { width: 10px; height: 20px; background: repeating-linear-gradient(to right, #888 0, #888 1px, transparent 1px, transparent 3px); cursor: ew-resize; margin: 0 5px; }
+.cs-icon { width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; border: 1px solid transparent; border-radius: 3px; }
+.cs-icon:hover { border-color: #888 #fff #fff #888; background: #e0e0e0; }
+.cs-icon:active { border-color: #fff #888 #888 #fff; background: #ccc; }
+
+/* WINDOWS */
+.window {
+  position: absolute; background: var(--platinum); min-width: 200px; min-height: 100px;
+  border: 1px solid #000; box-shadow: 2px 2px 0 #000;
+  display: flex; flex-direction: column; z-index: 10; transition: height 0.1s;
+}
+.window.active { box-shadow: 3px 3px 0 #000; }
+.window.shaded { height: 20px !important; min-height: 20px; }
+.window.shaded .window-body, .window.shaded .resize-box { display: none; }
+.window.shaded .title-bar { border-bottom: none; }
+
+.title-bar {
+  height: 20px; display: flex; align-items: center; padding: 0 4px; border-bottom: 1px solid #000;
+  background: #fff; position: relative; cursor: move;
+}
+.window.active .title-bar {
+  background: repeating-linear-gradient(to bottom, #ddd, #ddd 1px, #a0a0a0 1px, #a0a0a0 2px);
+}
+.window.inactive .title-bar { background: #ccc; }
+.title-bar .title-text {
+  flex: 1; text-align: center; font-size: 12px; font-weight: bold; color: #000;
+  background: #fff; padding: 1px 10px; border: 1px solid #000; border-radius: 4px; margin: 0 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: relative; z-index: 2;
+}
+.window.inactive .title-bar .title-text { color: #999; background: #eee; }
+
+.close-box {
+  width: 12px; height: 12px; border: 1px solid #000; background: #fff; cursor: pointer;
+  position: absolute; left: 6px; display: flex; justify-content: center; align-items: center; z-index: 3;
+}
+.window.active .close-box::after { content: ''; display: block; width: 4px; height: 4px; background: #000; }
+.zoom-box {
+  width: 12px; height: 12px; border: 1px solid #000; background: #fff; cursor: pointer;
+  position: absolute; right: 6px; z-index: 3;
+}
+.zoom-box::after { content: ''; display: block; width: 6px; height: 6px; border: 1px solid #000; margin: 2px; }
+
+.resize-box {
+  position: absolute; bottom: 0; right: 0; width: 15px; height: 15px;
+  cursor: nwse-resize; z-index: 10;
+}
+.resize-box::after { content: ''; display: block; width: 100%; height: 100%; background: repeating-linear-gradient(135deg, transparent, transparent 2px, #000 2px, #000 3px); }
+
+.window-body { flex: 1; background: #fff; overflow: auto; border: 1px solid #000; margin: 2px; position: relative; }
+.window.inactive .window-body { background: #eee; }
+
+/* CLASSIC SCROLLBARS */
+::-webkit-scrollbar { width: 16px; height: 16px; background: #ddd; }
+::-webkit-scrollbar-thumb { background: #fff; border: 1px solid #000; }
+::-webkit-scrollbar-button:single-button { background-color: #ddd; border: 1px solid #000; display: block; height: 16px; width: 16px; }
+::-webkit-scrollbar-button:single-button:vertical:decrement { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><polygon points="5,2 9,8 1,8" fill="black"/></svg>'); background-repeat: no-repeat; background-position: center; }
+::-webkit-scrollbar-button:single-button:vertical:increment { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><polygon points="5,8 9,2 1,2" fill="black"/></svg>'); background-repeat: no-repeat; background-position: center; }
+
+/* CONTEXT MENU */
+.context-menu {
+  position: absolute; background: #fff; border: 1px solid #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  padding: 2px; z-index: 20000; min-width: 150px;
+}
+.context-menu div { padding: 4px 20px; cursor: default; font-size: 12px; }
+.context-menu div:hover { background: var(--blue); color: #fff; }
+
+/* FINDER LIST */
+.finder-header { border-bottom: 1px solid #000; padding: 4px 8px; font-size: 11px; background: #eee; display: flex; justify-content: space-between; }
+.finder-list { padding: 15px; display: flex; flex-wrap: wrap; gap: 20px; }
+.finder-item { display: flex; flex-direction: column; align-items: center; width: 75px; cursor: default; }
+.finder-item .icon-img { font-size: 32px; }
+.finder-item .icon-label { font-size: 11px; }
+
+/* CALCULATOR */
+.mac-calc { padding: 10px; background: var(--platinum); height: 100%; display: flex; flex-direction: column; }
+.calc-display { background: #fff; border: 1px solid #000; text-align: right; padding: 4px 8px; font-family: "Courier", monospace; font-size: 20px; margin-bottom: 10px; height: 35px; }
+.calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; flex: 1; }
+.calc-btn { background: var(--platinum); border: 2px solid; border-color: #fff #555 #555 #fff; border-radius: 4px; font-size: 14px; font-weight: bold; cursor: pointer; outline: none; }
+.calc-btn:active { border-color: #555 #fff #fff #555; }
+.calc-btn.op { background: #bbb; }
+
+/* SIMPLETEXT */
+.simpletext-area { width: 100%; height: 100%; border: none; resize: none; outline: none; font-family: "Courier", monospace; font-size: 13px; padding: 10px; user-select: text; }
+
+/* STICKIES */
+.stickies-container { padding: 10px; background: #fff; height: 100%; overflow: auto; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; }
+.sticky-note { width: 150px; height: 150px; background: #ffffaa; border: 1px solid #ccaa00; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); padding: 5px; display: flex; flex-direction: column; }
+.sticky-note textarea { flex: 1; background: transparent; border: none; resize: none; outline: none; font-family: "Marker Felt", "Comic Sans MS", cursive; font-size: 12px; user-select: text; }
+
+/* ABOUT */
+.about-mac { padding: 20px; text-align: center; background: #fff; height: 100%; font-size: 12px; }
+.rainbow-apple { font-size: 60px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div id="boot-screen">
+  <div class="happy-mac">💻</div>
+</div>
+
+<div class="menubar" id="menubar">
+  <div class="menu-item apple-logo" id="appleBtn"></div>
+  <div class="menu-item" data-menu="file">File</div>
+  <div class="menu-item" data-menu="edit">Edit</div>
+  <div class="menu-item" data-menu="view">View</div>
+  <div class="menu-item" data-menu="special">Special</div>
+  <div class="menu-clock" id="clock">12:00 PM</div>
+</div>
+
+<!-- DYNAMIC MENU DROPDOWNS -->
+<div class="menu-dropdown" id="appleMenu" style="left:0;">
+  <div class="am-item" data-app="about">About This Computer</div>
+  <div class="am-sep"></div>
+  <div id="apple-running-apps"></div>
+  <div class="am-sep"></div>
+  <div class="am-item" onclick="playChime()">Play Startup Chime</div>
+  <div class="am-item" onclick="location.reload()">Restart</div>
+  <div class="am-item" onclick="shutDown()">Shut Down</div>
+</div>
+
+<div class="menu-dropdown" id="fileMenu" style="left:35px;">
+  <!-- Content dynamically generated -->
+</div>
+
+<div class="menu-dropdown" id="editMenu" style="left:75px;">
+  <div class="am-item" onclick="document.execCommand('undo')">Undo <span>⌘Z</span></div>
+  <div class="am-sep"></div>
+  <div class="am-item" onclick="document.execCommand('cut')">Cut <span>⌘X</span></div>
+  <div class="am-item" onclick="document.execCommand('copy')">Copy <span>⌘C</span></div>
+  <div class="am-item" onclick="document.execCommand('paste')">Paste <span>⌘V</span></div>
+</div>
+
+<div class="menu-dropdown" id="viewMenu" style="left:115px;">
+  <div class="am-item">by Icon</div>
+  <div class="am-item">by List</div>
+  <div class="am-sep"></div>
+  <div class="am-item">Show Balloons</div>
+</div>
+
+<div class="menu-dropdown" id="specialMenu" style="left:165px;">
+  <div class="am-item" onclick="emptyTrash()">Empty Trash...</div>
+  <div class="am-item" onclick="openApp('about')">System Information</div>
+  <div class="am-sep"></div>
+  <div class="am-item" onclick="alert('Sleeping...')">Sleep</div>
+</div>
+
+<div class="desktop" id="desktop">
+  <div class="desktop-icons" id="desktop-icons">
+    <!-- Icons generated by JS -->
+  </div>
+
+  <div class="trash-bin" id="trashBin">
+    <div class="icon-img" id="trashIcon">🗑️</div>
+    <div class="icon-label">Trash</div>
+  </div>
+</div>
+
+<div class="control-strip" id="controlStrip">
+  <div class="cs-apple" onclick="toggleAppleMenu(event)"></div>
+  <div class="cs-drag"></div>
+  <div class="cs-icon" onclick="openApp('calculator')" title="Calculator">🔢</div>
+  <div class="cs-icon" onclick="openApp('stickies')" title="Stickies">📝</div>
+  <div class="cs-icon" onclick="openApp('simpletext')" title="SimpleText">📄</div>
+  <div class="cs-icon" onclick="alert('Volume: 100%')" title="Volume">🔊</div>
+  <div class="cs-icon" onclick="alert('Battery: 100%')" title="Battery">🔋</div>
+</div>
+
+<script>
+let z = 100;
+let winCount = 0;
+let activeWindow = null;
+let activeApp = 'finder';
+let trashItems = [];
+
+// AUDIO: MAC STARTUP CHIME
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const freqs = [185.00, 233.08, 293.66, 369.99, 466.16]; // F# Major chord
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 2.5);
+    });
+  } catch(e) { console.log('Audio not supported'); }
+}
+
+// BOOT SEQUENCE
+setTimeout(() => {
+  playChime();
+  document.getElementById('boot-screen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('boot-screen').style.display = 'none';
+    openApp('about');
+  }, 800);
+}, 500);
+
+// CLOCK
+setInterval(() => {
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+}, 1000);
+
+// MENU LOGIC
+document.querySelectorAll('.menu-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menuId = item.dataset.menu ? item.dataset.menu + 'Menu' : 'appleMenu';
+    const target = document.getElementById(menuId);
+    document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+    if (target) target.classList.toggle('open');
+  });
+});
+
+function toggleAppleMenu(e) {
+  e.stopPropagation();
+  document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+  document.getElementById('appleMenu').classList.toggle('open');
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.context-menu').forEach(m => m.remove());
+});
+
+function updateMenus(appName) {
+  activeApp = appName;
+  const fileMenu = document.getElementById('fileMenu');
+  
+  if (appName === 'finder') {
+    fileMenu.innerHTML = `
+      <div class="am-item" onclick="openApp('finder')">New Finder Window <span>⌘N</span></div>
+      <div class="am-item" onclick="openApp('simpletext')">New Document</div>
+      <div class="am-sep"></div>
+      <div class="am-item" onclick="closeActiveWindow()">Close Window <span>⌘W</span></div>
+    `;
+  } else if (appName === 'simpletext') {
+    fileMenu.innerHTML = `
+      <div class="am-item" onclick="alert('Saved!')">Save <span>⌘S</span></div>
+      <div class="am-sep"></div>
+      <div class="am-item" onclick="closeActiveWindow()">Close <span>⌘W</span></div>
+    `;
+  } else {
+    fileMenu.innerHTML = `
+      <div class="am-item" onclick="closeActiveWindow()">Close Window <span>⌘W</span></div>
+    `;
+  }
+}
+
+// SHUTDOWN
+function shutDown() {
+  document.body.innerHTML = '<div style="background:#000;color:#fff;height:100vh;display:grid;place-items:center;font:18px Geneva;text-align:center;">It is now safe to turn off your Macintosh.</div>';
+}
+
+// DESKTOP ICON INIT
+const desktopIconsData = [
+  { id: 'hd', app: 'finder', icon: '🖥️', label: 'Macintosh HD', x: 20, y: 20 },
+  { id: 'readme', app: 'simpletext', icon: '📄', label: 'Read Me', x: 20, y: 100 }
+];
+
+function renderDesktopIcons() {
+  const container = document.getElementById('desktop-icons');
+  container.innerHTML = '';
+  desktopIconsData.forEach(data => {
+    const el = document.createElement('div');
+    el.className = 'desktop-icon';
+    el.dataset.app = data.app;
+    el.dataset.id = data.id;
+    el.style.left = data.x + 'px';
+    el.style.top = data.y + 'px';
+    el.innerHTML = `
+      <div class="icon-img">${data.icon}</div>
+      <div class="icon-label">${data.label}</div>
+    `;
+    
+    // Selection
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      document.querySelectorAll('.desktop-icon, .trash-bin').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      
+      // Drag logic
+      let startX = e.clientX, startY = e.clientY;
+      let origX = parseInt(el.style.left), origY = parseInt(el.style.top);
+      let dragging = false;
+      
+      const onMouseMove = (ev) => {
+        if (Math.abs(ev.clientX - startX) > 3 || Math.abs(ev.clientY - startY) > 3) dragging = true;
+        if (!dragging) return;
+        el.style.left = origX + (ev.clientX - startX) + 'px';
+        el.style.top = origY + (ev.clientY - startY) + 'px';
+      };
+      
+      const onMouseUp = (ev) => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        
+        // Check if dropped on trash
+        const trashRect = document.getElementById('trashBin').getBoundingClientRect();
+        if (ev.clientX >= trashRect.left && ev.clientX <= trashRect.right &&
+            ev.clientY >= trashRect.top && ev.clientY <= trashRect.bottom) {
+          trashItems.push(data.label);
+          desktopIconsData.splice(desktopIconsData.findIndex(d => d.id === data.id), 1);
+          renderDesktopIcons();
+          document.getElementById('trashIcon').textContent = '🗑️🗑️';
+        } else {
+          // Update data coordinates
+          data.x = parseInt(el.style.left);
+          data.y = parseInt(el.style.top);
+        }
+      };
+      
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    el.addEventListener('dblclick', () => openApp(data.app));
+    
+    // Context menu on icon
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      showContextMenu(e.clientX, e.clientY, [
+        { label: 'Open', action: () => openApp(data.app) },
+        { label: 'Get Info', action: () => alert('Info: ' + data.label) },
+        { label: 'Move to Trash', action: () => {
+            trashItems.push(data.label);
+            desktopIconsData.splice(desktopIconsData.findIndex(d => d.id === data.id), 1);
+            renderDesktopIcons();
+            document.getElementById('trashIcon').textContent = '🗑️🗑️';
+          } 
+        }
+      ]);
+    });
+    
+    container.appendChild(el);
+  });
+}
+renderDesktopIcons();
+
+// DESKTOP CONTEXT MENU
+document.getElementById('desktop').addEventListener('contextmenu', (e) => {
+  if (e.target.id === 'desktop' || e.target.id === 'desktop-icons') {
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY, [
+      { label: 'Clean Up', action: () => {
+          desktopIconsData.forEach((d, i) => { d.x = 20; d.y = 20 + (i * 80); });
+          renderDesktopIcons();
+        } 
+      },
+      { label: 'New Folder', action: () => {
+          desktopIconsData.push({ id: 'folder_'+Date.now(), app: 'finder', icon: '📁', label: 'untitled folder', x: e.clientX, y: e.clientY });
+          renderDesktopIcons();
+        } 
+      },
+      { label: 'Change Desktop Background', action: () => alert('Not implemented in this demo.') }
+    ]);
+  }
+});
+
+function showContextMenu(x, y, items) {
+  document.querySelectorAll('.context-menu').forEach(m => m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.textContent = item.label;
+    div.onclick = item.action;
+    menu.appendChild(div);
+  });
+  document.body.appendChild(menu);
+}
+
+// TRASH
+document.getElementById('trashBin').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.querySelectorAll('.desktop-icon, .trash-bin').forEach(i => i.classList.remove('selected'));
+  document.getElementById('trashBin').classList.add('selected');
+});
+document.getElementById('trashBin').addEventListener('dblclick', () => openApp('trash'));
+
+document.getElementById('desktop').addEventListener('mousedown', (e) => {
+  if (e.target.id === 'desktop' || e.target.id === 'desktop-icons') {
+    document.querySelectorAll('.desktop-icon, .trash-bin').forEach(i => i.classList.remove('selected'));
+  }
+});
+
+// APP DEFINITIONS
+const apps = {
+  finder: {
+    title: 'Macintosh HD',
+    width: 480, height: 320,
+    body: () => `
+      <div class="finder-header"><span>1 item selected, 24.5 MB available</span></div>
+      <div class="finder-list">
+        <div class="finder-item"><div class="icon-img">📁</div><div class="icon-label">Applications</div></div>
+        <div class="finder-item"><div class="icon-img">📁</div><div class="icon-label">Documents</div></div>
+        <div class="finder-item"><div class="icon-img">📁</div><div class="icon-label">System Folder</div></div>
+        <div class="finder-item" ondblclick="openApp('simpletext')"><div class="icon-img">📄</div><div class="icon-label">Read Me</div></div>
+        <div class="finder-item"><div class="icon-img">💿</div><div class="icon-label">Audio CD</div></div>
+      </div>
+    `
+  },
+  simpletext: {
+    title: 'Read Me - SimpleText',
+    width: 420, height: 320,
+    body: () => `
+      <textarea class="simpletext-area" spellcheck="false">Welcome to Mac OS 8!
+
+This is SimpleText, the classic text editor.
+The interface is built using HTML, CSS, and a bit of JavaScript.
+
+If you click the Special menu at the top, you can Empty the Trash.
+
+Feel free to type something here.</textarea>
+    `
+  },
+  calculator: {
+    title: 'Calculator',
+    width: 220, height: 280,
+    body: () => `
+      <div class="mac-calc">
+        <div class="calc-display" id="calc-screen">0</div>
+        <div class="calc-grid">
+          <button class="calc-btn" onclick="calcInput('C')">C</button>
+          <button class="calc-btn" onclick="calcInput('±')">±</button>
+          <button class="calc-btn" onclick="calcInput('%')">%</button>
+          <button class="calc-btn op" onclick="calcInput('/')">÷</button>
+          <button class="calc-btn" onclick="calcInput('7')">7</button>
+          <button class="calc-btn" onclick="calcInput('8')">8</button>
+          <button class="calc-btn" onclick="calcInput('9')">9</button>
+          <button class="calc-btn op" onclick="calcInput('*')">×</button>
+          <button class="calc-btn" onclick="calcInput('4')">4</button>
+          <button class="calc-btn" onclick="calcInput('5')">5</button>
+          <button class="calc-btn" onclick="calcInput('6')">6</button>
+          <button class="calc-btn op" onclick="calcInput('-')">−</button>
+          <button class="calc-btn" onclick="calcInput('1')">1</button>
+          <button class="calc-btn" onclick="calcInput('2')">2</button>
+          <button class="calc-btn" onclick="calcInput('3')">3</button>
+          <button class="calc-btn op" onclick="calcInput('+')">+</button>
+          <button class="calc-btn" onclick="calcInput('0')" style="grid-column: span 2">0</button>
+          <button class="calc-btn" onclick="calcInput('.')">.</button>
+          <button class="calc-btn op" onclick="calcInput('=')">=</button>
+        </div>
+      </div>
+    `
+  },
+  stickies: {
+    title: 'Stickies',
+    width: 350, height: 250,
+    body: () => `
+      <div class="stickies-container">
+        <div class="sticky-note">
+          <textarea spellcheck="false">Buy more RAM.
+16MB is not enough!</textarea>
+        </div>
+        <div class="sticky-note">
+          <textarea spellcheck="false">Call Steve about the iMac launch.</textarea>
+        </div>
+      </div>
+    `
+  },
+  trash: {
+    title: 'Trash',
+    width: 350, height: 250,
+    body: () => {
+      if (trashItems.length === 0) return '<div style="padding:20px; text-align:center; color:#888;">The Trash is empty.</div>';
+      return `<div class="finder-list">${trashItems.map(item => `
+        <div class="finder-item"><div class="icon-img">📄</div><div class="icon-label">${item}</div></div>
+      `).join('')}</div>`;
+    }
+  },
+  about: {
+    title: 'About This Computer',
+    width: 320, height: 260,
+    body: () => `
+      <div class="about-mac">
+        <div class="rainbow-apple"></div>
+        <b>Mac OS 8.1</b><br>
+        System Software Version 8.1<br><br>
+        Built-in Memory: 32 MB<br>
+        Virtual Memory: Off<br>
+        Largest Unused Block: 24.4 MB<br><br>
+        <i>HTML/CSS Recreation by AI</i>
+      </div>
+    `
+  }
+};
+
+// WINDOW MANAGEMENT
+function openApp(key) {
+  document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.context-menu').forEach(m => m.remove());
+  const app = apps[key]; if (!app) return;
+
+  const existing = document.querySelector(`.window[data-app="${key}"]`);
+  if (existing) { focusWin(existing); return; }
+
+  const w = document.createElement('section');
+  w.className = 'window active';
+  w.dataset.app = key;
+  w.style.width = app.width + 'px';
+  w.style.height = app.height + 'px';
+  w.style.left = Math.max(10, Math.min(innerWidth - app.width - 20, 100 + winCount * 20)) + 'px';
+  w.style.top = Math.max(10, Math.min(innerHeight - app.height - 20, 80 + winCount * 20)) + 'px';
+  winCount++;
+
+  w.innerHTML = `
+    <div class="title-bar">
+      <div class="close-box" data-close></div>
+      <div class="title-text">${app.title}</div>
+      <div class="zoom-box" data-zoom></div>
+    </div>
+    <div class="window-body">${app.body()}</div>
+    <div class="resize-box"></div>
+  `;
+
+  document.getElementById('desktop').appendChild(w);
+  focusWin(w);
+  makeDraggable(w);
+
+  w.querySelector('[data-close]').addEventListener('click', (e) => { e.stopPropagation(); w.remove(); });
+  w.querySelector('[data-zoom]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (w.style.width === '100vw') {
+      w.style.width = app.width + 'px'; w.style.height = app.height + 'px';
+      w.style.left = '100px'; w.style.top = '80px';
+    } else {
+      w.style.width = '100vw'; w.style.height = 'calc(100vh - 22px)';
+      w.style.left = '0px'; w.style.top = '0px';
+    }
+  });
+
+  w.addEventListener('mousedown', () => focusWin(w));
+
+  if (key === 'calculator') {
+    let current = '0', previous = '', operation = null, resetNext = false;
+    const screen = w.querySelector('#calc-screen');
+    window.calcInput = (val) => {
+      if (val === 'C') { current = '0'; previous = ''; operation = null; resetNext = false; }
+      else if (val === '±') { current = String(parseFloat(current) * -1); }
+      else if (val === '%') { current = String(parseFloat(current) / 100); }
+      else if (['+', '-', '*', '/'].includes(val)) {
+        if (operation && !resetNext) { calculate(); }
+        previous = current; operation = val; resetNext = true;
+      } else if (val === '=') {
+        if (operation) { calculate(); operation = null; }
+      } else if (val === '.') {
+        if (resetNext) { current = '0.'; resetNext = false; }
+        else if (!current.includes('.')) current += '.';
+      } else {
+        if (resetNext) { current = val; resetNext = false; }
+        else current = current === '0' ? val : current + val;
+      }
+      screen.textContent = current.length > 12 ? parseFloat(current).toExponential(5) : current;
+    };
+    function calculate() {
+      const a = parseFloat(previous), b = parseFloat(current);
+      let res = 0;
+      if (operation === '+') res = a + b;
+      if (operation === '-') res = a - b;
+      if (operation === '*') res = a * b;
+      if (operation === '/') res = b === 0 ? 'Error' : a / b;
+      current = String(res);
+      resetNext = true;
+    }
+  }
+}
+
+function focusWin(w) {
+  if (activeWindow && activeWindow !== w) {
+    activeWindow.classList.remove('active');
+    activeWindow.classList.add('inactive');
+  }
+  activeWindow = w;
+  w.style.zIndex = ++z;
+  w.classList.remove('inactive');
+  w.classList.add('active');
+  
+  // Update menus based on app
+  updateMenus(w.dataset.app);
+  
+  // Update Apple Menu running apps
+  const runningApps = document.getElementById('apple-running-apps');
+  runningApps.innerHTML = '';
+  document.querySelectorAll('.window').forEach(win => {
+    const appName = apps[win.dataset.app].title;
+    const item = document.createElement('div');
+    item.className = 'am-item';
+    item.textContent = appName;
+    item.onclick = () => focusWin(win);
+    runningApps.appendChild(item);
+  });
+}
+
+function closeActiveWindow() {
+  if (activeWindow) { activeWindow.remove(); activeWindow = null; }
+  updateMenus('finder');
+}
+
+function makeDraggable(w) {
+  const bar = w.querySelector('.title-bar');
+  const resizer = w.querySelector('.resize-box');
+  let ox = 0, oy = 0, moving = false, resizing = false, startW = 0, startH = 0, startX = 0, startY = 0;
+
+  bar.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.close-box') || e.target.closest('.zoom-box')) return;
+    moving = true;
+    ox = e.clientX - w.offsetLeft;
+    oy = e.clientY - w.offsetTop;
+  });
+
+  // WINDOW SHADING (Double-click title bar)
+  bar.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.close-box') || e.target.closest('.zoom-box')) return;
+    w.classList.toggle('shaded');
+  });
+
+  resizer.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    resizing = true;
+    startW = w.offsetWidth; startH = w.offsetHeight;
+    startX = e.clientX; startY = e.clientY;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (moving) {
+      w.style.left = Math.max(0, Math.min(innerWidth - w.offsetWidth, e.clientX - ox)) + 'px';
+      w.style.top = Math.max(22, Math.min(innerHeight - 22, e.clientY - oy)) + 'px';
+    }
+    if (resizing) {
+      w.style.width = Math.max(200, startW + (e.clientX - startX)) + 'px';
+      w.style.height = Math.max(100, startH + (e.clientY - startY)) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', () => { moving = false; resizing = false; });
+}
+
+// MENU ACTIONS
+document.querySelectorAll('.am-item[data-app]').forEach(item => {
+  item.addEventListener('click', () => openApp(item.dataset.app));
+});
+
+function emptyTrash() {
+  trashItems = [];
+  document.getElementById('trashIcon').textContent = '🗑️';
+  const trashWin = document.querySelector('.window[data-app="trash"]');
+  if (trashWin) {
+    trashWin.querySelector('.window-body').innerHTML = '<div style="padding:20px; text-align:center; color:#888;">The Trash is empty.</div>';
+  }
+  document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+}
+</script>
+</body>
+</html>s

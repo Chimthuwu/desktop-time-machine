@@ -1,0 +1,34 @@
+{
+  "id": "windows98",
+  "name": "Windows 98",
+  "era": "1998",
+  "period": "1998",
+  "version": "1.0.0",
+  "description": "The Active Desktop era with web integration, gradient title bars, Quick Launch toolbar, enhanced multimedia, and improved USB support. Windows 98 built on 95's foundation with tighter Internet Explorer 4 integration and a more polished shell.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "🪟",
+  "themeColor": "#0054e3",
+  "previewImage": "assets/preview.svg",
+  "capabilities": [
+    "window-management",
+    "filesystem",
+    "application-launcher",
+    "desktop-icons",
+    "start-menu",
+    "taskbar",
+    "quick-launch",
+    "active-desktop",
+    "multimedia",
+    "screensaver"
+  ],
+  "meta": {
+    "developer": "Microsoft",
+    "releaseDate": "1998-06-25",
+    "successor": "Windows 2000 / Windows Me",
+    "kernelFamily": "Win9x",
+    "historicalNote": "Windows 98 sold 580,000 copies in its first four days and introduced the Quick Launch toolbar, Active Desktop, and the Windows Update feature. It was the last DOS-based Windows before the NT kernel unified the line."
+  }
+}

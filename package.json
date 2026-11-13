@@ -1,0 +1,23 @@
+{
+  "name": "desktop-time-machine",
+  "version": "1.0.0",
+  "description": "Desktop Time Machine: A multi-environment retro desktop simulator for Windows",
+  "main": "electron/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "electron test/verify-all.js"
+  },
+  "keywords": [
+    "retro",
+    "desktop",
+    "windows95",
+    "macos",
+    "simulator",
+    "electron"
+  ],
+  "author": "Desktop Time Machine Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^45.3.1"
+  }
+}

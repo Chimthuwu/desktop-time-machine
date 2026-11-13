@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file:; frame-src 'self' file: https:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file: https:; font-src 'self' data: file:;">
+  <title>Desktop Time Machine</title>
+  <link rel="stylesheet" href="./components/SkinSwitcher/switcher.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+      user-select: none;
+    }
+    #skin-viewport {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #008080;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Active Retro Skin Viewport -->
+  <iframe id="skin-viewport" class="skin-viewport" src="./skins/windows95/desktop.html"></iframe>
+
+  <!-- Core Engine and Management Scripts -->
+  <script src="./core/desktop-engine/engine.js"></script>
+  <script src="./core/skin-manager/skin-manager.js"></script>
+  <script src="./components/SkinSwitcher/switcher.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize Desktop Engine
+      await window.dtmEngine.init();
+
+      // Initialize Skin Manager
+      await window.dtmSkinManager.init();
+
+      // Initialize Era Switcher UI
+      window.dtmSwitcherUI.init();
+
+      // Load active skin
+      const currentSkin = window.dtmSkinManager.getCurrentSkin();
+      const viewport = document.getElementById('skin-viewport');
+      if (viewport && currentSkin) {
+        viewport.src = currentSkin.entry;
+      }
+    });
+
+    // Provide keyboard shortcut forwarding from within iframes
+    window.addEventListener('message', (event) => {
+      if (event.data === 'dtm:open-switcher') {
+        window.dtmSwitcherUI.open();
+      }
+    });
+  </script>
+</body>
+</html>

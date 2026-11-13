@@ -1,0 +1,492 @@
+/* 
+ * Desktop Time Machine - Skin Template Stylesheet
+ * 
+ * This is a starting point for a new historical desktop environment.
+ * Replace ALL of this with your OS's authentic visual language.
+ * Do NOT simply recolour Windows 95 — each skin must feel like its own OS.
+ */
+
+/* ==========================================================================
+   CSS CUSTOM PROPERTIES — Define your OS's design tokens here
+   ========================================================================== */
+:root {
+  /* Core palette — replace with your OS's authentic colours */
+  --dtm-bg-primary: #008080;        /* Desktop background */
+  --dtm-bg-secondary: #006060;      /* Panels, menus, title bars */
+  --dtm-bg-tertiary: #004040;       /* Pressed/active states */
+  --dtm-fg-primary: #ffffff;        /* Primary text */
+  --dtm-fg-secondary: #e0e0e0;      /* Secondary text */
+  --dtm-fg-muted: #a0a0a0;          /* Disabled/muted text */
+  --dtm-accent: #ffd700;            /* Highlights, selection, focus */
+  --dtm-border-light: #ffffff;      /* 3D highlight (top/left) */
+  --dtm-border-dark: #000000;       /* 3D shadow (bottom/right) */
+  --dtm-border-mid: #808080;        /* Flat borders */
+  --dtm-window-bg: #c0c0c0;         /* Window background */
+  --dtm-titlebar-active: #000080;   /* Active window titlebar */
+  --dtm-titlebar-inactive: #808080; /* Inactive window titlebar */
+  --dtm-titlebar-text: #ffffff;     /* Titlebar text */
+
+  /* Spacing & sizing */
+  --dtm-icon-size: 64px;
+  --dtm-icon-label-width: 80px;
+  --dtm-taskbar-height: 28px;
+  --dtm-titlebar-height: 22px;
+  --dtm-border-width: 2px;
+
+  /* Fonts — load your OS's authentic fonts via @font-face */
+  --dtm-font-ui: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --dtm-font-mono: 'Courier New', Courier, monospace;
+  --dtm-font-size-ui: 12px;
+  --dtm-font-size-small: 11px;
+
+  /* Z-index layers */
+  --dtm-z-desktop: 1;
+  --dtm-z-icons: 10;
+  --dtm-z-context-menu: 1000;
+  --dtm-z-windows: 100;
+  --dtm-z-taskbar: 500;
+  --dtm-z-start-menu: 600;
+  --dtm-z-modal: 10000;
+}
+
+/* ==========================================================================
+   RESET & BASE
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--dtm-font-ui);
+  font-size: var(--dtm-font-size-ui);
+  color: var(--dtm-fg-primary);
+  background: var(--dtm-bg-primary);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ==========================================================================
+   DESKTOP CONTAINER
+   ========================================================================== */
+.dtm-desktop {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--dtm-bg-primary);
+}
+
+/* ==========================================================================
+   DESKTOP ICONS — Customise layout, spacing, selection style
+   ========================================================================== */
+.dtm-desktop-icons {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: var(--dtm-z-icons);
+}
+
+.dtm-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--dtm-icon-label-width);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+.dtm-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dtm-icon.selected {
+  background: rgba(255, 215, 0, 0.2);
+  outline: 1px dotted var(--dtm-accent);
+}
+
+.dtm-icon-image {
+  font-size: 32px;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.dtm-icon-label {
+  font-size: var(--dtm-font-size-small);
+  text-align: center;
+  word-wrap: break-word;
+  color: var(--dtm-fg-primary);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* ==========================================================================
+   TASKBAR / PANEL / DOCK — Replace entirely with your OS's paradigm
+   ========================================================================== */
+.dtm-taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--dtm-taskbar-height);
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-primary));
+  border-top: 1px solid var(--dtm-border-mid);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 4px;
+  z-index: var(--dtm-z-taskbar);
+  font-family: var(--dtm-font-ui);
+}
+
+.dtm-taskbar-start {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-tertiary));
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  cursor: pointer;
+  height: 24px;
+  user-select: none;
+}
+
+.dtm-taskbar-start:hover {
+  background: linear-gradient(180deg, var(--dtm-bg-tertiary), var(--dtm-bg-secondary));
+}
+
+.dtm-taskbar-start:active {
+  border-color: var(--dtm-border-dark) var(--dtm-border-light) var(--dtm-border-light) var(--dtm-border-dark);
+}
+
+.dtm-start-icon {
+  font-size: 14px;
+}
+
+.dtm-start-text {
+  font-weight: bold;
+  font-size: var(--dtm-font-size-small);
+}
+
+.dtm-taskbar-apps {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  height: 100%;
+  align-items: stretch;
+}
+
+.dtm-taskbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-tertiary));
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  color: var(--dtm-fg-primary);
+  font-size: var(--dtm-font-size-small);
+  cursor: pointer;
+  height: 22px;
+  white-space: nowrap;
+}
+
+.dtm-taskbar-btn.active {
+  border-color: var(--dtm-border-dark) var(--dtm-border-light) var(--dtm-border-light) var(--dtm-border-dark);
+  background: linear-gradient(180deg, var(--dtm-bg-tertiary), var(--dtm-bg-secondary));
+}
+
+.dtm-taskbar-clock {
+  padding: 0 10px;
+  font-family: var(--dtm-font-mono);
+  font-size: var(--dtm-font-size-small);
+  color: var(--dtm-fg-primary);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-tertiary));
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  height: 22px;
+  display: flex;
+  align-items: center;
+}
+
+/* ==========================================================================
+   START MENU / APPLICATION LAUNCHER — Replace with your OS's paradigm
+   ========================================================================== */
+.dtm-start-menu {
+  position: fixed;
+  bottom: calc(var(--dtm-taskbar-height) + 2px);
+  left: 4px;
+  width: 220px;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-primary));
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: var(--dtm-z-start-menu);
+  font-family: var(--dtm-font-ui);
+}
+
+.dtm-start-menu.hidden {
+  display: none;
+}
+
+.dtm-start-menu-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--dtm-border-mid);
+  font-weight: bold;
+  font-size: var(--dtm-font-size-small);
+  color: var(--dtm-fg-secondary);
+}
+
+.dtm-start-menu-items {
+  padding: 4px;
+}
+
+.dtm-start-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--dtm-fg-primary);
+  font-size: var(--dtm-font-size-ui);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.dtm-start-menu-item:hover {
+  background: var(--dtm-accent);
+  color: #000;
+}
+
+.dtm-start-menu-divider {
+  border: none;
+  border-top: 1px solid var(--dtm-border-mid);
+  margin: 4px 0;
+}
+
+/* ==========================================================================
+   CONTEXT MENU
+   ========================================================================== */
+.dtm-context-menu {
+  position: fixed;
+  min-width: 160px;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-primary));
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: var(--dtm-z-context-menu);
+  padding: 4px 0;
+  font-family: var(--dtm-font-ui);
+}
+
+.dtm-context-menu.hidden {
+  display: none;
+}
+
+.dtm-context-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: transparent;
+  border: none;
+  color: var(--dtm-fg-primary);
+  font-size: var(--dtm-font-size-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dtm-context-item:hover {
+  background: var(--dtm-accent);
+  color: #000;
+}
+
+.dtm-context-divider {
+  border: none;
+  border-top: 1px solid var(--dtm-border-mid);
+  margin: 4px 0;
+}
+
+/* ==========================================================================
+   WINDOWS — Base window chrome (customise per OS)
+   ========================================================================== */
+.dtm-window {
+  position: absolute;
+  background: var(--dtm-window-bg);
+  border: var(--dtm-border-width) solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 200px;
+  z-index: var(--dtm-z-windows);
+  font-family: var(--dtm-font-ui);
+}
+
+.dtm-window.inactive {
+  opacity: 0.85;
+}
+
+.dtm-window-titlebar {
+  height: var(--dtm-titlebar-height);
+  background: var(--dtm-titlebar-active);
+  color: var(--dtm-titlebar-text);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 8px;
+  border-bottom: 1px solid var(--dtm-border-mid);
+  cursor: default;
+  user-select: none;
+}
+
+.dtm-window.inactive .dtm-window-titlebar {
+  background: var(--dtm-titlebar-inactive);
+}
+
+.dtm-window-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.dtm-window-title {
+  flex: 1;
+  font-size: var(--dtm-font-size-small);
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dtm-window-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.dtm-window-btn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-tertiary));
+  border: 1px solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  color: var(--dtm-fg-primary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.dtm-window-btn:hover {
+  background: linear-gradient(180deg, var(--dtm-bg-tertiary), var(--dtm-bg-secondary));
+}
+
+.dtm-window-btn:active {
+  border-color: var(--dtm-border-dark) var(--dtm-border-light) var(--dtm-border-light) var(--dtm-border-dark);
+}
+
+.dtm-window-btn.close:hover {
+  background: #ff4444;
+  border-color: #cc0000;
+  color: #fff;
+}
+
+.dtm-window-content {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  background: var(--dtm-window-bg);
+}
+
+.dtm-window-statusbar {
+  height: 20px;
+  background: linear-gradient(180deg, var(--dtm-bg-secondary), var(--dtm-bg-tertiary));
+  border-top: 1px solid var(--dtm-border-mid);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: var(--dtm-font-size-small);
+  color: var(--dtm-fg-secondary);
+}
+
+/* ==========================================================================
+   WINDOWS LAYER — Container for all windows
+   ========================================================================== */
+.dtm-windows-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--dtm-z-windows);
+}
+
+.dtm-windows-layer > * {
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   SCROLLBARS — Optional custom styling
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dtm-bg-primary);
+  border-left: 1px solid var(--dtm-border-mid);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dtm-bg-tertiary);
+  border: 2px solid var(--dtm-bg-primary);
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dtm-bg-secondary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--dtm-bg-primary);
+}
+
+::-webkit-scrollbar-button {
+  background: var(--dtm-bg-secondary);
+  border: 1px solid;
+  border-color: var(--dtm-border-light) var(--dtm-border-dark) var(--dtm-border-dark) var(--dtm-border-light);
+  height: 16px;
+  width: 16px;
+}
+
+::-webkit-scrollbar-button:vertical:increment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='white' d='M4 0L0 7h8z'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='white' d='M4 8L0 1h8z'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+.hidden { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Example App</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="example-app">
+    <header class="app-header">
+      <h1>Example App</h1>
+      <p class="app-subtitle">A demonstration application</p>
+    </header>
+
+    <main class="app-content">
+      <section class="app-section">
+        <h2>Shared Engine APIs</h2>
+        <p>This app demonstrates how to use the shared Desktop Time Machine engine from within a skin application.</p>
+        
+        <div class="api-demo">
+          <button class="demo-btn" data-action="fs-list">List Desktop Files (engine.fs.list)</button>
+          <button class="demo-btn" data-action="sys-info">Get System Info (engine.system.getInfo)</button>
+          <button class="demo-btn" data-action="notify">Show Notification (engine.notify)</button>
+          <button class="demo-btn" data-action="clipboard">Read Clipboard (engine.clipboard.readText)</button>
+        </div>
+      </section>
+
+      <section class="app-section">
+        <h2>File Content Preview</h2>
+        <div class="file-preview" id="filePreview">
+          <p class="placeholder">Click "List Desktop Files" to see filesystem API in action.</p>
+        </div>
+      </section>
+
+      <section class="app-section">
+        <h2>System Information</h2>
+        <div class="sys-info" id="sysInfo">
+          <p class="placeholder">Click "Get System Info" to retrieve host information.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="status-bar" id="statusBar">Ready</div>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

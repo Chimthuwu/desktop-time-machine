@@ -1,0 +1,31 @@
+{
+  "id": "macos8",
+  "name": "Mac OS 8",
+  "era": "1997",
+  "period": "1997",
+  "version": "1.0.0",
+  "description": "The classic Macintosh Platinum appearance with authentic grey dither background, top menu bar, Apple menu, and Control Strip.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "💻",
+  "themeColor": "#888888",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "desktop-icons",
+    "apple-menu",
+    "control-strip",
+    "calculator",
+    "sound-chimes",
+    "trash-bin"
+  ],
+  "meta": {
+    "developer": "Apple Computer",
+    "releaseDate": "1997-07-26",
+    "successor": "Mac OS 9",
+    "kernelFamily": "Classic Mac OS",
+    "historicalNote": "Mac OS 8 sold 1.2 million copies in its first two weeks and introduced the Platinum visual theme."
+  }
+}

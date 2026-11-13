@@ -1,0 +1,27 @@
+{
+  "id": "your-skin-id",
+  "name": "Your Skin Name",
+  "era": "199X",
+  "period": "199X",
+  "version": "1.0.0",
+  "description": "A brief description of your historical desktop environment and what makes it unique.",
+  "author": "Your Name / Organization",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "🖥️",
+  "themeColor": "#008080",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "desktop-icons",
+    "application-launcher"
+  ],
+  "meta": {
+    "developer": "Original OS Vendor",
+    "releaseDate": "19XX-XX-XX",
+    "successor": "Next OS Version",
+    "kernelFamily": "OS Kernel Family",
+    "historicalNote": "Historical context and significance of this operating system."
+  }
+}
