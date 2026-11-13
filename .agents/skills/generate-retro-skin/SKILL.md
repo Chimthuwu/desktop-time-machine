@@ -34,3 +34,12 @@ Use this procedure to author a historically accurate desktop environment skin fo
 4. **Verify Isolation**:
    - Ensure the skin does not assume global variables outside its viewport.
    - Confirm all host interactions use `DTM.system`.
+
+## Electron Gotchas (learned 2026-11-14, cost ~10 debug cycles)
+
+1. **`window.prompt()` throws in Electron renderers.** It is not supported at all — any skin flow using it (New Folder, Rename, Run, Save As, Find) silently dies. Use an in-skin modal (`hostPrompt` in win95/win98/macos8 `desktop.html`) returning a Promise. `confirm()`/`alert()` DO work.
+2. **Testing real hover (`:hover` submenus) in Electron:** `webContents.sendInputEvent` mouseMove does NOT reliably update CSS `:hover`. Attach `webContents.debugger` and use CDP `Input.dispatchMouseEvent` (`mouseMoved`/`mousePressed`/`mouseReleased`) — same coordinates Chromium uses.
+3. **A single synthetic mousemove gets coalesced** — hover state may not update (flaky between runs). Step the move in ~5 increments with small sleeps, then probe `:hover` via `document.querySelectorAll(':hover')`.
+4. **Iframe coordinate math:** element rect (in iframe) + `iframe.getBoundingClientRect()` (in parent) = parent-viewport coords for CDP input. `display:none` elements return zero rects — open the parent menu first.
+5. **textContent matching for menu items is a trap:** a parent item's `textContent` includes its nested submenu's text (Accessories "contains" Notepad). Strip `.submenu` descendants from a clone before comparing labels.
+6. **Renderer errors in tests:** listen to `webContents 'console-message'` (level ≥ 2) — `executeJavaScript` failures otherwise surface only as "Script failed to execute".
