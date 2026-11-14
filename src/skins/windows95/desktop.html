@@ -80,7 +80,27 @@ button{font:inherit}
 .display-tab{width:70px;height:22px;font-size:11px}
 .display-tab.active{font-weight:bold;border-color:#808080 #fff #fff #808080;background:#dfdfdf}
 .display-panel{flex:1;display:flex;flex-direction:column;margin-left:6px;border:2px solid;border-color:#808080 #fff #fff #808080;padding:10px;min-width:0}
-.wallpaper-preview{height:70px;margin:4px 0 8px;border:2px solid;border-color:#808080 #fff #fff #808080;background:#008080}
+/* Display Properties — live monitor preview */
+.wp-layout{display:flex;gap:10px;align-items:flex-start;flex:1;min-height:0}
+.wp-monitor{display:flex;flex-direction:column;align-items:center;flex:none}
+.wp-monitor-shell{background:var(--gray);border:2px solid;border-color:#fff #404040 #404040 #fff;padding:6px 6px 10px;box-shadow:1px 1px 0 #000}
+.wp-monitor-screen{width:178px;aspect-ratio:4/3;position:relative;overflow:hidden;border:2px solid;border-color:#404040 #fff #fff #404040;background:#008080;cursor:default}
+.wp-monitor-desktop{position:absolute;left:0;top:0;width:1024px;height:768px;transform-origin:0 0}
+.wp-monitor-neck{width:44px;height:14px;background:#a8a8a8;border:2px solid;border-color:#fff #606060 #606060 #fff}
+.wp-monitor-base{width:104px;height:10px;background:#a8a8a8;border:2px solid;border-color:#fff #606060 #606060 #fff}
+.pv-icon{position:absolute;width:34px;height:34px;background:rgba(255,255,255,.85);border:1px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+.pv-window{position:absolute;left:150px;top:120px;width:420px;height:300px;background:#c0c0c0;border:3px solid;border-color:#fff #404040 #404040 #fff;box-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.pv-window::before{content:'';display:block;height:32px;background:linear-gradient(90deg,#000080,#1084d0)}
+.pv-taskbar{position:absolute;left:0;right:0;bottom:0;height:52px;background:#c0c0c0;border-top:3px solid #fff;display:flex;align-items:center;gap:8px;padding:0 8px}
+.pv-start{width:92px;height:30px;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff}
+.pv-tray{margin-left:auto;width:112px;height:30px;border:2px solid;border-color:#808080 #fff #fff #808080}
+.wp-controls{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.wp-controls select{width:100%;font-family:Tahoma;font-size:12px}
+.wp-mode{display:flex;align-items:center;gap:4px}
+.wp-mode select{flex:1;min-width:0}
+.wp-mode label{font-size:12px}
+.wp-buttons{display:flex;justify-content:flex-end;gap:5px;margin-top:8px}
+.wp-buttons button{padding:4px 14px}
 
 /* REAL EXPLORER FILE MANAGER */
 .explorer-container { display: flex; flex-direction: column; height: 100%; }
@@ -577,19 +597,55 @@ function setupExplorer(win, initialPath) {
   loadPath(currentPath);
 }
 
-// APPLICATION DEFINITIONS
 // CLASSIC WALLPAPERS & SCREEN SAVERS
+// A wallpaper is a solid colour, a bitmap-style image with a natural pixel
+// size, or a small pattern tile. The Display mode (Center/Tile/Stretch)
+// decides how that image lands on the desktop, just like Windows 95.
+function svgTile(w, h, shapes) {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" shape-rendering="crispEdges">' + shapes + '</svg>';
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+}
+function buttonTile() {
+  let shapes = '<rect width="16" height="16" fill="#8f8f8f"/>';
+  [[0, 0], [8, 0], [0, 8], [8, 8]].forEach(([x, y]) => {
+    shapes += '<g transform="translate(' + x + ' ' + y + ')"><rect width="7" height="7" fill="#c6c6c6"/>' +
+      '<rect width="7" height="1" fill="#efefef"/><rect width="1" height="7" fill="#efefef"/>' +
+      '<rect y="6" width="7" height="1" fill="#6a6a6a"/><rect x="6" width="1" height="7" fill="#6a6a6a"/></g>';
+  });
+  return svgTile(16, 16, shapes);
+}
 const WALLPAPERS = {
-  teal: { label: 'Teal (None)', css: '#008080' },
-  clouds: { label: 'Clouds', css: 'linear-gradient(180deg,#2b6bb0 0%,#7fb2e5 45%,#f2f8ff 100%)' },
-  rivets: { label: 'Blue Rivets', css: 'radial-gradient(circle at 8px 8px,#3d64a8 0 2px,transparent 2px) 0 0/32px 32px, linear-gradient(180deg,#124a8c,#0b2f5c)' },
-  sandstone: { label: 'Sandstone', css: 'repeating-linear-gradient(45deg,#c2a878 0 6px,#b09a6a 6px 12px)' },
-  metal: { label: 'Metal Links', css: 'repeating-linear-gradient(0deg,#8a8f96 0 2px,#6e747c 2px 4px)' },
-  slate: { label: 'Slate', css: 'linear-gradient(135deg,#4a5560,#232a31)' },
-  strawberry: { label: 'Straw Mat', css: 'repeating-linear-gradient(90deg,#8a1f1f 0 3px,#c9a227 3px 6px)' },
-  bubbles: { label: 'Bubbles', css: 'radial-gradient(circle at 20% 30%,rgba(255,255,255,.25) 0 12px,transparent 13px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.2) 0 18px,transparent 19px),#1c5b7a' },
-  black: { label: 'Black', css: '#000' }
+  teal: { label: 'Teal (None)', kind: 'color', color: '#008080' },
+  clouds: { label: 'Clouds', kind: 'image', w: 1024, h: 768, base: '#2b6bb0',
+    image: 'linear-gradient(180deg,#2b6bb0 0%,#7fb2e5 45%,#f2f8ff 100%)' },
+  slate: { label: 'Slate', kind: 'image', w: 1024, h: 768, base: '#232a31',
+    image: 'linear-gradient(135deg,#4a5560,#232a31)' },
+  bubbles: { label: 'Bubbles', kind: 'image', w: 1024, h: 768, base: '#1c5b7a',
+    image: 'radial-gradient(circle at 20% 30%,rgba(255,255,255,.25) 0 60px,transparent 61px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.2) 0 90px,transparent 91px),linear-gradient(180deg,#1c5b7a,#0b2f45)' },
+  black: { label: 'Black', kind: 'color', color: '#000' },
+  rivets: { label: 'Blue Rivets', kind: 'pattern', size: '16px 16px', base: '#124a8c',
+    image: svgTile(16, 16, '<rect width="16" height="16" fill="#124a8c"/><g fill="#3d64a8"><rect x="6" y="6" width="4" height="4"/><rect x="7" y="5" width="2" height="6"/><rect x="5" y="7" width="6" height="2"/></g><rect x="7" y="7" width="2" height="2" fill="#8aabe0"/>') },
+  sandstone: { label: 'Sandstone', kind: 'pattern', size: '16px 16px', base: '#b09a6a',
+    image: svgTile(16, 16, '<rect width="16" height="16" fill="#b09a6a"/><g fill="#c2a878"><rect x="1" y="2" width="5" height="3"/><rect x="9" y="7" width="6" height="2"/><rect x="4" y="11" width="4" height="3"/></g><g fill="#9a855a"><rect x="10" y="1" width="4" height="2"/><rect x="2" y="8" width="3" height="2"/><rect x="12" y="12" width="3" height="3"/></g>') },
+  metal: { label: 'Metal Links', kind: 'pattern', size: '8px 8px', base: '#6e747c',
+    image: svgTile(8, 8, '<rect width="8" height="8" fill="#6e747c"/><rect width="8" height="2" fill="#8a8f96"/><rect y="4" width="8" height="1" fill="#565b62"/>') },
+  strawberry: { label: 'Straw Mat', kind: 'pattern', size: '8px 8px', base: '#a8862a',
+    image: svgTile(8, 8, '<rect width="8" height="8" fill="#c9a227"/><rect width="8" height="2" fill="#8a1f1f"/><rect y="4" width="8" height="2" fill="#b8332f"/>') },
+  bricks: { label: 'Bricks', kind: 'pattern', size: '16px 16px', base: '#7d7466',
+    image: svgTile(16, 16, '<rect width="16" height="16" fill="#7d7466"/><g fill="#a94a34"><rect width="7" height="7"/><rect x="8" width="7" height="7"/><rect y="8" width="2" height="7"/><rect x="4" y="8" width="7" height="7"/><rect x="12" y="8" width="4" height="7"/></g>') },
+  cargonet: { label: 'Cargo Net', kind: 'pattern', size: '8px 8px', base: '#25324f',
+    image: svgTile(8, 8, '<rect width="8" height="8" fill="#25324f"/><path d="M0 0L8 8M8 0L0 8" stroke="#7d90b8" fill="none"/>') },
+  circuits: { label: 'Circuits', kind: 'pattern', size: '16px 16px', base: '#0b3d16',
+    image: svgTile(16, 16, '<rect width="16" height="16" fill="#0b3d16"/><path d="M2 0V5H11V16M13 0V3H16M0 10H6V16" stroke="#2fa84f" fill="none"/><rect x="9" y="3" width="4" height="4" fill="#8ee39b"/>') },
+  buttons: { label: 'Buttons', kind: 'pattern', size: '16px 16px', base: '#8f8f8f', image: buttonTile() },
+  weave: { label: 'Weave', kind: 'pattern', size: '8px 8px', base: '#a98f5f',
+    image: svgTile(8, 8, '<rect width="8" height="8" fill="#a98f5f"/><rect width="4" height="4" fill="#d8c091"/><rect x="4" y="4" width="4" height="4" fill="#d8c091"/>') },
+  waffle: { label: 'Waffle', kind: 'pattern', size: '8px 8px', base: '#e0cf9c',
+    image: svgTile(8, 8, '<rect width="8" height="8" fill="#e0cf9c"/><path d="M0 0H8M0 0V8" stroke="#8c7440" fill="none"/>') },
+  gray: { label: '50% Gray', kind: 'pattern', size: '4px 4px', base: '#808080',
+    image: svgTile(4, 4, '<rect width="4" height="4" fill="#808080"/><rect width="2" height="2" fill="#c0c0c0"/><rect x="2" y="2" width="2" height="2" fill="#c0c0c0"/>') }
 };
+const WALLPAPER_MODES = [['center', 'Center'], ['tile', 'Tile'], ['stretch', 'Stretch']];
 const SCREENSAVERS = [
   ['mystify', 'Mystify'],
   ['starfield', 'Starfield Simulation'],
@@ -599,15 +655,55 @@ const SCREENSAVERS = [
   ['marquee', 'Marquee']
 ];
 const WALLPAPER_KEY = 'dtm.wallpaper.windows95';
+const WALLPAPER_MODE_KEY = 'dtm.wallpaper-mode.windows95';
 const SS_KEY = 'dtm.screensaver.windows95';
 
 function currentWallpaper() {
   try { return localStorage.getItem(WALLPAPER_KEY) || 'teal'; } catch (e) { return 'teal'; }
 }
-function applyWallpaper(key) {
+function defaultWallpaperMode(key) {
+  const wp = WALLPAPERS[key];
+  return wp && wp.kind === 'pattern' ? 'tile' : 'stretch';
+}
+function currentWallpaperMode(key) {
+  try {
+    const mode = localStorage.getItem(WALLPAPER_MODE_KEY);
+    if (mode) return mode;
+  } catch (e) {}
+  return defaultWallpaperMode(key || currentWallpaper());
+}
+function wallpaperStyle(key, mode) {
   const wp = WALLPAPERS[key] || WALLPAPERS.teal;
-  document.body.style.background = wp.css;
-  try { localStorage.setItem(WALLPAPER_KEY, key); } catch (e) {}
+  const style = {
+    backgroundColor: wp.color || wp.base || '#008080',
+    backgroundImage: 'none',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'auto',
+    backgroundPosition: 'center center'
+  };
+  if (wp.image) {
+    style.backgroundImage = wp.image;
+    const natural = wp.size || (wp.w + 'px ' + wp.h + 'px');
+    if (mode === 'tile') {
+      style.backgroundRepeat = 'repeat';
+      style.backgroundSize = natural;
+      style.backgroundPosition = '0 0';
+    } else if (mode === 'center') {
+      style.backgroundSize = natural;
+    } else {
+      style.backgroundSize = '100% 100%';
+    }
+  }
+  return style;
+}
+function applyWallpaper(key, mode) {
+  const nextMode = mode || currentWallpaperMode(key);
+  const style = wallpaperStyle(key, nextMode);
+  Object.keys(style).forEach((prop) => { document.body.style[prop] = style[prop]; });
+  try {
+    localStorage.setItem(WALLPAPER_KEY, key);
+    localStorage.setItem(WALLPAPER_MODE_KEY, nextMode);
+  } catch (e) {}
 }
 function ssSettings() {
   try { return JSON.parse(localStorage.getItem(SS_KEY)) || {}; } catch (e) { return {}; }
@@ -619,7 +715,14 @@ function saveSsSettings(patch) {
 }
 
 function wallpaperOptions(selected) {
-  return Object.keys(WALLPAPERS).map((k) => `<option value="${k}"${k === selected ? ' selected' : ''}>${WALLPAPERS[k].label}</option>`).join('');
+  const keys = Object.keys(WALLPAPERS);
+  const option = (k) => `<option value="${k}"${k === selected ? ' selected' : ''}>${WALLPAPERS[k].label}</option>`;
+  const isPattern = (k) => WALLPAPERS[k].kind === 'pattern';
+  return `<optgroup label="Wallpaper">${keys.filter((k) => !isPattern(k)).map(option).join('')}</optgroup>` +
+    `<optgroup label="Patterns">${keys.filter(isPattern).map(option).join('')}</optgroup>`;
+}
+function wallpaperModeOptions(selected) {
+  return WALLPAPER_MODES.map(([k, label]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${label}</option>`).join('');
 }
 function screensaverOptions(selected) {
   return SCREENSAVERS.map(([k, label]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${label}</option>`).join('') + `<option value="none"${selected === 'none' ? ' selected' : ''}>None</option>`;
@@ -687,7 +790,7 @@ const apps={
  discord:{title:'Discord',icon:'💬',width:900,height:600,body:()=>`
   <div class="about"><div class="big-logo">💬</div><b>Discord opens in a real web app window.</b><p>Close this window and choose Discord again.</p></div>`},
 
- display:{title:'Display Properties',icon:'🖥️',width:410,height:360,body:()=>`
+ display:{title:'Display Properties',icon:'🖥️',width:500,height:430,body:()=>`
   <div style="display:flex;height:100%;padding:4px;background:var(--gray);">
     <div class="display-tabs">
       <button class="win95-button display-tab active" data-tab="background">Background</button>
@@ -696,14 +799,35 @@ const apps={
       <button class="win95-button display-tab" data-tab="settings">Settings</button>
     </div>
     <div class="display-panel" data-panel="background">
-      <div style="font-weight:bold;margin-bottom:4px;">Wallpaper</div>
-      <div class="wallpaper-preview" id="wallpaperPreview"></div>
-      <select id="wallpaperSelect" size="6" style="width:100%;font-family:Tahoma;font-size:12px;">${wallpaperOptions(currentWallpaper())}</select>
-      <div style="flex:1;"></div>
-      <div style="display:flex;justify-content:flex-end;gap:5px;margin-top:6px;">
-        <button class="win95-button" id="wpApply" style="padding:4px 14px;">Apply</button>
-        <button class="win95-button" id="wpOk" style="padding:4px 14px;">OK</button>
-        <button class="win95-button" id="wpCancel" style="padding:4px 14px;">Cancel</button>
+      <div style="font-weight:bold;margin-bottom:6px;">Wallpaper</div>
+      <div class="wp-layout">
+        <div class="wp-monitor">
+          <div class="wp-monitor-shell">
+            <div class="wp-monitor-screen">
+              <div class="wp-monitor-desktop" id="wallpaperPreview">
+                <div class="pv-icon" style="left:24px;top:24px;"></div>
+                <div class="pv-icon" style="left:24px;top:128px;"></div>
+                <div class="pv-icon" style="left:24px;top:232px;"></div>
+                <div class="pv-window"></div>
+                <div class="pv-taskbar"><span class="pv-start"></span><span class="pv-tray"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="wp-monitor-neck"></div>
+          <div class="wp-monitor-base"></div>
+        </div>
+        <div class="wp-controls">
+          <select id="wallpaperSelect" size="9">${wallpaperOptions(currentWallpaper())}</select>
+          <div class="wp-mode">
+            <label for="wallpaperMode">Display:</label>
+            <select id="wallpaperMode">${wallpaperModeOptions(currentWallpaperMode(currentWallpaper()))}</select>
+          </div>
+        </div>
+      </div>
+      <div class="wp-buttons">
+        <button class="win95-button" id="wpApply">Apply</button>
+        <button class="win95-button" id="wpOk">OK</button>
+        <button class="win95-button" id="wpCancel">Cancel</button>
       </div>
     </div>
     <div class="display-panel" data-panel="screensaver" style="display:none;">
@@ -800,16 +924,37 @@ function setupDisplay(w) {
     tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
     panels.forEach((p) => { p.style.display = p.dataset.panel === name ? 'flex' : 'none'; });
   };
-  tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    showTab(t.dataset.tab);
+    if (t.dataset.tab === 'background') scalePreview();
+  }));
+
+  // The sample monitor is a 1024×768 virtual desktop scaled to fit, so the
+  // Center/Tile/Stretch placement matches the real desktop exactly.
+  const sel = w.querySelector('#wallpaperSelect');
+  const modeSel = w.querySelector('#wallpaperMode');
+  const previewDesk = w.querySelector('#wallpaperPreview');
+  const screenEl = w.querySelector('.wp-monitor-screen');
+  function scalePreview() {
+    if (!previewDesk || !screenEl) return;
+    const width = screenEl.clientWidth;
+    if (width) previewDesk.style.transform = 'scale(' + (width / 1024) + ')';
+  }
+  function paintPreview() {
+    const wp = WALLPAPERS[sel.value] || WALLPAPERS.teal;
+    const style = wallpaperStyle(sel.value, modeSel.value);
+    Object.keys(style).forEach((prop) => { previewDesk.style[prop] = style[prop]; });
+    modeSel.disabled = wp.kind === 'color';
+    scalePreview();
+  }
+  sel.addEventListener('change', paintPreview);
+  modeSel.addEventListener('change', paintPreview);
+  paintPreview();
   showTab('background');
 
-  const sel = w.querySelector('#wallpaperSelect');
-  const preview = w.querySelector('#wallpaperPreview');
-  const paintPreview = () => { preview.style.background = (WALLPAPERS[sel.value] || WALLPAPERS.teal).css; };
-  sel.addEventListener('change', paintPreview);
-  paintPreview();
-  w.querySelector('#wpApply').addEventListener('click', () => applyWallpaper(sel.value));
-  w.querySelector('#wpOk').addEventListener('click', () => { applyWallpaper(sel.value); close(w); });
+  const commit = () => applyWallpaper(sel.value, modeSel.value);
+  w.querySelector('#wpApply').addEventListener('click', commit);
+  w.querySelector('#wpOk').addEventListener('click', () => { commit(); close(w); });
   w.querySelector('#wpCancel').addEventListener('click', () => close(w));
 
   const ssSel = w.querySelector('#ssSelect');
