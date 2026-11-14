@@ -7,6 +7,7 @@ class SkinSwitcherUI {
     this.skinManager = skinManager;
     this.engine = engine;
     this.isOpen = false;
+    this.switching = false;
     this.overlay = null;
   }
 
@@ -16,15 +17,6 @@ class SkinSwitcherUI {
   }
 
   createDom() {
-    // Floating Quick HUD Button
-    const hud = document.createElement('div');
-    hud.className = 'dtm-floating-hud';
-    hud.id = 'dtmFloatingHud';
-    hud.title = 'Switch Desktop Environment (F8)';
-    hud.innerHTML = `<span>⏳</span><span>Time Machine</span>`;
-    hud.addEventListener('click', () => this.toggle());
-    document.body.appendChild(hud);
-
     // Modal Overlay
     this.overlay = document.createElement('div');
     this.overlay.className = 'dtm-switcher-overlay';
@@ -44,6 +36,7 @@ class SkinSwitcherUI {
         <div class="dtm-switcher-body" id="dtmSwitcherGallery">
           <!-- Populated dynamically -->
         </div>
+        <div class="dtm-switcher-status" id="dtmSwitcherStatus" role="status" aria-live="polite"></div>
         <div class="dtm-switcher-footer">
           <span>Tip: Press <kbd>F8</kbd> or <kbd>Ctrl+Shift+T</kbd> at any time to travel between eras</span>
           <span id="dtmHostInfo">Host: Windows 10/11</span>
@@ -134,10 +127,7 @@ class SkinSwitcherUI {
 
       const switchBtn = card.querySelector('[data-switch]');
       if (switchBtn) {
-        switchBtn.addEventListener('click', () => {
-          this.skinManager.switchSkin(skin.id);
-          this.close();
-        });
+        switchBtn.addEventListener('click', () => this.performSwitch(skin));
       }
 
       gallery.appendChild(card);
@@ -152,8 +142,43 @@ class SkinSwitcherUI {
     }).catch(() => {});
   }
 
+  async performSwitch(skin) {
+    if (this.switching) return;
+    this.switching = true;
+    const buttons = Array.from(this.overlay.querySelectorAll('.dtm-load-btn'));
+    buttons.forEach((b) => { b.disabled = true; });
+    this.setStatus(`Transporting to ${skin.era || skin.period || skin.name}…`);
+
+    let ok = false;
+    try {
+      ok = await this.skinManager.switchSkin(skin.id);
+    } catch (error) {
+      console.warn('[DTM] Skin switch failed:', error);
+      ok = false;
+    }
+    this.switching = false;
+
+    // The switcher closes ONLY after the new era has loaded successfully.
+    if (ok) {
+      this.setStatus('');
+      this.close();
+      return;
+    }
+
+    this.setStatus(`Could not load ${skin.name}. Staying in the current era.`, true);
+    this.renderGallery();
+  }
+
+  setStatus(message, isError) {
+    const status = this.overlay && this.overlay.querySelector('#dtmSwitcherStatus');
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('is-error', !!isError);
+  }
+
   open() {
     this.renderGallery();
+    this.setStatus('');
     this.overlay.classList.add('open');
     this.isOpen = true;
   }

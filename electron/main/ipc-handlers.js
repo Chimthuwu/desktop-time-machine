@@ -6,6 +6,7 @@
 const { ipcMain, app } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { isSafePath } = require('../security/permissions');
 
 // Required manifest fields for a skin to be considered valid
 const MANIFEST_REQUIRED_FIELDS = ['id', 'name', 'era', 'version', 'entry', 'engineCompatibility', 'status'];
@@ -60,6 +61,7 @@ const {
   launchProgram
 } = require('./system-integration');
 const fsService = require('./filesystem-service');
+const desktopIntegration = require('./desktop-integration');
 const { getMainWindow, toggleFullScreen } = require('./window-manager');
 
 function registerIpcHandlers() {
@@ -176,11 +178,199 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('dtm:fs-drives', async () => {
-    return fsService.getDrives();
+    // Use the enhanced drive enumeration (real labels, types, capacity) with a
+    // graceful Node fallback inside desktop-integration.
+    return desktopIntegration.getEnhancedDrives();
   });
 
   ipcMain.handle('dtm:fs-special-folders', async () => {
-    return fsService.getSpecialFolders();
+    const folders = fsService.getSpecialFolders();
+    try {
+      const desktopPaths = await desktopIntegration.getDesktopPaths();
+      if (desktopPaths.user) folders.desktop = desktopPaths.user;
+      if (desktopPaths.public) folders.publicDesktop = desktopPaths.public;
+    } catch {
+      // Keep the environment-based result if known-folder discovery fails.
+    }
+    return folders;
+  });
+
+  // -----------------------------------------------------------------------
+  // Real Desktop mirroring (Phase 4)
+  // -----------------------------------------------------------------------
+
+  // Combined listing of every real Desktop location (User, redirected
+  // OneDrive Desktop, Public), de-duplicated by item name.
+  ipcMain.handle('dtm:fs-desktop', async () => {
+    const started = Date.now();
+    const dbg = process.env.DTM_DESKTOP_DEBUG === '1';
+    try {
+      const paths = await desktopIntegration.getDesktopPaths();
+      const dirs = [];
+      const pushDir = (d) => {
+        if (!d) return;
+        const resolved = path.resolve(d);
+        if (!dirs.some((x) => x.toLowerCase() === resolved.toLowerCase())) dirs.push(resolved);
+      };
+      pushDir(paths.user);
+      pushDir(paths.public);
+      (paths.all || []).forEach(pushDir);
+
+      const seen = new Set();
+      const items = [];
+      const errors = [];
+      for (const dir of dirs) {
+        let result;
+        const dirStarted = Date.now();
+        try {
+          result = await fsService.listDirectory(dir);
+        } catch (err) {
+          errors.push({ path: dir, error: err.message });
+          continue;
+        }
+        if (dbg) console.log('[dtm:desktop] list', dir, Date.now() - dirStarted + 'ms', result.items.length + ' items');
+        for (const it of result.items) {
+          const key = path.basename(it.path).toLowerCase();
+          if (seen.has(key)) continue; // de-duplicate Public/redirected copies
+          seen.add(key);
+          const isShortcut = /\.(lnk|url)$/i.test(it.name);
+          items.push({
+            name: it.name,
+            path: it.path,
+            dir,
+            isDirectory: it.isDirectory,
+            isFile: it.isFile,
+            isShortcut,
+            // Shortcut targets are resolved lazily (open / properties) so the
+            // desktop render never waits on a shell call per item.
+            target: null,
+            extension: path.extname(it.name).slice(1).toLowerCase(),
+            hidden: it.hidden,
+            size: it.size,
+            modified: it.modified
+          });
+        }
+      }
+      items.sort((a, b) => {
+        const ad = a.isDirectory ? 0 : 1;
+        const bd = b.isDirectory ? 0 : 1;
+        if (ad !== bd) return ad - bd;
+        return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
+      });
+      return { desktopPaths: paths, items, errors };
+    } catch (err) {
+      throw new Error('Could not read desktop: ' + err.message);
+    } finally {
+      if (dbg) console.log('[dtm:desktop] total', Date.now() - started + 'ms');
+    }
+  });
+
+  // Resolve a real .lnk / .url shortcut target.
+  ipcMain.handle('dtm:fs-resolve-shortcut', async (_event, targetPath) => {
+    assertPathArg(targetPath, 'targetPath');
+    return desktopIntegration.resolveShortcut(targetPath);
+  });
+
+  // Extract the ACTUAL Windows shell icon for a path as a PNG data URL.
+  ipcMain.handle('dtm:fs-icon', async (_event, targetPath, size) => {
+    assertPathArg(targetPath, 'targetPath');
+    const iconSize = Number(size) === 16 || Number(size) === 48 ? Number(size) : 32;
+    return desktopIntegration.getFileIcon(targetPath, iconSize);
+  });
+
+  // Safe recycle-bin delete (moves the real file to the Recycle Bin).
+  ipcMain.handle('dtm:fs-recycle', async (_event, targetPath) => {
+    assertPathArg(targetPath, 'targetPath');
+    return desktopIntegration.recycleItem(targetPath);
+  });
+
+  // Enumerate the real Recycle Bin.
+  ipcMain.handle('dtm:fs-recycle-list', async () => {
+    return desktopIntegration.listRecycleBin();
+  });
+
+  // Empty the real Recycle Bin.
+  ipcMain.handle('dtm:fs-recycle-empty', async () => {
+    return desktopIntegration.emptyRecycleBin();
+  });
+
+  // -----------------------------------------------------------------------
+  // Real-time filesystem watching (live desktop updates)
+  // -----------------------------------------------------------------------
+  const watchers = new Map();
+  const wcDestroyBound = new WeakSet();
+  let watchSeq = 0;
+
+  ipcMain.handle('dtm:fs-watch', (event, watchPath) => {
+    assertPathArg(watchPath, 'watchPath');
+    if (!isSafePath(watchPath)) {
+      throw new Error('Access denied: path outside permitted boundaries');
+    }
+    const wc = event.sender;
+    const id = 'w' + (++watchSeq);
+    let watcher;
+    try {
+      watcher = fs.watch(watchPath, { recursive: false }, (_evt, filename) => {
+        if (wc && !wc.isDestroyed()) {
+          wc.send('dtm:fs-changed', { id, path: watchPath, filename: filename || null });
+        }
+      });
+    } catch (err) {
+      throw new Error('Could not watch path: ' + err.message);
+    }
+    const entry = { watcher, wc };
+    const cleanup = () => {
+      try { watcher.close(); } catch {}
+      watchers.delete(id);
+      if (process.env.DTM_DESKTOP_DEBUG === '1') {
+        console.log('[dtm:watch] drop', id, 'active=' + watchers.size);
+      }
+    };
+    entry.cleanup = cleanup;
+    watchers.set(id, entry);
+    // A single destroyed-listener per WebContents closes every watcher it owns.
+    if (!wcDestroyBound.has(wc)) {
+      wcDestroyBound.add(wc);
+      wc.once('destroyed', () => {
+        wcDestroyBound.delete(wc);
+        for (const [, w] of watchers) {
+          if (w.wc === wc) w.cleanup();
+        }
+      });
+    }
+    if (process.env.DTM_DESKTOP_DEBUG === '1') {
+      console.log('[dtm:watch] add', id, watchPath, 'active=' + watchers.size);
+    }
+    return id;
+  });
+
+  ipcMain.handle('dtm:fs-unwatch', (_event, id) => {
+    const entry = watchers.get(id);
+    if (entry) entry.cleanup();
+    return { success: true };
+  });
+
+  // -----------------------------------------------------------------------
+  // Network Neighborhood + real Windows taskbar mirror + terminal
+  // -----------------------------------------------------------------------
+  ipcMain.handle('dtm:fs-network', async () => {
+    return desktopIntegration.getNetworkLocations();
+  });
+
+  ipcMain.handle('dtm:shell-taskbar', async () => {
+    return desktopIntegration.getTaskbarState();
+  });
+
+  ipcMain.handle('dtm:shell-activate-window', async (_event, pid) => {
+    if (typeof pid !== 'number' || !Number.isFinite(pid)) {
+      throw new Error('Invalid argument: pid must be a number');
+    }
+    return desktopIntegration.activateWindow(pid);
+  });
+
+  ipcMain.handle('dtm:open-terminal', async (_event, dirPath) => {
+    assertPathArg(dirPath, 'dirPath');
+    return desktopIntegration.openTerminal(dirPath);
   });
 
   // Open Path

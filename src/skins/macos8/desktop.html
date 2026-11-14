@@ -918,5 +918,17 @@ function emptyTrash() {
   document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
 }
 </script>
+<script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'macos8' });
+        }
+      } catch (e) { console.warn('[DTM] macos8 mirror mount failed:', e); }
+    })();
+</script>
 </body>
 </html>

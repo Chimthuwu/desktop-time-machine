@@ -2,7 +2,7 @@
  * Desktop Time Machine - Main Electron Process Entry
  */
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 const { createMainWindow, getMainWindow } = require('./window-manager');
 const { registerIpcHandlers } = require('./ipc-handlers');
@@ -24,8 +24,14 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     registerIpcHandlers();
+
+    // Chromium keeps file:// skin scripts in its disk cache between launches.
+    // Without this, a launch after an update can render the previous desktop
+    // mirror. Clearing it at boot keeps skin updates visible.
+    try { await session.defaultSession.clearCache(); } catch {}
+
     const mainWindow = createMainWindow();
 
     // Load the engine host HTML

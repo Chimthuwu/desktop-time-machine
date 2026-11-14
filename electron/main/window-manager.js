@@ -22,6 +22,7 @@ function createMainWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'Desktop Time Machine',
+    icon: path.join(__dirname, '../../assets/desktop-time-machine.ico'),
     backgroundColor: '#008080', // Classic Win95 Teal default
     autoHideMenuBar: true,
     show: false,

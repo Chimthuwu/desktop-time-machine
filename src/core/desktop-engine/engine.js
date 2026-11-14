@@ -12,6 +12,10 @@ class DesktopEngine {
     this.systemInfo = null;
     this.currentSkin = 'windows95';
     this.listeners = new Map();
+    this._desktopCache = null;
+    this._desktopCacheAt = 0;
+    this._desktopRequest = null;
+    this._desktopApi = null;
   }
 
   async init() {
@@ -85,8 +89,95 @@ class DesktopEngine {
       removeRecursive: (targetPath) => requireBackend().removeRecursive(targetPath),
       exists: (targetPath) => requireBackend().exists(targetPath),
       getDrives: () => requireBackend().getDrives(),
-      getSpecialFolders: () => requireBackend().getSpecialFolders()
+      getSpecialFolders: () => requireBackend().getSpecialFolders(),
+
+      // Phase 4 — real desktop mirroring & system integration
+      getDesktop: () => (backend && backend.getDesktop) ? backend.getDesktop()
+        : Promise.resolve({ desktopPaths: {}, items: [] }),
+      resolveShortcut: (p) => (backend && backend.resolveShortcut) ? backend.resolveShortcut(p)
+        : Promise.resolve({ target: null }),
+      icon: (p, s) => (backend && backend.icon) ? backend.icon(p, s) : Promise.resolve(null),
+      recycle: (p) => (backend && backend.recycle) ? backend.recycle(p)
+        : Promise.reject(new Error('Recycle Bin unavailable in this host')),
+      recycleList: () => (backend && backend.recycleList) ? backend.recycleList() : Promise.resolve([]),
+      recycleEmpty: () => (backend && backend.recycleEmpty) ? backend.recycleEmpty() : Promise.resolve({ success: true }),
+      watch: (p) => (backend && backend.watch) ? backend.watch(p) : Promise.resolve('mock'),
+      unwatch: (id) => (backend && backend.unwatch) ? backend.unwatch(id) : Promise.resolve({ success: true }),
+      network: () => (backend && backend.network) ? backend.network()
+        : Promise.resolve({ computerName: '', mappings: [], shares: [], drives: [] })
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared desktop data service — single source of truth for every skin.
+  //
+  //   DTM.desktop.getItems({ forceRefresh }) -> { desktopPaths, items, errors }
+  //   DTM.desktop.getLocations()             -> { user, public, oneDrive, all }
+  //   DTM.desktop.mount({ desktop, skinId }) -> mounted mirror handle
+  //   DTM.desktop.unmount(skinId)            -> cleanup watchers/listeners
+  //   DTM.desktop.invalidate()               -> drop the cached listing
+  //
+  // Thin wrapper around the existing preload filesystem backend; no skin
+  // performs its own desktop discovery.
+  // ---------------------------------------------------------------------------
+  getDesktopItems(options) {
+    const opts = options || {};
+    const ttl = 1500;
+    const now = Date.now();
+    if (!opts.forceRefresh && this._desktopCache && (now - this._desktopCacheAt) < ttl) {
+      return Promise.resolve(this._desktopCache);
+    }
+    if (this._desktopRequest) return this._desktopRequest;
+
+    const request = this.fs.getDesktop().then((data) => {
+      const normalised = {
+        desktopPaths: data.desktopPaths || {},
+        items: Array.isArray(data.items) ? data.items : [],
+        errors: Array.isArray(data.errors) ? data.errors : []
+      };
+      this._desktopCache = normalised;
+      this._desktopCacheAt = Date.now();
+      return normalised;
+    });
+    // Never leave a skin waiting forever if a host shell call stalls.
+    this._desktopRequest = Promise.race([
+      request,
+      new Promise((resolve) => setTimeout(() => resolve({
+        desktopPaths: (this._desktopCache && this._desktopCache.desktopPaths) || {},
+        items: (this._desktopCache && this._desktopCache.items) || [],
+        errors: [{ error: 'Desktop discovery timed out' }],
+        timedOut: true
+      }), 10000))
+    ]).finally(() => {
+      this._desktopRequest = null;
+    });
+    return this._desktopRequest;
+  }
+
+  invalidateDesktop() {
+    this._desktopCache = null;
+    this._desktopCacheAt = 0;
+    this._desktopRequest = null;
+  }
+
+  get desktop() {
+    if (!this._desktopApi) {
+      this._desktopApi = Object.freeze({
+        getItems: (options) => this.getDesktopItems(options),
+        getLocations: () => this.getDesktopItems().then((data) => data.desktopPaths || {}),
+        invalidate: () => this.invalidateDesktop(),
+        mount: (options) => {
+          if (typeof this.mountDesktop !== 'function') {
+            throw new Error('Desktop mirror is not loaded');
+          }
+          return this.mountDesktop(options);
+        },
+        unmount: (skinId) => {
+          if (typeof this.unmountDesktop === 'function') this.unmountDesktop(skinId);
+        }
+      });
+    }
+    return this._desktopApi;
   }
 
   // System API
@@ -111,6 +202,13 @@ class DesktopEngine {
       openPath: (targetPath) => this.preload.openPath(targetPath),
       openExternalUrl: (url) => this.preload.openExternalUrl(url),
       launchProgram: (program) => this.preload.launchProgram(program),
+      openTerminal: (dirPath) => this.preload.openTerminal(dirPath),
+      getTaskbar: () => this.preload.getTaskbar
+        ? this.preload.getTaskbar()
+        : Promise.resolve({ pinned: [], windows: [], tray: [] }),
+      activateWindow: (pid) => this.preload.activateWindow
+        ? this.preload.activateWindow(pid)
+        : Promise.reject(new Error('Window activation unavailable in this host')),
       toggleFullScreen: () => this.preload.toggleFullScreen(),
       minimizeWindow: () => this.preload.minimizeWindow(),
       maximizeWindow: () => this.preload.maximizeWindow(),
@@ -446,6 +544,12 @@ class DesktopEngine {
         alert(`[Mock] Launching program: ${program}`);
         return { success: true, program };
       },
+      openTerminal: async (dirPath) => {
+        alert(`[Mock] Opening a terminal in: ${dirPath}`);
+        return { success: true, path: dirPath };
+      },
+      getTaskbar: async () => ({ pinned: [], windows: [], tray: [] }),
+      activateWindow: async () => ({ success: true }),
       toggleFullScreen: async () => {
         if (!document.fullscreenElement) {
           document.documentElement.requestFullscreen().catch(() => {});

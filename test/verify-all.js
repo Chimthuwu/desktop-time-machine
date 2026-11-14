@@ -70,7 +70,10 @@ app.whenReady().then(async () => {
   });
 
   await win.loadFile(path.join(__dirname, '../src/index.html'));
-  await new Promise(r => setTimeout(r, 1200));
+  // The remembered skin is shared with earlier test runs; start from Windows 95.
+  await win.webContents.executeJavaScript("localStorage.setItem('dtm_active_skin','windows95')");
+  await win.webContents.reloadIgnoringCache();
+  await new Promise(r => setTimeout(r, 1800));
 
   // Test 3: Windows 95 Verification
   try {

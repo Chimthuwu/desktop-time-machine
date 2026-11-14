@@ -1907,5 +1907,17 @@ openApp('about');
 window.openApp = openApp;
 })();
 </script>
+<script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'windows98' });
+        }
+      } catch (e) { console.warn('[DTM] win98 mirror mount failed:', e); }
+    })();
+</script>
 </body>
 </html>

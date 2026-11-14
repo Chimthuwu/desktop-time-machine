@@ -28,11 +28,12 @@
 </head>
 <body>
 
-  <!-- Active Retro Skin Viewport -->
-  <iframe id="skin-viewport" class="skin-viewport" src="./skins/windows95/desktop.html"></iframe>
+  <!-- Active Retro Skin Viewport (mounted by the skin manager after init) -->
+  <iframe id="skin-viewport" class="skin-viewport" src="about:blank"></iframe>
 
   <!-- Core Engine and Management Scripts -->
   <script src="./core/desktop-engine/engine.js"></script>
+  <script src="./core/desktop-mirror/desktop-mirror.js"></script>
   <script src="./core/skin-manager/skin-manager.js"></script>
   <script src="./components/SkinSwitcher/switcher.js"></script>
 
@@ -47,11 +48,10 @@
       // Initialize Era Switcher UI
       window.dtmSwitcherUI.init();
 
-      // Load active skin
-      const currentSkin = window.dtmSkinManager.getCurrentSkin();
-      const viewport = document.getElementById('skin-viewport');
-      if (viewport && currentSkin) {
-        viewport.src = currentSkin.entry;
+      // Load (and verify) the active skin
+      const mounted = await window.dtmSkinManager.mountActiveSkin();
+      if (!mounted) {
+        console.error('[DTM] Startup skin could not be mounted.');
       }
     });
 

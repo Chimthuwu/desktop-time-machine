@@ -28,8 +28,24 @@ const dtmBridge = {
     removeRecursive: (targetPath) => ipcRenderer.invoke('dtm:fs-remove-recursive', targetPath),
     exists: (targetPath) => ipcRenderer.invoke('dtm:fs-exists', targetPath),
     getDrives: () => ipcRenderer.invoke('dtm:fs-drives'),
-    getSpecialFolders: () => ipcRenderer.invoke('dtm:fs-special-folders')
+    getSpecialFolders: () => ipcRenderer.invoke('dtm:fs-special-folders'),
+
+    // Phase 4 — real desktop mirroring & system integration
+    getDesktop: () => ipcRenderer.invoke('dtm:fs-desktop'),
+    resolveShortcut: (targetPath) => ipcRenderer.invoke('dtm:fs-resolve-shortcut', targetPath),
+    icon: (targetPath, size) => ipcRenderer.invoke('dtm:fs-icon', targetPath, size),
+    recycle: (targetPath) => ipcRenderer.invoke('dtm:fs-recycle', targetPath),
+    recycleList: () => ipcRenderer.invoke('dtm:fs-recycle-list'),
+    recycleEmpty: () => ipcRenderer.invoke('dtm:fs-recycle-empty'),
+    watch: (watchPath) => ipcRenderer.invoke('dtm:fs-watch', watchPath),
+    unwatch: (subId) => ipcRenderer.invoke('dtm:fs-unwatch', subId),
+    network: () => ipcRenderer.invoke('dtm:fs-network')
   },
+
+  // Real Windows taskbar mirror (pinned apps / running windows / tray items)
+  getTaskbar: () => ipcRenderer.invoke('dtm:shell-taskbar'),
+  activateWindow: (pid) => ipcRenderer.invoke('dtm:shell-activate-window', pid),
+  openTerminal: (dirPath) => ipcRenderer.invoke('dtm:open-terminal', dirPath),
 
   // File / Path Execution
   openPath: (targetPath) => ipcRenderer.invoke('dtm:open-path', targetPath),
@@ -45,6 +61,9 @@ const dtmBridge = {
   minimizeWindow: () => ipcRenderer.invoke('dtm:minimize-window'),
   maximizeWindow: () => ipcRenderer.invoke('dtm:maximize-window'),
   exitApp: () => ipcRenderer.invoke('dtm:exit-app'),
+
+  // Event subscription (used for live filesystem watch notifications)
+  on: (channel, callback) => ipcRenderer.on(channel, (_event, ...args) => callback(...args)),
 
   // Skin Management
   getAvailableSkins: () => ipcRenderer.invoke('dtm:get-available-skins'),

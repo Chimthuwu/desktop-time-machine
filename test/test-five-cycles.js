@@ -120,10 +120,11 @@ app.whenReady().then(async () => {
       bodyChildNodes: document.body.children.length,
       viewportExists: !!document.getElementById('skin-viewport'),
       switcherExists: !!document.getElementById('dtmSwitcherOverlay'),
-      hudExists: !!document.getElementById('dtmFloatingHud')
+      hudAbsent: !document.getElementById('dtmFloatingHud')
     })
   `);
   results.finalHostState = finalHostState;
+  if (!finalHostState.hudAbsent) results.errors.push('Floating HUD still present in the shell.');
 
   console.log('=== FIVE-CYCLE REPEATED SWITCHING RESULTS ===');
   console.log(JSON.stringify(results, null, 2));

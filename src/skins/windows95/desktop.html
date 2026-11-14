@@ -22,7 +22,18 @@ button{font:inherit}
 .win95-button{background:var(--gray);border:2px solid;border-color:white #404040 #404040 white;box-shadow:inset 1px 1px #dfdfdf;min-height:24px;padding:2px 8px;cursor:pointer}
 .win95-button:active,.win95-button.pressed{border-color:#404040 white white #404040;box-shadow:inset 1px 1px #808080}
 .start-logo{font-size:20px}
-.task-buttons{display:flex;gap:4px;flex:1;min-width:0}
+.task-buttons{display:flex;gap:4px;flex:1;min-width:0;overflow:hidden}
+.real-pinned{display:flex;align-items:center;gap:2px;padding:0 4px;border-left:1px solid #808080;border-right:1px solid #fff;height:29px;max-width:240px;overflow:hidden;flex:none}
+.real-pinned:empty{display:none}
+.real-pin-btn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;padding:1px;cursor:pointer}
+.real-pin-btn:hover{border-color:#fff #404040 #404040 #fff}
+.real-pin-btn img{width:18px;height:18px;object-fit:contain}
+.real-pin-fallback{font-size:12px;font-weight:bold;color:#000;background:#d0d0d0;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.real-task{max-width:150px;font-weight:normal}
+.real-task img{width:15px;height:15px;margin-right:3px;vertical-align:-3px}
+.real-tray{display:flex;align-items:center;gap:4px;max-width:150px;overflow:hidden}
+.real-tray img{width:15px;height:15px}
+.real-tray-glyph{display:inline-flex;align-items:center;justify-content:center;font-size:12px;cursor:default}
 .task-button{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;height:29px;font-weight:bold}
 .tray{height:29px;border:2px solid;border-color:#808080 white white #808080;display:flex;align-items:center;padding:0 9px;gap:8px;min-width:78px}
 .clock{font-variant-numeric:tabular-nums}
@@ -138,8 +149,10 @@ button{font:inherit}
 </div>
 <div class="taskbar">
   <button class="win95-button start-button" id="startBtn"><span class="start-logo">⊞</span> Start</button>
+  <div class="real-pinned" id="realPinned" title="Apps pinned to your real Windows taskbar"></div>
   <div class="task-buttons" id="taskButtons"></div>
   <div class="tray" id="trayArea" title="Double click to toggle fullscreen">
+    <span class="real-tray" id="realTray" title="Real Windows notification area"></span>
     <span id="trayVol" title="Volume">🔊</span>
     <span class="clock" id="clock">4:20 PM</span>
   </div>
@@ -952,9 +965,135 @@ window.addEventListener('unload', () => {
     ssOverlay = null;
   }
 });
-openApp('about');
 window.openApp = openApp;
+
+// REAL WINDOWS TASKBAR MIRROR — pinned apps, running windows, tray items.
+function setupRealTaskbar() {
+  const pinnedEl = document.getElementById('realPinned');
+  const trayEl = document.getElementById('realTray');
+  if (!pinnedEl || !trayEl || !DTM || !DTM.system || !DTM.system.getTaskbar) return;
+  const state = { pinSig: null, traySig: null, busy: false };
+
+  function clearRealTaskButtons() {
+    taskButtons.querySelectorAll('.real-task').forEach(b => b.remove());
+  }
+
+  function renderPinned(pinned) {
+    const list = pinned || [];
+    const sig = list.map(p => p.path).join('|');
+    if (sig === state.pinSig) return;
+    state.pinSig = sig;
+    pinnedEl.innerHTML = '';
+    list.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'real-pin-btn';
+      b.title = p.name + ' — pinned in your real Windows taskbar';
+      if (p.icon) {
+        const img = document.createElement('img');
+        img.src = p.icon; img.alt = '';
+        b.appendChild(img);
+      } else {
+        const s = document.createElement('span');
+        s.className = 'real-pin-fallback';
+        s.textContent = (p.name || '?').trim().charAt(0).toUpperCase();
+        b.appendChild(s);
+      }
+      b.addEventListener('click', () => {
+        DTM.system.openPath(p.path).catch(e => alert('Could not open ' + p.name + ': ' + e.message));
+      });
+      pinnedEl.appendChild(b);
+    });
+  }
+
+  function renderWindows(windows) {
+    clearRealTaskButtons();
+    (windows || []).forEach(w => {
+      const b = document.createElement('button');
+      b.className = 'win95-button task-button real-task';
+      b.title = w.title + (w.processName ? ' (' + w.processName + ')' : '') + ' — real Windows window';
+      if (w.icon) {
+        const img = document.createElement('img');
+        img.src = w.icon; img.alt = '';
+        b.appendChild(img);
+      }
+      const label = document.createElement('span');
+      label.textContent = w.title;
+      b.appendChild(label);
+      b.addEventListener('click', () => {
+        DTM.system.activateWindow(w.pid).catch(e => alert(e.message));
+      });
+      taskButtons.appendChild(b);
+    });
+  }
+
+  function trayGlyph(name) {
+    const n = String(name || '').toLowerCase();
+    if (/network|internet|ethernet|wi-?fi|wlan/.test(n)) return '🌐';
+    if (/volume|sound|audio|speaker/.test(n)) return '🔊';
+    if (/battery|power/.test(n)) return '🔋';
+    if (/security|shield|defender|virus/.test(n)) return '🛡️';
+    if (/bluetooth/.test(n)) return '🔵';
+    if (/notification/.test(n)) return '🔔';
+    return '▫';
+  }
+
+  function renderTray(tray) {
+    const list = tray || [];
+    const sig = list.map(t => t.name).join('|');
+    if (sig === state.traySig) return;
+    state.traySig = sig;
+    trayEl.innerHTML = '';
+    list.forEach(t => {
+      const s = document.createElement('span');
+      s.className = 'real-tray-glyph';
+      s.title = t.name + (t.processName ? ' — ' + t.processName : '');
+      if (t.icon) {
+        const img = document.createElement('img');
+        img.src = t.icon; img.alt = '';
+        s.appendChild(img);
+      } else {
+        s.textContent = trayGlyph(t.name);
+      }
+      trayEl.appendChild(s);
+    });
+    const vol = document.getElementById('trayVol');
+    if (vol) vol.style.display = list.length ? 'none' : '';
+  }
+
+  async function refresh() {
+    if (state.busy || document.hidden) return;
+    state.busy = true;
+    try {
+      const data = await DTM.system.getTaskbar();
+      renderPinned(data.pinned);
+      renderWindows(data.windows);
+      renderTray(data.tray);
+    } catch (e) {
+      // Taskbar mirroring is best-effort and host-dependent.
+    } finally {
+      state.busy = false;
+    }
+  }
+
+  refresh();
+  const interval = setInterval(refresh, 10000);
+  window.addEventListener('focus', refresh);
+  window.addEventListener('unload', () => clearInterval(interval));
+}
+setupRealTaskbar();
 })();
+</script>
+<script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'windows95' });
+        }
+      } catch (e) { console.warn('[DTM] win95 mirror mount failed:', e); }
+    })();
 </script>
 </body>
 </html>
