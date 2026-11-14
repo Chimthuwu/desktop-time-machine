@@ -1467,7 +1467,12 @@ function setupRealTaskbar() {
         s.textContent = (p.name || '?').trim().charAt(0).toUpperCase();
         b.appendChild(s);
       }
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
+        // Waterfox is mirrored from the real taskbar — open the retro browser
+        // rather than launching the real Waterfox window.
+        try {
+          if (DTM.openRetroShortcut && await DTM.openRetroShortcut({ name: p.name, path: p.path }, document)) return;
+        } catch {}
         DTM.system.openPath(p.path).catch(e => alert('Could not open ' + p.name + ': ' + e.message));
       });
       pinnedEl.appendChild(b);

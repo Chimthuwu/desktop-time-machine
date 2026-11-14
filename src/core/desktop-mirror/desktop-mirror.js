@@ -154,6 +154,46 @@
     return SYSTEM_ICON_NAMES.has(base);
   }
 
+  // ---------------------------------------------------------------------------
+  // Real browser shortcuts stay inside the app.
+  //
+  // A Waterfox shortcut is part of the mirrored real desktop, so activating it
+  // opens the in-app retro browser window instead of launching the real
+  // Waterfox binary (which would leave the retro session behind).
+  // ---------------------------------------------------------------------------
+  const WATERFOX_NAME_RE = /waterfox/i;
+  const WATERFOX_TARGET_RE = /(^|[\\/])waterfox(\.exe)?$/i;
+
+  function isRetroBrowserShortcut(DTM, item) {
+    if (!item || item.isDirectory) return Promise.resolve(false);
+    if (WATERFOX_NAME_RE.test(item.name || '')) return Promise.resolve(true);
+    // Shortcut targets are resolved lazily, only for the item being opened.
+    if (!DTM || !DTM.fs || typeof DTM.fs.resolveShortcut !== 'function') return Promise.resolve(false);
+    if (!/\.lnk$/i.test(item.path || '')) return Promise.resolve(false);
+    return DTM.fs.resolveShortcut(item.path)
+      .then((sc) => WATERFOX_TARGET_RE.test(String((sc && sc.target) || '')))
+      .catch(() => false);
+  }
+
+  function openRetroBrowser(doc) {
+    const view = doc && doc.defaultView;
+    try {
+      // The shell owns the real <webview>, so asking it to launch the browser
+      // works from every skin (Windows and Mac alike).
+      const target = view && view.parent ? view.parent : window;
+      target.postMessage({ type: 'dtm:launch-webapp', app: 'browser' }, '*');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Resolves true when the item was handled by opening the retro browser.
+  async function openRetroShortcut(DTM, doc, item) {
+    if (!(await isRetroBrowserShortcut(DTM, item))) return false;
+    return openRetroBrowser(doc);
+  }
+
   // Per-skin icon position persistence.
   function makeStore(skinId) {    const key = 'dtm:icon-positions:' + skinId;
     let data = {};
@@ -380,6 +420,7 @@
 
     async function openItem(item) {
       try {
+        if (await openRetroShortcut(DTM, doc, item)) return;
         // Hand shortcuts to the Windows shell so .lnk arguments, working
         // directories and .url associations behave exactly as natively.
         await DTM.system.openPath(item.path);
@@ -860,6 +901,7 @@
 
     async function openDesktopItem(item) {
       try {
+        if (await openRetroShortcut(DTM, doc, item)) return;
         if (item.isDirectory) {
           const ex = buildExplorer({ doc, DTM, skinId, desktop, path: item.path });
           openWindow({ doc, skinId, desktop, title: item.name, width: 620, height: 440, content: ex.wrap });
@@ -1433,6 +1475,9 @@
   if (window.dtmEngine) {
     window.dtmEngine.mountDesktop = mountDesktop;
     window.dtmEngine.unmountDesktop = unmountDesktop;
+    // Skins with their own real-taskbar mirror reuse the same shortcut routing.
+    window.dtmEngine.openRetroShortcut = (item, doc) =>
+      openRetroShortcut(window.dtmEngine, doc || document, item);
     // Lightweight diagnostics for verification tooling (no UI impact).
     window.dtmEngine.dtmDesktopStats = () => ({
       mounted: liveRenderers.size,
