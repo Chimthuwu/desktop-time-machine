@@ -667,15 +667,26 @@
     const layoutState = { loaded: false, data: null };
     let layoutActive = false;
 
-    function layoutKey(name) {
-      return String(name || '').replace(/\.(lnk|url)$/i, '').replace(/[^a-z0-9]+/gi, '').toLowerCase();
+    // Explorer's display name may hide or keep a known extension depending on
+    // the user's folder options (Waterfox vs Waterfox.lnk, .ahk, .exe), so an
+    // item is matched on its full name and its extension-less forms.
+    function layoutKeys(name) {
+      const raw = String(name || '').trim().toLowerCase();
+      const noKnown = raw.replace(/\.(lnk|url)$/i, '');
+      const noExt = raw.replace(/\.[^.\\/]+$/, '');
+      return [...new Set([raw, noKnown, noExt].filter(Boolean))];
     }
 
     async function ensureLayout() {
       if (layoutState.loaded) return layoutState.data;
       layoutState.loaded = true;
       try {
-        const layout = await DTM.fs.desktopLayout();
+        // A slow shell probe must never hold up the icons; the next mount or
+        // refresh picks the snapshot up.
+        const layout = await Promise.race([
+          DTM.fs.desktopLayout().catch(() => null),
+          new Promise((resolve) => setTimeout(() => resolve(null), 1500))
+        ]);
         layoutState.data = (layout && Array.isArray(layout.items)) ? layout : null;
       } catch { layoutState.data = null; }
       return layoutState.data;
@@ -688,18 +699,27 @@
       const spacing = (layout.spacing && layout.spacing.x > 0) ? layout.spacing : { x: 76, y: 104 };
       const byKey = new Map();
       layout.items.forEach((icon) => {
-        const key = layoutKey(icon && icon.name);
-        if (!key) return;
-        if (!byKey.has(key)) byKey.set(key, []);
-        byKey.get(key).push(icon);
+        layoutKeys(icon && icon.name).forEach((key) => {
+          if (!byKey.has(key)) byKey.set(key, []);
+          byKey.get(key).push(icon);
+        });
       });
       const positioned = [];
       const rest = [];
+      // Consume layout entries by identity so one real icon can never be placed
+      // twice, even when several candidate keys match it.
+      const used = new Set();
       items.forEach((item) => {
-        const hits = byKey.get(layoutKey(item.name));
-        const icon = hits && hits.length ? hits.shift() : null;
-        if (icon && typeof icon.x === 'number' && typeof icon.y === 'number') {
-          positioned.push({ item, icon });
+        let match = null;
+        for (const key of layoutKeys(item.name)) {
+          const hits = byKey.get(key);
+          if (!hits) continue;
+          match = hits.find((entry) => !used.has(entry)) || null;
+          if (match) break;
+        }
+        if (match && typeof match.x === 'number' && typeof match.y === 'number') {
+          used.add(match);
+          positioned.push({ item, icon: match });
         } else {
           rest.push(item);
         }
@@ -1044,7 +1064,12 @@
         render(true);
       });
       menuSep(m);
-      menuAdd(m, 'Refresh', () => render(true));
+      menuAdd(m, 'Refresh', () => {
+        if (DTM.fs.desktopLayoutReset) DTM.fs.desktopLayoutReset().catch(() => {});
+        layoutState.loaded = false;
+        layoutState.data = null;
+        render(true);
+      });
       menuSep(m);
       menuAdd(m, 'Paste', pasteIntoDesktop, !clipboard);
       menuAdd(m, 'Paste Shortcut', null, true);

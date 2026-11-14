@@ -726,80 +726,6 @@ async function runTerminalCommand(command, cwd) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Real desktop icon layout (names + positions) via the supported IFolderView
-// COM API. Used to keep mirrored icons in the same arrangement as the host.
-// ---------------------------------------------------------------------------
-const DESKTOP_LAYOUT_SCRIPT = path.join(__dirname, 'desktop-layout.ps1');
-let _layoutCache = null;
-let _layoutCacheAt = 0;
-
-function runPowerShellFile(scriptPath, expectJson = false) {
-  return new Promise((resolve, reject) => {
-    execFile('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath
-    ], {
-      windowsHide: true,
-      timeout: PS_TIMEOUT_MS,
-      encoding: 'utf8',
-      maxBuffer: 1024 * 1024
-    }, (err, stdout) => {
-      if (err) return reject(err);
-      const out = (stdout || '').trim();
-      if (expectJson) {
-        try { resolve(JSON.parse(out)); }
-        catch (e) { reject(new Error('Could not parse shell response: ' + out)); }
-        return;
-      }
-      resolve(out);
-    });
-  });
-}
-
-async function getDesktopIconLayout() {
-  if (_layoutCache && (Date.now() - _layoutCacheAt) < 10000) return _layoutCache;
-
-  let layout = null;
-  try {
-    layout = await withTimeout(runPowerShellFile(DESKTOP_LAYOUT_SCRIPT, true), 7000, null);
-  } catch {
-    layout = null;
-  }
-
-  const result = (layout && typeof layout === 'object' && Array.isArray(layout.items))
-    ? layout
-    : { autoArrange: false, spacing: { x: 76, y: 104 }, items: [] };
-
-  try {
-    const { screen } = require('electron');
-    const displays = screen.getAllDisplays();
-    const primary = screen.getPrimaryDisplay();
-    const bounds = displays.reduce((acc, d) => {
-      const b = d.bounds;
-      return {
-        minX: Math.min(acc.minX, b.x),
-        minY: Math.min(acc.minY, b.y),
-        maxX: Math.max(acc.maxX, b.x + b.width),
-        maxY: Math.max(acc.maxY, b.y + b.height)
-      };
-    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
-    result.screen = {
-      x: bounds.minX,
-      y: bounds.minY,
-      width: bounds.maxX - bounds.minX,
-      height: bounds.maxY - bounds.minY
-    };
-    result.scale = primary.scaleFactor || 1;
-  } catch {
-    result.screen = null;
-    result.scale = 1;
-  }
-
-  _layoutCache = result;
-  _layoutCacheAt = Date.now();
-  return result;
-}
-
 function scanDrivesNode() {
   const drives = [];
   for (let code = 65; code <= 90; code++) {
@@ -840,6 +766,5 @@ module.exports = {
   getTaskbarState,
   activateWindow,
   openTerminal,
-  runTerminalCommand,
-  getDesktopIconLayout
+  runTerminalCommand
 };

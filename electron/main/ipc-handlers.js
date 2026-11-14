@@ -62,6 +62,7 @@ const {
 } = require('./system-integration');
 const fsService = require('./filesystem-service');
 const desktopIntegration = require('./desktop-integration');
+const desktopLayout = require('./desktop-layout');
 const { getMainWindow, toggleFullScreen } = require('./window-manager');
 
 function registerIpcHandlers() {
@@ -265,9 +266,14 @@ function registerIpcHandlers() {
     }
   });
 
-  // Real desktop icon layout (names + positions from IFolderView).
+  // Real desktop icon layout (names + positions from IFolderView2).
   ipcMain.handle('dtm:fs-desktop-layout', async () => {
-    return desktopIntegration.getDesktopIconLayout();
+    return desktopLayout.getDesktopLayout();
+  });
+
+  ipcMain.handle('dtm:fs-desktop-layout-reset', async () => {
+    desktopLayout.invalidate();
+    return true;
   });
 
   // Resolve a real .lnk / .url shortcut target.
@@ -316,6 +322,8 @@ function registerIpcHandlers() {
     let watcher;
     try {
       watcher = fs.watch(watchPath, { recursive: false }, (_evt, filename) => {
+        // Desktop changes can move icons; drop the cached layout snapshot.
+        desktopLayout.invalidate();
         if (wc && !wc.isDestroyed()) {
           wc.send('dtm:fs-changed', { id, path: watchPath, filename: filename || null });
         }

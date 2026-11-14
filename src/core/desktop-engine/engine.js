@@ -106,7 +106,9 @@ class DesktopEngine {
       network: () => (backend && backend.network) ? backend.network()
         : Promise.resolve({ computerName: '', mappings: [], shares: [], drives: [] }),
       desktopLayout: () => (backend && backend.desktopLayout) ? backend.desktopLayout()
-        : Promise.resolve({ items: [], spacing: { x: 76, y: 104 } })
+        : Promise.resolve({ ok: false, items: [], spacing: { x: 76, y: 104 } }),
+      desktopLayoutReset: () => (backend && backend.desktopLayoutReset) ? backend.desktopLayoutReset()
+        : Promise.resolve(false)
     };
   }
 
