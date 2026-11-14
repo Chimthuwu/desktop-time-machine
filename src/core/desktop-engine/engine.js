@@ -104,7 +104,9 @@ class DesktopEngine {
       watch: (p) => (backend && backend.watch) ? backend.watch(p) : Promise.resolve('mock'),
       unwatch: (id) => (backend && backend.unwatch) ? backend.unwatch(id) : Promise.resolve({ success: true }),
       network: () => (backend && backend.network) ? backend.network()
-        : Promise.resolve({ computerName: '', mappings: [], shares: [], drives: [] })
+        : Promise.resolve({ computerName: '', mappings: [], shares: [], drives: [] }),
+      desktopLayout: () => (backend && backend.desktopLayout) ? backend.desktopLayout()
+        : Promise.resolve({ items: [], spacing: { x: 76, y: 104 } })
     };
   }
 
@@ -203,6 +205,9 @@ class DesktopEngine {
       openExternalUrl: (url) => this.preload.openExternalUrl(url),
       launchProgram: (program) => this.preload.launchProgram(program),
       openTerminal: (dirPath) => this.preload.openTerminal(dirPath),
+      runTerminal: (command, cwd) => this.preload.runTerminal
+        ? this.preload.runTerminal(command, cwd)
+        : Promise.resolve({ stdout: '', stderr: 'Command Prompt is unavailable in this host', code: -1 }),
       getTaskbar: () => this.preload.getTaskbar
         ? this.preload.getTaskbar()
         : Promise.resolve({ pinned: [], windows: [], tray: [] }),
@@ -548,6 +553,7 @@ class DesktopEngine {
         alert(`[Mock] Opening a terminal in: ${dirPath}`);
         return { success: true, path: dirPath };
       },
+      runTerminal: async (command) => ({ stdout: `[Mock] ${command}\n`, stderr: '', code: 0 }),
       getTaskbar: async () => ({ pinned: [], windows: [], tray: [] }),
       activateWindow: async () => ({ success: true }),
       toggleFullScreen: async () => {

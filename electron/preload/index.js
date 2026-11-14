@@ -39,13 +39,15 @@ const dtmBridge = {
     recycleEmpty: () => ipcRenderer.invoke('dtm:fs-recycle-empty'),
     watch: (watchPath) => ipcRenderer.invoke('dtm:fs-watch', watchPath),
     unwatch: (subId) => ipcRenderer.invoke('dtm:fs-unwatch', subId),
-    network: () => ipcRenderer.invoke('dtm:fs-network')
+    network: () => ipcRenderer.invoke('dtm:fs-network'),
+    desktopLayout: () => ipcRenderer.invoke('dtm:fs-desktop-layout')
   },
 
   // Real Windows taskbar mirror (pinned apps / running windows / tray items)
   getTaskbar: () => ipcRenderer.invoke('dtm:shell-taskbar'),
   activateWindow: (pid) => ipcRenderer.invoke('dtm:shell-activate-window', pid),
   openTerminal: (dirPath) => ipcRenderer.invoke('dtm:open-terminal', dirPath),
+  runTerminal: (command, cwd) => ipcRenderer.invoke('dtm:terminal-run', command, cwd),
 
   // File / Path Execution
   openPath: (targetPath) => ipcRenderer.invoke('dtm:open-path', targetPath),

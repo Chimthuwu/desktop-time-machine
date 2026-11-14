@@ -31,6 +31,7 @@ function createMainWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // Allows preload to bridge Node APIs securely
+      webviewTag: true, // In-app browser + Discord guests (hardened in main)
       webSecurity: true,
       allowRunningInsecureContent: false
     }

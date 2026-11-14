@@ -265,6 +265,11 @@ function registerIpcHandlers() {
     }
   });
 
+  // Real desktop icon layout (names + positions from IFolderView).
+  ipcMain.handle('dtm:fs-desktop-layout', async () => {
+    return desktopIntegration.getDesktopIconLayout();
+  });
+
   // Resolve a real .lnk / .url shortcut target.
   ipcMain.handle('dtm:fs-resolve-shortcut', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
@@ -371,6 +376,12 @@ function registerIpcHandlers() {
   ipcMain.handle('dtm:open-terminal', async (_event, dirPath) => {
     assertPathArg(dirPath, 'dirPath');
     return desktopIntegration.openTerminal(dirPath);
+  });
+
+  ipcMain.handle('dtm:terminal-run', async (_event, command, cwd) => {
+    if (typeof command !== 'string') throw new Error('Invalid argument: command must be a string');
+    assertPathArg(cwd, 'cwd');
+    return desktopIntegration.runTerminalCommand(command, cwd);
   });
 
   // Open Path

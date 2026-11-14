@@ -1,0 +1,89 @@
+#shell-app-layer {
+  position: fixed;
+  inset: 0 0 38px 0;
+  z-index: 900;
+  pointer-events: none;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 12px;
+}
+
+.dtmshell-win {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 220px;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #404040 #404040 #fff;
+  box-shadow: 2px 2px 0 #000;
+  pointer-events: auto;
+}
+
+.dtmshell-win.max {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dtmshell-title {
+  flex: none;
+  height: 23px;
+  margin: 2px 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 3px 2px 5px;
+  font-weight: bold;
+  color: #fff;
+  background: #808080;
+  cursor: move;
+  user-select: none;
+}
+
+.dtmshell-win.active .dtmshell-title { background: #000080; }
+.dtmshell-title .dtmshell-title-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dtmshell-title .dtmshell-title-icon { font-size: 13px; }
+.dtmshell-buttons { display: flex; gap: 2px; }
+.dtmshell-buttons button {
+  width: 18px; height: 18px; padding: 0; line-height: 12px;
+  font: bold 11px Tahoma; cursor: pointer; background: #c0c0c0; color: #000;
+  border: 2px solid; border-color: #fff #404040 #404040 #fff;
+}
+.dtmshell-buttons button:active { border-color: #404040 #fff #fff #404040; }
+
+.dtmshell-body {
+  flex: 1; min-height: 0; margin: 3px;
+  display: flex; flex-direction: column;
+  border: 2px solid; border-color: #808080 #fff #fff #808080;
+  background: #fff; overflow: hidden;
+}
+
+.dtmshell-toolbar {
+  flex: none; display: flex; align-items: center; gap: 3px;
+  padding: 3px; background: #c0c0c0; border-bottom: 1px solid #808080;
+}
+.dtmshell-btn {
+  min-height: 22px; padding: 2px 8px; cursor: pointer;
+  background: #c0c0c0; border: 2px solid; border-color: #fff #404040 #404040 #fff;
+  font: 11px Tahoma;
+}
+.dtmshell-btn:active { border-color: #404040 #fff #fff #404040; }
+.dtmshell-addr {
+  flex: 1; min-width: 80px; padding: 2px 4px; font: 11px Tahoma; outline: none;
+  border: 2px solid; border-color: #808080 #fff #fff #808080;
+}
+.dtmshell-web { flex: 1; width: 100%; min-height: 0; border: 0; background: #fff; }
+.dtmshell-status {
+  flex: none; height: 30px; padding: 3px 6px; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px;
+  font: 10px Tahoma; color: #333;
+  border-top: 1px solid #808080; background: #c0c0c0;
+  white-space: nowrap; overflow: hidden;
+}
+.dtmshell-status span { overflow: hidden; text-overflow: ellipsis; }
+.dtmshell-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 24px; font: 12px Tahoma; color: #333; text-align: center; line-height: 1.6;
+}

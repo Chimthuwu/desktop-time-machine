@@ -666,6 +666,140 @@ async function openTerminal(dirPath) {
   return { success: true, path: resolved, terminal: 'powershell' };
 }
 
+// Runs a single command in the REAL host shell for the in-skin Command
+// Prompt and returns its output. The command itself is user-supplied (that is
+// what a terminal is), but every invocation is non-interactive, time-limited,
+// runs as the current user with the app's environment, and starts in a
+// validated folder.
+const MAX_TERMINAL_COMMAND = 2000;
+const MAX_TERMINAL_OUTPUT = 200 * 1024;
+const TERMINAL_TIMEOUT_MS = 20000;
+
+async function runTerminalCommand(command, cwd) {
+  if (typeof command !== 'string' || !command.trim()) throw new Error('Command must be a non-empty string');
+  if (command.length > MAX_TERMINAL_COMMAND) throw new Error('Command is too long');
+  if (command.includes('\0')) throw new Error('Invalid command');
+
+  const resolved = path.resolve(cwd || os.homedir());
+  if (!isSafePath(resolved)) throw new Error('Access denied: terminal path outside permitted boundaries');
+  let stat;
+  try { stat = await fsp.stat(resolved); } catch { throw new Error('Folder not found: ' + resolved); }
+  if (!stat.isDirectory()) throw new Error('Terminal path is not a folder');
+  if (process.platform !== 'win32') throw new Error('Command Prompt is only supported on Windows');
+
+  const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+  const powershell = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const exe = fs.existsSync(powershell) ? powershell : 'powershell.exe';
+  const script = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ' + command;
+
+  return new Promise((resolve) => {
+    const child = spawn(exe, ['-NoProfile', '-NonInteractive', '-Command', script], {
+      cwd: resolved,
+      windowsHide: true,
+      env: process.env
+    });
+    let stdout = '';
+    let stderr = '';
+    let done = false;
+    let timer = null;
+
+    const finish = (code) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve({ stdout, stderr, code });
+    };
+
+    child.stdout.on('data', (chunk) => {
+      if (stdout.length < MAX_TERMINAL_OUTPUT) stdout += chunk.toString('utf8');
+    });
+    child.stderr.on('data', (chunk) => {
+      if (stderr.length < MAX_TERMINAL_OUTPUT) stderr += chunk.toString('utf8');
+    });
+    child.on('error', (err) => { stderr += err.message; finish(-1); });
+    child.on('close', (code) => finish(code === null ? -1 : code));
+
+    timer = setTimeout(() => {
+      try { child.kill(); } catch {}
+      finish(-2);
+    }, TERMINAL_TIMEOUT_MS);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Real desktop icon layout (names + positions) via the supported IFolderView
+// COM API. Used to keep mirrored icons in the same arrangement as the host.
+// ---------------------------------------------------------------------------
+const DESKTOP_LAYOUT_SCRIPT = path.join(__dirname, 'desktop-layout.ps1');
+let _layoutCache = null;
+let _layoutCacheAt = 0;
+
+function runPowerShellFile(scriptPath, expectJson = false) {
+  return new Promise((resolve, reject) => {
+    execFile('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath
+    ], {
+      windowsHide: true,
+      timeout: PS_TIMEOUT_MS,
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024
+    }, (err, stdout) => {
+      if (err) return reject(err);
+      const out = (stdout || '').trim();
+      if (expectJson) {
+        try { resolve(JSON.parse(out)); }
+        catch (e) { reject(new Error('Could not parse shell response: ' + out)); }
+        return;
+      }
+      resolve(out);
+    });
+  });
+}
+
+async function getDesktopIconLayout() {
+  if (_layoutCache && (Date.now() - _layoutCacheAt) < 10000) return _layoutCache;
+
+  let layout = null;
+  try {
+    layout = await withTimeout(runPowerShellFile(DESKTOP_LAYOUT_SCRIPT, true), 7000, null);
+  } catch {
+    layout = null;
+  }
+
+  const result = (layout && typeof layout === 'object' && Array.isArray(layout.items))
+    ? layout
+    : { autoArrange: false, spacing: { x: 76, y: 104 }, items: [] };
+
+  try {
+    const { screen } = require('electron');
+    const displays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    const bounds = displays.reduce((acc, d) => {
+      const b = d.bounds;
+      return {
+        minX: Math.min(acc.minX, b.x),
+        minY: Math.min(acc.minY, b.y),
+        maxX: Math.max(acc.maxX, b.x + b.width),
+        maxY: Math.max(acc.maxY, b.y + b.height)
+      };
+    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+    result.screen = {
+      x: bounds.minX,
+      y: bounds.minY,
+      width: bounds.maxX - bounds.minX,
+      height: bounds.maxY - bounds.minY
+    };
+    result.scale = primary.scaleFactor || 1;
+  } catch {
+    result.screen = null;
+    result.scale = 1;
+  }
+
+  _layoutCache = result;
+  _layoutCacheAt = Date.now();
+  return result;
+}
+
 function scanDrivesNode() {
   const drives = [];
   for (let code = 65; code <= 90; code++) {
@@ -705,5 +839,7 @@ module.exports = {
   getNetworkLocations,
   getTaskbarState,
   activateWindow,
-  openTerminal
+  openTerminal,
+  runTerminalCommand,
+  getDesktopIconLayout
 };

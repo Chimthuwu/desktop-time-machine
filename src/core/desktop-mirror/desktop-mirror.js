@@ -61,9 +61,17 @@
 .dtm-context { position:absolute; z-index:30000; background:var(--gray,#c0c0c0);
   border:2px solid; border-color:#fff #404040 #404040 #fff; padding:3px; min-width:160px;
   box-shadow:2px 2px #000; font:11px Tahoma; color:#000; }
-.dtm-context > div { padding:6px 18px 6px 10px; cursor:default; }
+.dtm-context > div { position:relative; padding:6px 18px 6px 10px; cursor:default; }
 .dtm-context > div:hover { background:#000080; color:#fff; }
 .dtm-context hr { border:0; border-top:1px solid #808080; border-bottom:1px solid #fff; margin:3px 0; }
+.dtm-context .dtm-sub { display:none; position:absolute; left:100%; top:-5px; min-width:170px;
+  background:var(--gray,#c0c0c0); border:2px solid; border-color:#fff #404040 #404040 #fff;
+  padding:3px; box-shadow:2px 2px #000; color:#000; z-index:31000; }
+.dtm-context > div:hover > .dtm-sub { display:block; }
+.dtm-context .dtm-sub > div { padding:6px 18px 6px 22px; cursor:default; }
+.dtm-context .dtm-sub > div:hover { background:#000080; color:#fff; }
+.dtm-context .disabled { color:#808080; text-shadow:1px 1px #fff; pointer-events:none; }
+.dtm-context .checked { font-weight:bold; }
 .dtm-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:40000;
   display:flex; align-items:center; justify-content:center; }
 .dtm-modal { width:340px; background:#c0c0c0; border:2px solid; border-color:#fff #404040 #404040 #fff;
@@ -151,6 +159,7 @@
     return {
       get(path) { return data[path]; },
       set(path, pos) { data[path] = pos; try { localStorage.setItem(key, JSON.stringify(data)); } catch {} },
+      clear() { data = {}; try { localStorage.removeItem(key); } catch {} },
       all() { return data; }
     };
   }
@@ -653,6 +662,57 @@
     const store = makeStore(skinId);
     const state = { selection: new Set(), items: [] };
 
+    // Real Windows desktop icon layout (names + positions). When available,
+    // mirrored items follow the host's own arrangement order.
+    const layoutState = { loaded: false, data: null };
+    let layoutActive = false;
+
+    function layoutKey(name) {
+      return String(name || '').replace(/\.(lnk|url)$/i, '').replace(/[^a-z0-9]+/gi, '').toLowerCase();
+    }
+
+    async function ensureLayout() {
+      if (layoutState.loaded) return layoutState.data;
+      layoutState.loaded = true;
+      try {
+        const layout = await DTM.fs.desktopLayout();
+        layoutState.data = (layout && Array.isArray(layout.items)) ? layout : null;
+      } catch { layoutState.data = null; }
+      return layoutState.data;
+    }
+
+    function orderItemsByLayout(items, layout) {
+      if (!layout || !Array.isArray(layout.items) || !layout.items.length) {
+        return { items, matched: 0 };
+      }
+      const spacing = (layout.spacing && layout.spacing.x > 0) ? layout.spacing : { x: 76, y: 104 };
+      const byKey = new Map();
+      layout.items.forEach((icon) => {
+        const key = layoutKey(icon && icon.name);
+        if (!key) return;
+        if (!byKey.has(key)) byKey.set(key, []);
+        byKey.get(key).push(icon);
+      });
+      const positioned = [];
+      const rest = [];
+      items.forEach((item) => {
+        const hits = byKey.get(layoutKey(item.name));
+        const icon = hits && hits.length ? hits.shift() : null;
+        if (icon && typeof icon.x === 'number' && typeof icon.y === 'number') {
+          positioned.push({ item, icon });
+        } else {
+          rest.push(item);
+        }
+      });
+      positioned.sort((a, b) => {
+        const colA = Math.round(a.icon.x / spacing.x);
+        const colB = Math.round(b.icon.x / spacing.x);
+        if (colA !== colB) return colA - colB;
+        return a.icon.y - b.icon.y;
+      });
+      return { items: positioned.map((e) => e.item).concat(rest), matched: positioned.length };
+    }
+
     // Classic Windows arranges desktop icons in columns running down the
     // screen, with the system icons occupying the first column. Both Mac skins
     // keep their existing top-left horizontal flow.
@@ -687,17 +747,18 @@
       state.selection.add(icon.dataset.path);
     }
 
-    function positionIcon(icon, path) {
+    function positionIcon(icon, path, slotOffset) {
       const saved = store.get(path);
       if (saved && typeof saved.x === 'number') {
         icon.style.left = saved.x + 'px';
         icon.style.top = saved.y + 'px';
         return;
       }
-      // Slots 0-2 belong to My Computer / Recycle Bin / Network; host items
-      // follow them so nothing overlaps in either layout mode.
+      // Without a host layout, slots 0-2 belong to My Computer / Recycle Bin /
+      // Network and host items follow. With a host layout, host items come
+      // first in their real arrangement order and system icons follow them.
       const idx = state.items.findIndex((i) => i.path === path);
-      placeIcon(icon, idx + 3);
+      placeIcon(icon, idx + (typeof slotOffset === 'number' ? slotOffset : 3));
     }
 
     // ---- icon element factory ----
@@ -765,9 +826,7 @@
       icon.addEventListener('click', (e) => { e.stopPropagation(); selectIcon(icon, e.ctrlKey || e.metaKey); });
       icon.addEventListener('dblclick', (e) => { e.stopPropagation(); systemActivate(kind); });
       icon.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showSystemMenu(e.clientX, e.clientY, kind); });
-      const slot = SYSTEM_SLOTS[kind] || 0;
-      icon.dataset.slot = String(slot);
-      placeIcon(icon, slot);
+      icon.dataset.systemKind = kind;
       return icon;
     }
 
@@ -790,29 +849,83 @@
       } catch (e) { alert('Could not open "' + item.name + '": ' + e.message); }
     }
 
-    // ---- context menus ----
+    // ---- context menus (Windows 95 structure) ----
+    let clipboard = null;
+    let arrangeMode = null;
+    let autoArrange = false;
+
     function closeMenus() { doc.querySelectorAll('.dtm-context').forEach((m) => m.remove()); }
+
+    function menuAdd(menu, label, fn, disabled) {
+      const item = el(doc, 'div', disabled ? 'disabled' : null, label);
+      if (!disabled) {
+        item.addEventListener('click', (ev) => { ev.stopPropagation(); closeMenus(); if (fn) fn(); });
+      }
+      menu.appendChild(item);
+      return item;
+    }
+
+    function menuSep(menu) { menu.appendChild(el(doc, 'hr')); }
+
+    function menuSub(menu, label, build) {
+      const wrap = el(doc, 'div', null, label + '  ▸');
+      const sub = el(doc, 'div', 'dtm-sub');
+      build(sub);
+      wrap.appendChild(sub);
+      menu.appendChild(wrap);
+      return wrap;
+    }
+
+    function applyArrange(list) {
+      if (!arrangeMode) return list;
+      const copy = list.slice();
+      const dirFirst = (a, b) => (a.isDirectory === b.isDirectory ? 0 : (a.isDirectory ? -1 : 1));
+      if (arrangeMode === 'name') copy.sort((a, b) => dirFirst(a, b) || a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+      else if (arrangeMode === 'type') copy.sort((a, b) => dirFirst(a, b) || String(a.extension || '').localeCompare(String(b.extension || '')) || a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+      else if (arrangeMode === 'size') copy.sort((a, b) => dirFirst(a, b) || (a.size || 0) - (b.size || 0));
+      else if (arrangeMode === 'date') copy.sort((a, b) => dirFirst(a, b) || (b.modified || 0) - (a.modified || 0));
+      return copy;
+    }
+
+    async function pasteIntoDesktop() {
+      if (!clipboard) return;
+      const base = desktopBase();
+      if (!base) { alert('Desktop location unknown.'); return; }
+      const dest = joinPath(base, clipboard.name);
+      try {
+        if (clipboard.mode === 'cut') await DTM.fs.move(clipboard.path, dest);
+        else await DTM.fs.copy(clipboard.path, dest);
+        clipboard = null;
+        render(true);
+      } catch (e) { alert('Could not paste: ' + e.message); }
+    }
 
     function showContextMenu(x, y, item, icon) {
       closeMenus();
       const m = el(doc, 'div', 'dtm-context');
-      const add = (label, fn) => { const d = el(doc, 'div', null, label); d.addEventListener('click', () => { closeMenus(); fn(); }); m.appendChild(d); };
-      add('Open', () => openDesktopItem(item));
-      add('Open file location', () => {
-        const parent = parentPathOf(item.path) || item.path;
-        const ex = buildExplorer({ doc, DTM, skinId, desktop, path: parent });
-        openWindow({ doc, skinId, desktop, title: 'Explorer', width: 620, height: 440, content: ex.wrap });
+      menuAdd(m, 'Open', () => openDesktopItem(item));
+      menuAdd(m, 'Explore', () => {
+        const target = item.isDirectory ? item.path : (parentPathOf(item.path) || item.path);
+        const ex = buildExplorer({ doc, DTM, skinId, desktop, path: target });
+        openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, content: ex.wrap });
       });
-      m.appendChild(el(doc, 'hr'));
-      add('Rename', () => startRename(item, icon));
-      add('Delete (Recycle Bin)', () => deleteItem(item));
-      m.appendChild(el(doc, 'hr'));
-      add('New Folder', () => newFolder());
-      add('Refresh', () => render());
-      m.appendChild(el(doc, 'hr'));
-      add('Properties', () => showProperties(item));
-      m.style.left = Math.min(x, view.innerWidth - 180) + 'px';
-      m.style.top = Math.min(y, view.innerHeight - 220) + 'px';
+      menuAdd(m, 'Find...', null, true);
+      menuSep(m);
+      menuAdd(m, 'Cut', () => { clipboard = { mode: 'cut', path: item.path, name: item.name }; });
+      menuAdd(m, 'Copy', () => { clipboard = { mode: 'copy', path: item.path, name: item.name }; });
+      menuAdd(m, 'Create Shortcut', null, true);
+      menuAdd(m, 'Delete', () => deleteItem(item));
+      menuAdd(m, 'Rename', () => startRename(item, icon));
+      menuSep(m);
+      menuSub(m, 'Send To', (sub) => {
+        menuAdd(sub, 'Desktop (create shortcut)', null, true);
+        menuAdd(sub, 'Mail Recipient', null, true);
+        menuAdd(sub, 'My Documents', null, true);
+      });
+      menuSep(m);
+      menuAdd(m, 'Properties', () => showProperties(item));
+      m.style.left = Math.min(x, view.innerWidth - 210) + 'px';
+      m.style.top = Math.min(y, view.innerHeight - 300) + 'px';
       doc.body.appendChild(m);
     }
 
@@ -893,31 +1006,63 @@
       catch (e) { alert('Could not open a terminal: ' + e.message); }
     }
 
-    // Right-click on empty desktop space — real Windows actions.
+    function openCommandPromptHere() {
+      const base = desktopBase();
+      if (!base) { alert('Desktop location unknown.'); return; }
+      const skinWin = doc.defaultView;
+      if (skinWin && typeof skinWin.openApp === 'function') {
+        skinWin.openApp('terminal', { cwd: base });
+      } else {
+        openTerminalHere();
+      }
+    }
+
+    // Right-click on empty desktop space — Windows 95 menu structure.
     function showDesktopMenu(x, y) {
       closeMenus();
       const m = el(doc, 'div', 'dtm-context');
-      const add = (label, fn) => { const d = el(doc, 'div', null, label); d.addEventListener('click', () => { closeMenus(); fn(); }); m.appendChild(d); };
-      const newItem = el(doc, 'div', null, 'New  ▸');
-      newItem.style.position = 'relative';
-      const sub = el(doc, 'div', 'dtm-context');
-      sub.style.cssText = 'position:absolute;left:100%;top:-4px;display:none;';
-      const addSub = (label, fn) => {
-        const d = el(doc, 'div', null, label);
-        d.addEventListener('click', (ev) => { ev.stopPropagation(); closeMenus(); fn(); });
-        sub.appendChild(d);
-      };
-      addSub('Folder', newFolder);
-      addSub('Text Document', newTextDocument);
-      newItem.appendChild(sub);
-      newItem.addEventListener('mouseenter', () => { sub.style.display = 'block'; });
-      newItem.addEventListener('mouseleave', () => { sub.style.display = 'none'; });
-      m.appendChild(newItem);
-      m.appendChild(el(doc, 'hr'));
-      add('Open Terminal Here', openTerminalHere);
-      add('Refresh', () => render(true));
-      m.style.left = Math.min(x, view.innerWidth - 200) + 'px';
-      m.style.top = Math.min(y, view.innerHeight - 180) + 'px';
+
+      menuSub(m, 'Arrange Icons', (sub) => {
+        const addSort = (label, mode) => menuAdd(sub, (arrangeMode === mode ? '✓ ' : '   ') + label, () => {
+          arrangeMode = mode; autoArrange = false; store.clear(); render(true);
+        });
+        addSort('by Name', 'name');
+        addSort('by Type', 'type');
+        addSort('by Size', 'size');
+        addSort('by Date', 'date');
+        menuSep(sub);
+        menuAdd(sub, (autoArrange ? '✓ ' : '   ') + 'Auto Arrange', () => {
+          autoArrange = !autoArrange;
+          arrangeMode = autoArrange ? (arrangeMode || 'name') : null;
+          store.clear();
+          render(true);
+        });
+      });
+      menuAdd(m, 'Line up Icons', () => {
+        store.clear();
+        if (!arrangeMode) arrangeMode = 'name';
+        render(true);
+      });
+      menuSep(m);
+      menuAdd(m, 'Refresh', () => render(true));
+      menuSep(m);
+      menuAdd(m, 'Paste', pasteIntoDesktop, !clipboard);
+      menuAdd(m, 'Paste Shortcut', null, true);
+      menuSub(m, 'New', (sub) => {
+        menuAdd(sub, 'Folder', newFolder);
+        menuAdd(sub, 'Shortcut', null, true);
+        menuAdd(sub, 'Text Document', newTextDocument);
+      });
+      menuSep(m);
+      menuAdd(m, 'Command Prompt Here', openCommandPromptHere);
+      menuAdd(m, 'Open in Windows Terminal', openTerminalHere);
+      menuSep(m);
+      menuAdd(m, 'Properties', () => {
+        const skinWin = doc.defaultView;
+        if (skinWin && typeof skinWin.openApp === 'function') skinWin.openApp('display');
+      });
+      m.style.left = Math.min(x, view.innerWidth - 230) + 'px';
+      m.style.top = Math.min(y, view.innerHeight - 330) + 'px';
       doc.body.appendChild(m);
     }
 
@@ -959,9 +1104,13 @@
       }
       let data;
       try {
-        data = DTM.desktop && DTM.desktop.getItems
-          ? await DTM.desktop.getItems({ forceRefresh: forceRefresh === true })
-          : await DTM.fs.getDesktop();
+        const [desktopData] = await Promise.all([
+          DTM.desktop && DTM.desktop.getItems
+            ? DTM.desktop.getItems({ forceRefresh: forceRefresh === true })
+            : DTM.fs.getDesktop(),
+          ensureLayout()
+        ]);
+        data = desktopData;
       } catch (e) {
         // A failed refresh keeps the last successful desktop on screen.
         console.warn('[DTM mirror] Desktop refresh failed:', e && e.message ? e.message : e);
@@ -985,17 +1134,37 @@
       layer.innerHTML = '';
       state.items = [];
 
-      // System icons first (top row reserved in the layout).
-      layer.appendChild(makeSystemIcon('computer'));
-      layer.appendChild(makeSystemIcon('recycle'));
-      layer.appendChild(makeSystemIcon('network'));
+      const ordered = orderItemsByLayout(items, layoutState.data);
+      layoutActive = ordered.matched > 0;
+      const arranged = { items: applyArrange(ordered.items), matched: ordered.matched };
 
-      items.forEach((item) => {
+      const systemIcons = [
+        makeSystemIcon('computer'),
+        makeSystemIcon('recycle'),
+        makeSystemIcon('network')
+      ];
+      systemIcons.forEach((icon) => layer.appendChild(icon));
+
+      arranged.items.forEach((item, idx) => {
         state.items.push(item);
         const icon = makeIcon(item);
         icon.dataset.index = String(state.items.length - 1);
         layer.appendChild(icon);
-        positionIcon(icon, item.path);
+        positionIcon(icon, item.path, layoutActive ? 0 : 3);
+      });
+
+      const systemBase = layoutActive ? arranged.items.length : 0;
+      systemIcons.forEach((icon, idx) => {
+        const slot = systemBase + idx;
+        icon.dataset.slot = String(slot);
+        const kind = icon.dataset.systemKind;
+        const saved = store.get('system:' + kind);
+        if (saved && typeof saved.x === 'number') {
+          icon.style.left = saved.x + 'px';
+          icon.style.top = saved.y + 'px';
+        } else {
+          placeIcon(icon, slot);
+        }
       });
       hasRendered = true;
 
@@ -1045,7 +1214,7 @@
       state.items.forEach((item, i) => {
         if (store.get(item.path)) return;
         const icon = layer.querySelector('.dtm-icon[data-index="' + i + '"]');
-        if (icon) placeIcon(icon, i + 3);
+        if (icon) placeIcon(icon, i + (layoutActive ? 0 : 3));
       });
     };
     view.addEventListener('resize', renderer.onResize);

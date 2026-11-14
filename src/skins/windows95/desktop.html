@@ -73,6 +73,14 @@ button{font:inherit}
 .about h2{font-size:20px;margin:8px}
 .paint{display:block;width:100%;height:100%;background:white;touch-action:none}
 .paint-tools{display:flex;gap:4px;padding:4px;background:var(--gray)}
+.term-screen{flex:1;background:#000;color:#c0c0c0;font-family:'Courier New',monospace;font-size:13px;padding:4px 6px;overflow:auto;cursor:text;white-space:pre-wrap;line-height:1.3}
+.term-line{display:flex;gap:2px;align-items:baseline}
+.term-in{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:inherit;padding:0}
+.display-tabs{display:flex;flex-direction:column;gap:2px;padding:4px 4px 0 4px}
+.display-tab{width:70px;height:22px;font-size:11px}
+.display-tab.active{font-weight:bold;border-color:#808080 #fff #fff #808080;background:#dfdfdf}
+.display-panel{flex:1;display:flex;flex-direction:column;margin-left:6px;border:2px solid;border-color:#808080 #fff #fff #808080;padding:10px;min-width:0}
+.wallpaper-preview{height:70px;margin:4px 0 8px;border:2px solid;border-color:#808080 #fff #fff #808080;background:#008080}
 
 /* REAL EXPLORER FILE MANAGER */
 .explorer-container { display: flex; flex-direction: column; height: 100%; }
@@ -114,6 +122,8 @@ button{font:inherit}
     <div class="desktop-icon" data-app="notepad"><span class="glyph">📝</span><span>Notepad</span></div>
     <div class="desktop-icon" data-app="paint"><span class="glyph">🎨</span><span>Paint</span></div>
     <div class="desktop-icon" data-app="internet"><span class="glyph">🌐</span><span>The Internet</span></div>
+    <div class="desktop-icon" data-app="terminal"><span class="glyph">💻</span><span>MS-DOS Prompt</span></div>
+    <div class="desktop-icon" data-app="discord"><span class="glyph">💬</span><span>Discord</span></div>
     <div class="desktop-icon" data-app="doom"><span class="glyph">👹</span><span>DOOM</span></div>
   </div>
   
@@ -128,6 +138,8 @@ button{font:inherit}
         <span class="glyph">📁</span><b>Programs</b> <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
           <div class="start-item" data-launch="internet"><span class="glyph">🌐</span>Internet Explorer</div>
+          <div class="start-item" data-launch="discord"><span class="glyph">💬</span>Discord</div>
+          <div class="start-item" data-launch="terminal"><span class="glyph">💻</span>MS-DOS Prompt</div>
           <div class="start-item" data-launch="minesweeper"><span class="glyph">💣</span>Minesweeper</div>
           <div class="start-item" data-launch="notepad"><span class="glyph">📝</span>Notepad</div>
           <div class="start-item" data-launch="paint"><span class="glyph">🎨</span>Paint</div>
@@ -566,6 +578,53 @@ function setupExplorer(win, initialPath) {
 }
 
 // APPLICATION DEFINITIONS
+// CLASSIC WALLPAPERS & SCREEN SAVERS
+const WALLPAPERS = {
+  teal: { label: 'Teal (None)', css: '#008080' },
+  clouds: { label: 'Clouds', css: 'linear-gradient(180deg,#2b6bb0 0%,#7fb2e5 45%,#f2f8ff 100%)' },
+  rivets: { label: 'Blue Rivets', css: 'radial-gradient(circle at 8px 8px,#3d64a8 0 2px,transparent 2px) 0 0/32px 32px, linear-gradient(180deg,#124a8c,#0b2f5c)' },
+  sandstone: { label: 'Sandstone', css: 'repeating-linear-gradient(45deg,#c2a878 0 6px,#b09a6a 6px 12px)' },
+  metal: { label: 'Metal Links', css: 'repeating-linear-gradient(0deg,#8a8f96 0 2px,#6e747c 2px 4px)' },
+  slate: { label: 'Slate', css: 'linear-gradient(135deg,#4a5560,#232a31)' },
+  strawberry: { label: 'Straw Mat', css: 'repeating-linear-gradient(90deg,#8a1f1f 0 3px,#c9a227 3px 6px)' },
+  bubbles: { label: 'Bubbles', css: 'radial-gradient(circle at 20% 30%,rgba(255,255,255,.25) 0 12px,transparent 13px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.2) 0 18px,transparent 19px),#1c5b7a' },
+  black: { label: 'Black', css: '#000' }
+};
+const SCREENSAVERS = [
+  ['mystify', 'Mystify'],
+  ['starfield', 'Starfield Simulation'],
+  ['pipes', '3D Pipes'],
+  ['flyingwindows', '3D Flying Windows'],
+  ['bubbles', 'Bubbles'],
+  ['marquee', 'Marquee']
+];
+const WALLPAPER_KEY = 'dtm.wallpaper.windows95';
+const SS_KEY = 'dtm.screensaver.windows95';
+
+function currentWallpaper() {
+  try { return localStorage.getItem(WALLPAPER_KEY) || 'teal'; } catch (e) { return 'teal'; }
+}
+function applyWallpaper(key) {
+  const wp = WALLPAPERS[key] || WALLPAPERS.teal;
+  document.body.style.background = wp.css;
+  try { localStorage.setItem(WALLPAPER_KEY, key); } catch (e) {}
+}
+function ssSettings() {
+  try { return JSON.parse(localStorage.getItem(SS_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveSsSettings(patch) {
+  const next = Object.assign(ssSettings(), patch);
+  try { localStorage.setItem(SS_KEY, JSON.stringify(next)); } catch (e) {}
+  return next;
+}
+
+function wallpaperOptions(selected) {
+  return Object.keys(WALLPAPERS).map((k) => `<option value="${k}"${k === selected ? ' selected' : ''}>${WALLPAPERS[k].label}</option>`).join('');
+}
+function screensaverOptions(selected) {
+  return SCREENSAVERS.map(([k, label]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${label}</option>`).join('') + `<option value="none"${selected === 'none' ? ' selected' : ''}>None</option>`;
+}
+
 const apps={
  computer:{title:'My Computer',icon:'🖥️',width:480,height:330,body:()=>`
   <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
@@ -615,55 +674,67 @@ const apps={
  
  paint:{title:'untitled - Paint',icon:'🎨',width:560,height:420,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></div><div class="paint-tools"><button class="win95-button" data-color="#000000">■</button><button class="win95-button" data-color="#ff0000">■</button><button class="win95-button" data-color="#0000ff">■</button><button class="win95-button" data-color="#008000">■</button><button class="win95-button" data-color="#ffff00">■</button><button class="win95-button" data-color="#ffffff">□</button></div><canvas class="paint" width="900" height="560"></canvas>`},
  
- internet:{title:'The Internet - Microsoft Internet Explorer',icon:'🌐',width:700,height:520,body:()=>`<div style="display:flex;flex-direction:column;height:100%;background:#c0c0c0;">
-  <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Favorites</span><span>Help</span></div>
-  <div style="padding:3px;display:flex;gap:3px;border-bottom:1px solid #808080;">
-    <button class="win95-button" onclick="ieBack(this.closest('.window'))">⬅ Back</button>
-    <button class="win95-button" onclick="ieForward(this.closest('.window'))">➡ Forward</button>
-    <button class="win95-button" onclick="ieStop(this.closest('.window'))">🛑 Stop</button>
-    <button class="win95-button" onclick="ieRefresh(this.closest('.window'))">🔄 Refresh</button>
-    <button class="win95-button" onclick="ieGo(this.closest('.window'))">🏠 Home</button>
-    <button class="win95-button" onclick="ieOpenExternal(this.closest('.window'))" title="Open in Windows Default Browser" style="margin-left:auto;">↗ External Browser</button>
-  </div>
-  <div style="padding:3px;display:flex;align-items:center;gap:5px;border-bottom:1px solid #808080;">
-    <span>Address:</span>
-    <input type="text" id="ie-url" value="https://www.google.com/search?igu=1" style="flex:1;border:2px solid;border-color:#808080 #fff #fff #808080;font-family:Tahoma;font-size:12px;padding:2px 4px;outline:none;" onkeydown="if(event.key==='Enter') ieGo(this.closest('.window'))">
-    <button class="win95-button" onclick="ieGo(this.closest('.window'))">Go</button>
-  </div>
-  <iframe id="ie-frame" src="https://www.google.com/search?igu=1" style="flex:1;border:2px solid;border-color:#808080 white white #808080;background:#fff;width:100%;height:100%;display:block;" onload="this.closest('.window').querySelector('#ie-status').textContent='Done';"></iframe>
-  <div class="statusbar" id="ie-status"><span>Done</span><span>Internet Explorer 4.0</span></div>
-</div>`},
+ internet:{title:'The Internet - Microsoft Internet Explorer',icon:'🌐',width:700,height:520,body:()=>`
+  <div class="about"><div class="big-logo">🌐</div><b>Internet Explorer opens in a real browser window.</b><p>Close this window and choose The Internet again.</p></div>`},
 
- display:{title:'Display Properties',icon:'🖥️',width:380,height:300,body:()=>`
+ terminal:{title:'MS-DOS Prompt',icon:'💻',width:620,height:390,body:()=>`
+  <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
+  <div class="term-screen" id="termScreen">
+    <div id="termLog"></div>
+    <div class="term-line"><span id="termPrompt">C:\\&gt;</span><input class="term-in" id="termInput" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  </div>`},
+
+ discord:{title:'Discord',icon:'💬',width:900,height:600,body:()=>`
+  <div class="about"><div class="big-logo">💬</div><b>Discord opens in a real web app window.</b><p>Close this window and choose Discord again.</p></div>`},
+
+ display:{title:'Display Properties',icon:'🖥️',width:410,height:360,body:()=>`
   <div style="display:flex;height:100%;padding:4px;background:var(--gray);">
-    <div style="display:flex;flex-direction:column;gap:2px;padding:4px 4px 0 4px;">
-      <button class="win95-button" style="width:64px;height:22px;font-size:11px;">Background</button>
-      <button class="win95-button pressed" style="width:64px;height:22px;font-size:11px;">Screen Saver</button>
-      <button class="win95-button" style="width:64px;height:22px;font-size:11px;">Appearance</button>
-      <button class="win95-button" style="width:64px;height:22px;font-size:11px;">Settings</button>
+    <div class="display-tabs">
+      <button class="win95-button display-tab active" data-tab="background">Background</button>
+      <button class="win95-button display-tab" data-tab="screensaver">Screen Saver</button>
+      <button class="win95-button display-tab" data-tab="appearance">Appearance</button>
+      <button class="win95-button display-tab" data-tab="settings">Settings</button>
     </div>
-    <div style="flex:1;display:flex;flex-direction:column;margin-left:6px;border:2px solid;border-color:#808080 white white #808080;padding:10px;">
-      <div style="font-weight:bold;margin-bottom:12px;">Screen Saver</div>
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
-        <select id="ssSelect" style="flex:1;font-family:Tahoma;font-size:12px;padding:2px;">
-          <option value="mystify">Mystify</option>
-          <option value="starfield">Starfield Simulation</option>
-        </select>
+    <div class="display-panel" data-panel="background">
+      <div style="font-weight:bold;margin-bottom:4px;">Wallpaper</div>
+      <div class="wallpaper-preview" id="wallpaperPreview"></div>
+      <select id="wallpaperSelect" size="6" style="width:100%;font-family:Tahoma;font-size:12px;">${wallpaperOptions(currentWallpaper())}</select>
+      <div style="flex:1;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:5px;margin-top:6px;">
+        <button class="win95-button" id="wpApply" style="padding:4px 14px;">Apply</button>
+        <button class="win95-button" id="wpOk" style="padding:4px 14px;">OK</button>
+        <button class="win95-button" id="wpCancel" style="padding:4px 14px;">Cancel</button>
       </div>
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+    </div>
+    <div class="display-panel" data-panel="screensaver" style="display:none;">
+      <div style="font-weight:bold;margin-bottom:10px;">Screen Saver</div>
+      <select id="ssSelect" style="width:100%;font-family:Tahoma;font-size:12px;">${screensaverOptions(ssSettings().type || 'mystify')}</select>
+      <div style="display:flex;align-items:center;gap:5px;margin:10px 0;">
         <span>Wait:</span>
-        <input type="number" value="1" min="1" style="width:40px;border:2px inset #fff;">
+        <input type="number" id="ssWait" value="${Number(ssSettings().wait) || 1}" min="0" style="width:44px;border:2px inset #fff;">
         <span>minutes</span>
       </div>
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:5px;">
         <input type="checkbox" id="ssPassword"> <label for="ssPassword">Password protected</label>
       </div>
       <div style="flex:1;"></div>
       <div style="display:flex;justify-content:flex-end;gap:5px;">
-        <button class="win95-button" id="ssPreview" style="padding:4px 15px;">Preview</button>
-        <button class="win95-button" data-close style="padding:4px 15px;">OK</button>
-        <button class="win95-button" data-close style="padding:4px 15px;">Cancel</button>
+        <button class="win95-button" id="ssPreview" style="padding:4px 14px;">Preview</button>
+        <button class="win95-button" id="ssOk" style="padding:4px 14px;">OK</button>
+        <button class="win95-button" id="ssCancel" style="padding:4px 14px;">Cancel</button>
       </div>
+    </div>
+    <div class="display-panel" data-panel="appearance" style="display:none;">
+      <div style="font-weight:bold;margin-bottom:8px;">Appearance</div>
+      <p>Windows 95 Standard theme is always active in Desktop Time Machine.</p>
+      <div style="flex:1;"></div>
+      <div style="display:flex;justify-content:flex-end;"><button class="win95-button" id="appearanceOk" style="padding:4px 14px;">OK</button></div>
+    </div>
+    <div class="display-panel" data-panel="settings" style="display:none;">
+      <div style="font-weight:bold;margin-bottom:8px;">Settings</div>
+      <p>Display: ${typeof screen !== 'undefined' ? screen.width + ' × ' + screen.height : 'Desktop'} — Windows mirrors your real display automatically.</p>
+      <div style="flex:1;"></div>
+      <div style="display:flex;justify-content:flex-end;"><button class="win95-button" id="settingsOk" style="padding:4px 14px;">OK</button></div>
     </div>
   </div>`},
 
@@ -720,6 +791,144 @@ const apps={
   <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
   <iframe src="https://thedoggybrad.github.io/doom_on_js-dos/" width="100%" height="100%" frameborder="0" allowfullscreen style="display:block;background:#000;"></iframe>`}
 };
+
+// DISPLAY PROPERTIES — wallpapers, screensavers, persistence
+function setupDisplay(w) {
+  const tabs = w.querySelectorAll('[data-tab]');
+  const panels = w.querySelectorAll('[data-panel]');
+  const showTab = (name) => {
+    tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    panels.forEach((p) => { p.style.display = p.dataset.panel === name ? 'flex' : 'none'; });
+  };
+  tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  showTab('background');
+
+  const sel = w.querySelector('#wallpaperSelect');
+  const preview = w.querySelector('#wallpaperPreview');
+  const paintPreview = () => { preview.style.background = (WALLPAPERS[sel.value] || WALLPAPERS.teal).css; };
+  sel.addEventListener('change', paintPreview);
+  paintPreview();
+  w.querySelector('#wpApply').addEventListener('click', () => applyWallpaper(sel.value));
+  w.querySelector('#wpOk').addEventListener('click', () => { applyWallpaper(sel.value); close(w); });
+  w.querySelector('#wpCancel').addEventListener('click', () => close(w));
+
+  const ssSel = w.querySelector('#ssSelect');
+  const ssWait = w.querySelector('#ssWait');
+  w.querySelector('#ssPreview').addEventListener('click', () => startScreensaver(ssSel.value));
+  w.querySelector('#ssOk').addEventListener('click', () => {
+    saveSsSettings({ type: ssSel.value, wait: Math.max(0, Number(ssWait.value) || 0) });
+    close(w);
+  });
+  w.querySelector('#ssCancel').addEventListener('click', () => close(w));
+  w.querySelector('#appearanceOk').addEventListener('click', () => close(w));
+  w.querySelector('#settingsOk').addEventListener('click', () => close(w));
+}
+
+// MS-DOS PROMPT — real PowerShell execution at a real host directory
+function setupTerminal(w, opts) {
+  const screenEl = w.querySelector('#termScreen');
+  const log = w.querySelector('#termLog');
+  const input = w.querySelector('#termInput');
+  const promptEl = w.querySelector('#termPrompt');
+  let cwd = (opts && opts.cwd) || null;
+  let busy = false;
+  const history = [];
+  let hIdx = 0;
+
+  const updatePrompt = () => { promptEl.textContent = (cwd || 'C:\\') + '> '; };
+  const write = (text) => {
+    const line = document.createElement('div');
+    line.textContent = text;
+    log.appendChild(line);
+    screenEl.scrollTop = screenEl.scrollHeight;
+  };
+  const parentOf = (p) => {
+    const s = String(p || 'C:\\').replace(/[\\/]+$/, '');
+    const i = Math.max(s.lastIndexOf('\\'), s.lastIndexOf('/'));
+    return i > 1 ? s.slice(0, i) : s;
+  };
+  const resolve = (arg) => {
+    if (/^[a-zA-Z]:[\\/]/.test(arg)) return arg;
+    const base = String(cwd || 'C:\\').replace(/[\\/]+$/, '');
+    return base + '\\' + arg;
+  };
+
+  updatePrompt();
+  input.focus();
+  screenEl.addEventListener('click', () => input.focus());
+
+  if (!cwd && DTM && DTM.fs) {
+    DTM.fs.getSpecialFolders().then((folders) => {
+      if (!cwd) { cwd = (folders && (folders.desktop || folders.home)) || 'C:\\'; updatePrompt(); }
+    }).catch(() => {});
+  }
+
+  async function run(raw) {
+    write((cwd || 'C:\\') + '> ' + raw);
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    history.push(trimmed);
+    hIdx = history.length;
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+
+    if (cmd === 'cls') { log.innerHTML = ''; return; }
+    if (cmd === 'exit') { close(w); return; }
+    if (cmd === 'help') {
+      write('Built in: cd <dir>, cd .., cls, exit, help');
+      write('Everything else runs in PowerShell in the current folder.');
+      return;
+    }
+    if (cmd === 'cd' || cmd === 'chdir') {
+      const target = parts[1];
+      if (!target) { write(cwd || 'C:\\'); return; }
+      let next;
+      if (target === '..') next = parentOf(cwd);
+      else if (target === '\\' || target === '/') next = String(cwd || 'C:').slice(0, 2) + '\\';
+      else next = resolve(target);
+      try {
+        const st = await DTM.fs.stat(next);
+        if (!st || st.isDirectory === false) throw new Error('not a folder');
+        cwd = st.path || next;
+        updatePrompt();
+      } catch (e) { write('The system cannot find the path specified.'); }
+      return;
+    }
+
+    busy = true;
+    input.disabled = true;
+    try {
+      const res = await DTM.system.runTerminal(trimmed, cwd);
+      if (res && res.stdout) write(String(res.stdout).replace(/\s+$/, ''));
+      if (res && res.stderr) write(String(res.stderr).replace(/\s+$/, ''));
+      if (res && res.code) write('[exit code ' + res.code + ']');
+    } catch (e) {
+      write('Error: ' + e.message);
+    } finally {
+      busy = false;
+      input.disabled = false;
+      input.focus();
+      screenEl.scrollTop = screenEl.scrollHeight;
+    }
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (busy) return;
+      const value = input.value;
+      input.value = '';
+      run(value);
+    } else if (e.key === 'ArrowUp' && history.length) {
+      e.preventDefault();
+      hIdx = Math.max(0, hIdx - 1);
+      input.value = history[hIdx] || '';
+    } else if (e.key === 'ArrowDown' && history.length) {
+      e.preventDefault();
+      hIdx = Math.min(history.length, hIdx + 1);
+      input.value = history[hIdx] || '';
+    }
+  });
+}
 
 // SCREENSAVER FUNCTIONS
 function startScreensaver(type) {
@@ -793,14 +1002,85 @@ function startScreensaver(type) {
       ssAnimId=requestAnimationFrame(draw);
     };
     draw();
+  } else if(type==='pipes'){
+    const colors=['#00ff66','#00e5ff','#ff4dff','#ffe600','#ff8a00','#7dff00'];
+    const segs=colors.map((color,i)=>({x:canvas.width/2,y:canvas.height/2,dx:Math.cos(i*Math.PI/3)*4,dy:Math.sin(i*Math.PI/3)*4,color,pts:[{x:canvas.width/2,y:canvas.height/2}]}));
+    const draw=()=>{
+      ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      segs.forEach(s=>{
+        if(Math.random()<0.035){ const a=Math.atan2(s.dy,s.dx)+(Math.random()-0.5)*Math.PI/2; s.dx=Math.cos(a)*4; s.dy=Math.sin(a)*4; }
+        s.x+=s.dx; s.y+=s.dy;
+        if(s.x<0||s.x>canvas.width||s.y<0||s.y>canvas.height){
+          s.dx*=-1; s.dy*=-1;
+          s.x=Math.max(4,Math.min(canvas.width-4,s.x));
+          s.y=Math.max(4,Math.min(canvas.height-4,s.y));
+        }
+        s.pts.push({x:s.x,y:s.y}); if(s.pts.length>260) s.pts.shift();
+        ctx.strokeStyle=s.color; ctx.lineWidth=3; ctx.beginPath();
+        s.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke();
+      });
+      ssAnimId=requestAnimationFrame(draw);
+    };
+    draw();
+  } else if(type==='flyingwindows'){
+    const wins=Array.from({length:14},()=>({x:(Math.random()-0.5)*canvas.width,y:(Math.random()-0.5)*canvas.height,z:Math.random()*canvas.width+40}));
+    const draw=()=>{
+      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      wins.forEach(o=>{
+        o.z-=3; if(o.z<=1){ o.x=(Math.random()-0.5)*canvas.width; o.y=(Math.random()-0.5)*canvas.height; o.z=canvas.width; }
+        const scale=canvas.width/o.z; const x=o.x*scale+canvas.width/2; const y=o.y*scale+canvas.height/2;
+        const size=Math.max(2,80*scale/6);
+        if(size>canvas.width*1.5||x<-size||y<-size||x>canvas.width+size||y>canvas.height+size) return;
+        ctx.fillStyle='#c0c0c0'; ctx.fillRect(x,y,size,size*0.9);
+        ctx.fillStyle='#000080'; ctx.fillRect(x,y,size,size*0.18);
+        ctx.strokeStyle='#404040'; ctx.lineWidth=1; ctx.strokeRect(x,y,size,size*0.9);
+      });
+      ssAnimId=requestAnimationFrame(draw);
+    };
+    draw();
+  } else if(type==='bubbles'){
+    const bubbles=Array.from({length:45},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:4+Math.random()*24,s:0.5+Math.random()*1.6}));
+    const draw=()=>{
+      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      bubbles.forEach(b=>{
+        b.y-=b.s; b.x+=Math.sin(b.y/40)*0.5;
+        if(b.y<-b.r){ b.y=canvas.height+b.r; b.x=Math.random()*canvas.width; }
+        const g=ctx.createRadialGradient(b.x-b.r/3,b.y-b.r/3,1,b.x,b.y,b.r);
+        g.addColorStop(0,'rgba(180,225,255,0.85)'); g.addColorStop(1,'rgba(20,90,150,0.12)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='rgba(180,220,255,0.55)'; ctx.stroke();
+      });
+      ssAnimId=requestAnimationFrame(draw);
+    };
+    draw();
+  } else if(type==='marquee'){
+    let x=canvas.width; const text='Windows 95 — Desktop Time Machine';
+    const draw=()=>{
+      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.font='bold 42px Tahoma,Arial'; ctx.textBaseline='middle'; ctx.fillStyle='#d4af37';
+      ctx.fillText(text,x,canvas.height/2);
+      x-=4; const w=ctx.measureText(text).width; if(x<-w) x=canvas.width;
+      ssAnimId=requestAnimationFrame(draw);
+    };
+    draw();
+  } else if(type==='none'){
+    stop();
   }
 }
 
 // OPEN WINDOW LOGIC
-function openApp(key){
+function openApp(key, opts){
  menu.classList.remove('open');
  if (key === 'timemachine') {
    if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
+   return;
+ }
+ // Real browser engine apps live in the shell as Win95 windows; a skin iframe
+ // cannot host <webview>.
+ if (key === 'internet' || key === 'browser' || key === 'discord') {
+   const appId = key === 'discord' ? 'discord' : 'browser';
+   const url = opts && opts.url;
+   if (window.parent) window.parent.postMessage({ type: 'dtm:launch-webapp', app: appId, url: url }, '*');
    return;
  }
 
@@ -821,9 +1101,10 @@ function openApp(key){
  const canvas=w.querySelector('canvas');if(canvas)setupPaint(canvas,w);
  
  if(key==='display'){
-   w.querySelector('#ssPreview').addEventListener('click',()=>{
-     startScreensaver(w.querySelector('#ssSelect').value);
-   });
+   setupDisplay(w);
+ }
+ if(key==='terminal'){
+   setupTerminal(w, opts || {});
  }
  if(key==='minesweeper') {
    setupMinesweeper(w);
@@ -966,6 +1247,49 @@ window.addEventListener('unload', () => {
   }
 });
 window.openApp = openApp;
+
+// Shell web apps (browser, Discord) report state so their taskbar buttons match.
+function setupWebappTasks() {
+  const meta = { browser: { icon: '🌐', title: 'Internet Explorer' }, discord: { icon: '💬', title: 'Discord' } };
+  const buttons = new Map();
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || d.type !== 'dtm:webapp-state') return;
+    const m = meta[d.app] || { icon: '🪟', title: d.title || d.app };
+    let b = buttons.get(d.app);
+    if (!d.open) {
+      if (b) { b.remove(); buttons.delete(d.app); }
+      return;
+    }
+    if (!b) {
+      b = document.createElement('button');
+      b.className = 'win95-button task-button webapp-task';
+      b.dataset.for = 'webapp-' + d.app;
+      b.addEventListener('click', () => {
+        if (window.parent) window.parent.postMessage({ type: 'dtm:webapp-focus', app: d.app }, '*');
+      });
+      taskButtons.appendChild(b);
+      buttons.set(d.app, b);
+    }
+    b.textContent = m.icon + ' ' + m.title;
+    b.classList.toggle('pressed', !d.minimized);
+  });
+}
+setupWebappTasks();
+
+// CLASSIC WALLPAPER + IDLE SCREENSAVER
+applyWallpaper(currentWallpaper());
+let lastActivity = Date.now();
+['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach((ev) => {
+  document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true });
+});
+setInterval(() => {
+  if (ssOverlay) return;
+  const s = ssSettings();
+  if (!s.type || s.type === 'none') return;
+  const wait = Number(s.wait) || 0;
+  if (wait > 0 && Date.now() - lastActivity >= wait * 60000) startScreensaver(s.type);
+}, 15000);
 
 // REAL WINDOWS TASKBAR MIRROR — pinned apps, running windows, tray items.
 function setupRealTaskbar() {

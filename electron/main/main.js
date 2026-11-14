@@ -6,6 +6,7 @@ const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 const { createMainWindow, getMainWindow } = require('./window-manager');
 const { registerIpcHandlers } = require('./ipc-handlers');
+const { hardenWebviews } = require('./webview-security');
 
 // User request (2026-11-14): the app must stay muted — no startup sounds,
 // skin audio or system beeps out of the speakers, ever.
@@ -33,6 +34,7 @@ if (!gotTheLock) {
     try { await session.defaultSession.clearCache(); } catch {}
 
     const mainWindow = createMainWindow();
+    hardenWebviews(mainWindow.webContents);
 
     // Load the engine host HTML
     const indexPath = path.join(__dirname, '../../src/index.html');
