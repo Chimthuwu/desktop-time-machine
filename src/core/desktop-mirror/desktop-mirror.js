@@ -60,16 +60,18 @@
 .dtm-status { padding:3px 8px; border:1px solid; border-color:#808080 #fff #fff #808080; margin:3px; }
 .dtm-context { position:absolute; z-index:30000; background:var(--gray,#c0c0c0);
   border:2px solid; border-color:#fff #404040 #404040 #fff; padding:3px; min-width:160px;
-  box-shadow:2px 2px #000; font:11px Tahoma; color:#000; }
+  box-shadow:2px 2px #000; font:11px Tahoma; color:#000; outline:none; }
 .dtm-context > div { position:relative; padding:6px 18px 6px 10px; cursor:default; }
 .dtm-context > div:hover { background:#000080; color:#fff; }
 .dtm-context hr { border:0; border-top:1px solid #808080; border-bottom:1px solid #fff; margin:3px 0; }
 .dtm-context .dtm-sub { display:none; position:absolute; left:100%; top:-5px; min-width:170px;
   background:var(--gray,#c0c0c0); border:2px solid; border-color:#fff #404040 #404040 #fff;
   padding:3px; box-shadow:2px 2px #000; color:#000; z-index:31000; }
-.dtm-context > div:hover > .dtm-sub { display:block; }
+.dtm-context > div.open > .dtm-sub { display:block; }
 .dtm-context .dtm-sub > div { padding:6px 18px 6px 22px; cursor:default; }
 .dtm-context .dtm-sub > div:hover { background:#000080; color:#fff; }
+.dtm-context > div.active, .dtm-context .dtm-sub > div.active { background:#000080; color:#fff; }
+.dtm-context > div.open, .dtm-context .dtm-sub > div.open { background:#000080; color:#fff; }
 .dtm-context .disabled { color:#808080; text-shadow:1px 1px #fff; pointer-events:none; }
 .dtm-context .checked { font-weight:bold; }
 .dtm-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:40000;
@@ -874,7 +876,14 @@
     let arrangeMode = null;
     let autoArrange = false;
 
-    function closeMenus() { doc.querySelectorAll('.dtm-context').forEach((m) => m.remove()); }
+    const SUBMENU_HOVER_DELAY = 420;
+    const menuTimers = new Set();
+
+    function closeMenus() {
+      menuTimers.forEach((t) => clearTimeout(t));
+      menuTimers.clear();
+      doc.querySelectorAll('.dtm-context').forEach((m) => m.remove());
+    }
 
     function menuAdd(menu, label, fn, disabled) {
       const item = el(doc, 'div', disabled ? 'disabled' : null, label);
@@ -894,6 +903,170 @@
       wrap.appendChild(sub);
       menu.appendChild(wrap);
       return wrap;
+    }
+
+    // ---- menu navigation: arrow keys, type-ahead, delayed submenus ----
+    function submenuOf(item) {
+      for (const child of item.children) {
+        if (child.classList && child.classList.contains('dtm-sub')) return child;
+      }
+      return null;
+    }
+
+    // Selectable items of one menu level, in visual order.
+    function childItems(container) {
+      const items = [];
+      for (const child of container.children) {
+        if (child.tagName !== 'DIV' || child.classList.contains('dtm-sub')) continue;
+        if (child.classList.contains('disabled')) continue;
+        items.push(child);
+      }
+      return items;
+    }
+
+    function setMenuActive(item) {
+      const menu = item.closest('.dtm-context');
+      if (!menu) return;
+      menu.querySelectorAll('.active').forEach((n) => n.classList.remove('active'));
+      item.classList.add('active');
+    }
+
+    function openSubmenu(item) {
+      const sub = submenuOf(item);
+      if (!sub) return;
+      childItems(item.parentElement).forEach((sib) => { if (sib !== item) sib.classList.remove('open'); });
+      item.classList.add('open');
+      setMenuActive(item);
+    }
+
+    function closeSubmenu(sub) {
+      if (sub && sub.parentElement) sub.parentElement.classList.remove('open');
+    }
+
+    // Windows only opens a flyout after the pointer rests on its parent, and
+    // closes the previous flyout as soon as another item is targeted.
+    function wireMenuLevel(container) {
+      let timer = null;
+      const clearTimer = () => {
+        if (!timer) return;
+        clearTimeout(timer);
+        menuTimers.delete(timer);
+        timer = null;
+      };
+      const itemFrom = (target) => {
+        let node = target;
+        while (node && node.parentElement !== container) node = node.parentElement;
+        if (!node || node.tagName !== 'DIV') return null;
+        if (node.classList.contains('dtm-sub') || node.classList.contains('disabled')) return null;
+        return node;
+      };
+
+      container.addEventListener('pointerover', (e) => {
+        // Events from a nested flyout belong to that flyout's own level.
+        const sub = e.target.closest ? e.target.closest('.dtm-sub') : null;
+        if (sub && sub !== container) return;
+        const item = itemFrom(e.target);
+        if (!item) return;
+        clearTimer();
+        setMenuActive(item);
+        childItems(container).forEach((sib) => { if (sib !== item) sib.classList.remove('open'); });
+        if (submenuOf(item)) {
+          timer = setTimeout(() => {
+            menuTimers.delete(timer);
+            timer = null;
+            if (item.isConnected) openSubmenu(item);
+          }, SUBMENU_HOVER_DELAY);
+          menuTimers.add(timer);
+        }
+      });
+      container.addEventListener('pointerleave', clearTimer);
+      container.addEventListener('click', (e) => {
+        const sub = e.target.closest ? e.target.closest('.dtm-sub') : null;
+        if (sub && sub !== container) return;
+        const item = itemFrom(e.target);
+        if (item && submenuOf(item)) openSubmenu(item);
+      });
+    }
+
+    function onMenuKey(e, menu) {
+      const active = menu.querySelector('.active');
+      const inSub = !!(active && active.parentElement && active.parentElement.classList.contains('dtm-sub'));
+      const level = inSub ? active.parentElement : menu;
+      const items = childItems(level);
+      const idx = active ? items.indexOf(active) : -1;
+      const focusItem = (item) => {
+        if (!item) return;
+        setMenuActive(item);
+        item.scrollIntoView({ block: 'nearest' });
+      };
+      const enterSubmenu = (item) => {
+        openSubmenu(item);
+        const sub = submenuOf(item);
+        if (sub) focusItem(childItems(sub)[0]);
+      };
+      const handled = () => { e.preventDefault(); e.stopPropagation(); };
+
+      switch (e.key) {
+        case 'ArrowDown': handled(); focusItem(items[(idx + 1) % items.length]); return;
+        case 'ArrowUp': handled(); focusItem(items[idx <= 0 ? items.length - 1 : idx - 1]); return;
+        case 'Home': handled(); focusItem(items[0]); return;
+        case 'End': handled(); focusItem(items[items.length - 1]); return;
+        case 'ArrowRight':
+          if (active && submenuOf(active)) { handled(); enterSubmenu(active); }
+          return;
+        case 'ArrowLeft':
+          if (inSub) {
+            handled();
+            const sub = active.parentElement;
+            const parentItem = sub.parentElement;
+            closeSubmenu(sub);
+            focusItem(parentItem);
+          }
+          return;
+        case 'Enter':
+        case ' ':
+          if (!active) return;
+          handled();
+          if (submenuOf(active)) enterSubmenu(active);
+          else active.click();
+          return;
+        case 'Escape':
+          handled();
+          if (inSub) {
+            const sub = active.parentElement;
+            const parentItem = sub.parentElement;
+            closeSubmenu(sub);
+            focusItem(parentItem);
+          } else {
+            closeMenus();
+          }
+          return;
+        case 'Tab':
+          closeMenus();
+          return;
+      }
+
+      // Windows jumps to the next item beginning with the typed letter.
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const letter = e.key.toLowerCase();
+        for (let i = 0; i < items.length; i++) {
+          const item = items[(idx + 1 + i) % items.length];
+          const label = item.textContent.replace(/^[^A-Za-z0-9]+/, '').toLowerCase();
+          if (label.startsWith(letter)) {
+            handled();
+            focusItem(item);
+            return;
+          }
+        }
+      }
+    }
+
+    function attachMenu(menu) {
+      menu.tabIndex = -1;
+      menu.addEventListener('keydown', (e) => onMenuKey(e, menu));
+      wireMenuLevel(menu);
+      menu.querySelectorAll('.dtm-sub').forEach(wireMenuLevel);
+      menu.focus();
     }
 
     function applyArrange(list) {
@@ -947,6 +1120,7 @@
       m.style.left = Math.min(x, view.innerWidth - 210) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 300) + 'px';
       doc.body.appendChild(m);
+      attachMenu(m);
     }
 
     function showSystemMenu(x, y, kind) {
@@ -964,6 +1138,7 @@
       m.style.left = Math.min(x, view.innerWidth - 180) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 160) + 'px';
       doc.body.appendChild(m);
+      attachMenu(m);
     }
 
     function startRename(item, icon) {
@@ -1089,6 +1264,7 @@
       m.style.left = Math.min(x, view.innerWidth - 230) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 330) + 'px';
       doc.body.appendChild(m);
+      attachMenu(m);
     }
 
     async function showProperties(item) {
