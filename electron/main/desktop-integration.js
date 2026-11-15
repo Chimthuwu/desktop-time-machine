@@ -15,7 +15,6 @@ const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
 const { execFile, spawn } = require('child_process');
-const { pathToFileURL } = require('url');
 const { isSafePath, isProtectedPath } = require('../security/permissions');
 
 let _app = null;
@@ -399,9 +398,20 @@ async function getFileIcon(filePath, size = 32) {
     }
   }
 
-  // The shell API cannot decode a standalone .ico, so hand the renderer the
-  // file itself; Chromium draws ICO images in an <img> just fine.
-  if (/\.ico$/i.test(iconPath)) return pathToFileURL(iconPath).href;
+  // The shell API cannot decode a standalone .ico, so read its bytes instead.
+  // Sending the bytes (rather than a file:// URL) keeps the artwork current: a
+  // re-drawn .ico is picked up on the next request with no cached copy in the
+  // way, so a shortcut re-pointed at new art needs no app restart.
+  if (/\.ico$/i.test(iconPath)) {
+    try {
+      const buf = await fsp.readFile(iconPath);
+      if (buf.length && buf.length <= 4 * 1024 * 1024) {
+        return 'data:image/x-icon;base64,' + buf.toString('base64');
+      }
+    } catch {
+      // Unreadable icon file: fall back to the shell's own icon below.
+    }
+  }
 
   const app = getApp();
   const nativeImage = await app.getFileIcon(iconPath, { size });

@@ -129,6 +129,33 @@
     return request;
   }
 
+  // Artwork is the only part of a desktop item that goes stale in place: a
+  // shortcut can be re-pointed at a different icon, and an icon file can be
+  // re-drawn without its path changing. Forgetting the cached images makes the
+  // next render ask the host again instead of needing an app restart.
+  function invalidateIcon(targetPath) {
+    if (!targetPath) return;
+    const suffix = ':' + String(targetPath).toLowerCase();
+    for (const key of Array.from(iconCache.keys())) {
+      if (key.endsWith(suffix)) iconCache.delete(key);
+    }
+  }
+
+  // Shortcuts (and standalone .ico files) borrow artwork from another file, so
+  // they are refreshed whenever anything on the desktop changes. Plain files
+  // are keyed on themselves and only need refreshing when they are the target.
+  function invalidateArtwork(changedPath, items) {
+    invalidateIcon(changedPath);
+    const changed = changedPath ? String(changedPath).toLowerCase() : null;
+    (items || []).forEach((item) => {
+      const p = item && item.path;
+      if (!p) return;
+      if (/\.(lnk|url|ico)$/i.test(p) || (changed && String(p).toLowerCase() === changed)) {
+        invalidateIcon(p);
+      }
+    });
+  }
+
   function joinPath(dir, name) {
     if (!dir) return name;
     return /[\\/]$/.test(dir) ? dir + name : dir + '\\' + name;
@@ -248,8 +275,12 @@
       if (window.dtmEngine && window.dtmEngine.invalidateDesktop) {
         window.dtmEngine.invalidateDesktop();
       }
+      const changed = payload.filename ? joinPath(payload.path, payload.filename) : payload.path;
       for (const entry of liveRenderers.values()) {
         if (!entry.watchIds || !entry.watchIds.has(payload.id)) continue;
+        // Refresh the artwork before the re-render reads it, so a changed
+        // shortcut icon shows up on the desktop as soon as the file changes.
+        invalidateArtwork(changed, entry.state && entry.state.items);
         clearTimeout(entry.timer);
         entry.timer = setTimeout(() => {
           Promise.resolve(entry.render()).catch((err) => {
@@ -461,7 +492,10 @@
       if (parent) load(parent);
     });
     addr.addEventListener('keydown', (e) => { if (e.key === 'Enter') load(addr.value); });
-    ref.addEventListener('click', () => load(current));
+    ref.addEventListener('click', () => {
+      visibleItems.forEach((item) => invalidateIcon(item.path));
+      load(current);
+    });
     nf.addEventListener('click', async () => {
       const name = await promptModal(doc, 'New Folder', 'Name for the new folder:', 'New Folder');
       if (!name) return;
@@ -1223,7 +1257,7 @@
         }
       });
       m.appendChild(el(doc, 'hr'));
-      add('Refresh', () => render());
+      add('Refresh', () => { invalidateArtwork(null, state.items); render(); });
       m.style.left = Math.min(x, view.innerWidth - 180) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 160) + 'px';
       doc.body.appendChild(m);
@@ -1329,6 +1363,9 @@
       });
       menuSep(m);
       menuAdd(m, 'Refresh', () => {
+        // Re-read the artwork too, so a shortcut whose icon changed while the
+        // app was open is redrawn by this menu item alone.
+        invalidateArtwork(null, state.items);
         if (DTM.fs.desktopLayoutReset) DTM.fs.desktopLayoutReset().catch(() => {});
         layoutState.loaded = false;
         layoutState.data = null;
@@ -1483,7 +1520,7 @@
       }
     }
 
-    const renderer = { render, watchIds: new Set(), DTM, timer: null, watchedPaths: new Set(), layer, doc, view, disposed: false };
+    const renderer = { render, refreshIcons: () => invalidateArtwork(null, state.items), state, watchIds: new Set(), DTM, timer: null, watchedPaths: new Set(), layer, doc, view, disposed: false };
     liveRenderers.set(skinId, renderer);
 
     // Rubber-band selection: dragging an empty stretch of desktop selects every
