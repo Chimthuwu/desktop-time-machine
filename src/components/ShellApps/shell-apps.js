@@ -57,6 +57,10 @@
     entry.maximized = false;
     setActive(app);
     notifySkin(app, true, false);
+    // The docked Waterfox window is a real Windows window; re-raise it above
+    // the shell after the OS activates us.
+    if (entry.waterfox && entry.wfReady) setTimeout(() => { try { wfBridge.raise(); } catch (e) {} }, 0);
+    if (entry.waterfox && !entry.wfReady && entry.begin) entry.begin();
   }
 
   function sendState(app) {
@@ -70,6 +74,11 @@
     if (!entry) return;
     if (entry.video) { try { entry.video.pause(); } catch (e) {} }
     try { if (entry.webview) entry.webview.stop(); } catch (e) {}
+    if (entry.waterfox && wfBridge) {
+      lastDockRect = null;
+      lastDockShown = null;
+      try { wfBridge.close(); } catch (e) {}
+    }
     entry.win.remove();
     windows.delete(app);
     setActive(null);
@@ -143,6 +152,7 @@
     const config = APP_CONFIG[app];
     if (!config) return;
     if (app === 'mediaplayer') { openMediaPlayer(requestedUrl); return; }
+    if (app === 'browser') { openBrowser(requestedUrl); return; }
 
     const existing = windows.get(app);
     if (existing) {
@@ -158,8 +168,8 @@
     const offset = windows.size * 26;
     win.style.left = (56 + offset) + 'px';
     win.style.top = (36 + offset) + 'px';
-    win.style.width = (app === 'browser' ? 780 : 900) + 'px';
-    win.style.height = (app === 'browser' ? 540 : 600) + 'px';
+    win.style.width = '900px';
+    win.style.height = '600px';
     win.style.zIndex = String(++zTop);
 
     const titlebar = document.createElement('div');
@@ -175,40 +185,9 @@
     const body = document.createElement('div');
     body.className = 'dtmshell-body';
 
-    let addressInput = null;
     let statusText = null;
 
-    if (app === 'browser') {
-      const toolbar = document.createElement('div');
-      toolbar.className = 'dtmshell-toolbar';
-      const mkBtn = (label, title, fn) => {
-        const b = document.createElement('button');
-        b.className = 'dtmshell-btn';
-        b.textContent = label;
-        b.title = title;
-        b.addEventListener('click', fn);
-        return b;
-      };
-      const back = mkBtn('⬅ Back', 'Back', () => { try { webview.goBack(); } catch (e) {} });
-      const forward = mkBtn('➡ Forward', 'Forward', () => { try { webview.goForward(); } catch (e) {} });
-      const stop = mkBtn('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} });
-      const reload = mkBtn('Refresh', 'Refresh', () => { try { webview.reload(); } catch (e) {} });
-      const home = mkBtn('Home', 'Home', () => { try { webview.loadURL(config.url); } catch (e) {} });
-      addressInput = document.createElement('input');
-      addressInput.className = 'dtmshell-addr';
-      addressInput.value = config.url;
-      addressInput.spellcheck = false;
-      addressInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          try { webview.loadURL(normalizeUrl(addressInput.value)); } catch (err) {}
-        }
-      });
-      const go = mkBtn('Go', 'Go', () => {
-        try { webview.loadURL(normalizeUrl(addressInput.value)); } catch (e) {}
-      });
-      toolbar.append(back, forward, stop, reload, home, addressInput, go);
-      body.appendChild(toolbar);
-    } else {
+    {
       const toolbar = document.createElement('div');
       toolbar.className = 'dtmshell-toolbar';
       const reload = document.createElement('button');
@@ -234,7 +213,7 @@
     const statusLeft = document.createElement('span');
     statusLeft.textContent = 'Loading…';
     const statusRight = document.createElement('span');
-    statusRight.textContent = app === 'browser' ? 'Microsoft Internet Explorer 4.0' : 'Discord for Windows 95';
+    statusRight.textContent = 'Discord for Windows 95';
     status.append(statusLeft, statusRight);
     body.appendChild(status);
     statusText = statusLeft;
@@ -246,16 +225,6 @@
 
     win.addEventListener('pointerdown', () => focusWindow(app));
 
-    if (addressInput) {
-      webview.addEventListener('did-navigate', (e) => {
-        addressInput.value = e.url;
-        statusText.textContent = e.url;
-      });
-      webview.addEventListener('did-navigate-in-page', (e) => {
-        addressInput.value = e.url;
-      });
-    }
-
     webview.addEventListener('did-start-loading', () => { statusText.textContent = 'Opening page…'; });
     webview.addEventListener('did-stop-loading', () => { statusText.textContent = 'Done'; });
     webview.addEventListener('did-fail-load', (e) => {
@@ -264,7 +233,7 @@
     });
     webview.addEventListener('page-title-updated', (e) => {
       if (!e.title) return;
-      titleText.textContent = app === 'browser' ? (e.title + ' - Internet Explorer') : e.title;
+      titleText.textContent = e.title;
       document.title = e.title;
     });
     if (app === 'discord') {
@@ -275,6 +244,348 @@
 
     focusWindow(app);
     notifySkin(app, true, false);
+  }
+
+  // -------------------------------------------------------------------------
+  // Retro "Internet Explorer" — a docked, real Waterfox window
+  //
+  // Waterfox is Firefox-based, so its engine cannot render inside a <webview>.
+  // Instead a private Waterfox kiosk window is docked into this window's page
+  // area, which keeps real Waterfox rendering (logins, certificates) inside
+  // the 1998 window furniture. Navigation is driven over WebDriver BiDi.
+  // -------------------------------------------------------------------------
+
+  const preloadBridge = window.dtmPreload || {};
+  const wfBridge = preloadBridge.waterfox || null;
+  let wfAvailable = null;
+  let lastDockRect = null;
+  let lastDockShown = null;
+  let dockTimer = null;
+  let stateTimer = null;
+  let lastAssertAt = 0;
+
+  async function waterfoxAvailable() {
+    if (wfAvailable !== null) return wfAvailable;
+    if (!wfBridge) { wfAvailable = false; return false; }
+    try { const s = await wfBridge.status(); wfAvailable = !!(s && s.available); }
+    catch (e) { wfAvailable = false; }
+    return wfAvailable;
+  }
+
+  function openBrowser(requestedUrl) {
+    const existing = windows.get('browser');
+    if (existing) {
+      if (requestedUrl) navigateBrowser(existing, requestedUrl);
+      focusWindow('browser');
+      return;
+    }
+    const startUrl = normalizeUrl(requestedUrl || APP_CONFIG.browser.url);
+    waterfoxAvailable().then((ok) => {
+      const openNow = windows.get('browser');
+      if (openNow) { navigateBrowser(openNow, startUrl); return; }
+      if (ok) buildWaterfoxBrowser(startUrl);
+      else buildWebviewBrowser(startUrl);
+    });
+  }
+
+  function browserChrome(startUrl) {
+    const config = APP_CONFIG.browser;
+    const win = document.createElement('div');
+    win.className = 'dtmshell-win active';
+    const offset = windows.size * 26;
+    win.style.left = (56 + offset) + 'px';
+    win.style.top = (36 + offset) + 'px';
+    win.style.width = '780px';
+    win.style.height = '540px';
+    win.style.zIndex = String(++zTop);
+
+    const titlebar = document.createElement('div');
+    titlebar.className = 'dtmshell-title';
+    const icon = document.createElement('span');
+    icon.className = 'dtmshell-title-icon';
+    icon.textContent = config.icon;
+    const titleText = document.createElement('span');
+    titleText.className = 'dtmshell-title-text';
+    titleText.textContent = config.title;
+    titlebar.append(icon, titleText, makeButtons('browser'));
+
+    const body = document.createElement('div');
+    body.className = 'dtmshell-body';
+    const toolbar = document.createElement('div');
+    toolbar.className = 'dtmshell-toolbar';
+    body.appendChild(toolbar);
+
+    const status = document.createElement('div');
+    status.className = 'dtmshell-status';
+    const statusLeft = document.createElement('span');
+    statusLeft.textContent = 'Ready';
+    const statusRight = document.createElement('span');
+    statusRight.textContent = 'Microsoft Internet Explorer 4.0';
+    status.append(statusLeft, statusRight);
+
+    win.append(titlebar, body);
+    layer.appendChild(win);
+    makeDraggable(win, titlebar);
+    win.addEventListener('pointerdown', () => focusWindow('browser'));
+
+    return { win, body, toolbar, status, statusLeft, titleText, startUrl };
+  }
+
+  function browserButton(label, title, fn) {
+    const b = document.createElement('button');
+    b.className = 'dtmshell-btn';
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener('click', fn);
+    return b;
+  }
+
+  function browserAddress(frame, submit) {
+    const input = document.createElement('input');
+    input.className = 'dtmshell-addr';
+    input.value = frame.startUrl;
+    input.spellcheck = false;
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      submit(input.value);
+    });
+    return input;
+  }
+
+  function buildWaterfoxBrowser(startUrl) {
+    if (!wfBridge) { buildWebviewBrowser(startUrl); return; }
+    const frame = browserChrome(startUrl);
+    const pane = document.createElement('div');
+    pane.className = 'dtmshell-pane';
+    const paneMsg = document.createElement('div');
+    paneMsg.className = 'dtmshell-pane-msg';
+    paneMsg.textContent = 'Starting Waterfox…';
+    pane.appendChild(paneMsg);
+
+    const entry = {
+      win: frame.win,
+      titleText: frame.titleText,
+      maximized: false,
+      waterfox: true,
+      wfReady: false,
+      pane,
+      paneMsg,
+      statusLeft: frame.statusLeft
+    };
+
+    const address = browserAddress(frame, (value) => navigateBrowser(entry, value));
+    entry.addressInput = address;
+    frame.toolbar.append(
+      browserButton('⬅ Back', 'Back', () => { wfBridge.history(-1).then(() => refreshBrowserState(entry)); }),
+      browserButton('➡ Forward', 'Forward', () => { wfBridge.history(1).then(() => refreshBrowserState(entry)); }),
+      browserButton('Refresh', 'Refresh', () => { wfBridge.reload().then(() => refreshBrowserState(entry)); }),
+      browserButton('Home', 'Home', () => navigateBrowser(entry, APP_CONFIG.browser.url)),
+      address,
+      browserButton('Go', 'Go', () => navigateBrowser(entry, address.value))
+    );
+    frame.body.append(pane, frame.status);
+
+    windows.set('browser', entry);
+    lastDockRect = null;
+    lastDockShown = null;
+    startDockSync();
+
+    entry.begin = () => {
+      entry.wfReady = false;
+      entry.stateFails = 0;
+      entry.paneMsg.textContent = 'Starting Waterfox…';
+      entry.statusLeft.textContent = 'Starting Waterfox…';
+      wfBridge.open(startUrl).then((res) => {
+        if (!windows.has('browser')) { try { wfBridge.close(); } catch (e) {} return; }
+        if (!res || !res.ok) {
+          entry.paneMsg.textContent = 'Could not start Waterfox' + (res && res.error ? ': ' + res.error : '.');
+          entry.statusLeft.textContent = 'Waterfox unavailable';
+          return;
+        }
+        entry.wfReady = true;
+        entry.paneMsg.textContent = 'Waterfox page hidden — click the window to bring it back.';
+        entry.statusLeft.textContent = 'Waterfox is rendering this page';
+        lastDockRect = null;
+        lastDockShown = null;
+        syncBrowserDock();
+        startStatePolling();
+        refreshBrowserState(entry);
+      }).catch((e) => {
+        entry.paneMsg.textContent = 'Could not start Waterfox: ' + e.message;
+      });
+    };
+
+    focusWindow('browser');
+    entry.begin();
+  }
+
+  function buildWebviewBrowser(startUrl) {
+    const frame = browserChrome(startUrl);
+    const webview = document.createElement('webview');
+    webview.className = 'dtmshell-web';
+    webview.setAttribute('partition', PARTITION);
+    webview.setAttribute('src', startUrl);
+
+    const address = browserAddress(frame, (value) => {
+      try { webview.loadURL(normalizeUrl(value)); } catch (e) {}
+    });
+    frame.toolbar.append(
+      browserButton('⬅ Back', 'Back', () => { try { webview.goBack(); } catch (e) {} }),
+      browserButton('➡ Forward', 'Forward', () => { try { webview.goForward(); } catch (e) {} }),
+      browserButton('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} }),
+      browserButton('Refresh', 'Refresh', () => { try { webview.reload(); } catch (e) {} }),
+      browserButton('Home', 'Home', () => { try { webview.loadURL(APP_CONFIG.browser.url); } catch (e) {} }),
+      address,
+      browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} })
+    );
+    frame.body.append(webview, frame.status);
+
+    windows.set('browser', { win: frame.win, webview, titleText: frame.titleText, maximized: false });
+    focusWindow('browser');
+
+    webview.addEventListener('did-navigate', (e) => {
+      address.value = e.url;
+      frame.statusLeft.textContent = e.url;
+    });
+    webview.addEventListener('did-navigate-in-page', (e) => { address.value = e.url; });
+    webview.addEventListener('did-start-loading', () => { frame.statusLeft.textContent = 'Opening page…'; });
+    webview.addEventListener('did-stop-loading', () => { frame.statusLeft.textContent = 'Done'; });
+    webview.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return;
+      frame.statusLeft.textContent = 'Could not load page (' + (e.errorDescription || e.errorCode) + ')';
+    });
+    webview.addEventListener('page-title-updated', (e) => {
+      if (!e.title) return;
+      frame.titleText.textContent = e.title + ' - Internet Explorer';
+      document.title = e.title;
+    });
+  }
+
+  function navigateBrowser(entry, value) {
+    if (!entry) return;
+    const url = normalizeUrl(value);
+    if (entry.webview) {
+      try { entry.webview.loadURL(url); } catch (e) {}
+      return;
+    }
+    if (entry.waterfox && entry.wfReady && wfBridge) {
+      entry.statusLeft.textContent = 'Opening page…';
+      wfBridge.navigate(url).then(() => { setTimeout(() => refreshBrowserState(entry), 700); });
+    }
+  }
+
+  function refreshBrowserState(entry) {
+    if (!entry || !entry.waterfox || !wfBridge) return;
+    wfBridge.state().then((st) => {
+      if (!st || !st.ok) {
+        entry.stateFails = (entry.stateFails || 0) + 1;
+        // Waterfox was closed by hand (Alt+F4 on the docked page).
+        if (entry.wfReady && entry.stateFails >= 3) {
+          entry.wfReady = false;
+          lastDockRect = null;
+          lastDockShown = null;
+          entry.paneMsg.textContent = 'Waterfox was closed — click the window to open it again.';
+          entry.statusLeft.textContent = 'Waterfox closed';
+          try { wfBridge.hide(); } catch (e) {}
+        }
+        return;
+      }
+      entry.stateFails = 0;
+      if (document.activeElement !== entry.addressInput) entry.addressInput.value = st.url;
+      entry.titleText.textContent = (st.title ? st.title + ' - ' : '') + 'Internet Explorer';
+      entry.statusLeft.textContent = st.url;
+    }).catch(() => {});
+  }
+
+  function startStatePolling() {
+    if (stateTimer) return;
+    stateTimer = setInterval(() => {
+      const entry = windows.get('browser');
+      if (!entry || !entry.waterfox || !entry.wfReady) return;
+      if (!entry.win.classList.contains('active') || entry.win.style.display === 'none') return;
+      refreshBrowserState(entry);
+    }, 1500);
+  }
+
+  // Where the docked Waterfox window should sit, in physical screen pixels.
+  function browserPageRect(entry) {
+    const rect = entry.pane.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const frameX = Math.max(0, (window.outerWidth - window.innerWidth) / 2);
+    const frameY = Math.max(0, window.outerHeight - window.innerHeight - frameX);
+    const dpr = window.devicePixelRatio || 1;
+    return {
+      x: Math.round((window.screenX + frameX + rect.left) * dpr),
+      y: Math.round((window.screenY + frameY + rect.top) * dpr),
+      w: Math.round(rect.width * dpr),
+      h: Math.round(rect.height * dpr)
+    };
+  }
+
+  function syncBrowserDock() {
+    bindSkinDocument();
+    const entry = windows.get('browser');
+    if (!entry || !entry.waterfox || !entry.wfReady || !wfBridge) return;
+    // Minimizing the whole shell must not leave a page floating on the desktop.
+    const active = entry.win.classList.contains('active') && entry.win.style.display !== 'none' && !document.hidden;
+    if (active) {
+      const rect = browserPageRect(entry);
+      if (rect && (!lastDockRect || Math.abs(rect.x - lastDockRect.x) > 1 || Math.abs(rect.y - lastDockRect.y) > 1 ||
+        Math.abs(rect.w - lastDockRect.w) > 2 || Math.abs(rect.h - lastDockRect.h) > 2)) {
+        lastDockRect = rect;
+        wfBridge.dock(rect);
+        lastAssertAt = Date.now();
+      } else if (Date.now() - lastAssertAt > 3000 && lastDockRect) {
+        // Kiosk windows can re-assert fullscreen when they are activated;
+        // re-applying the bounds keeps the page inside its retro frame.
+        lastAssertAt = Date.now();
+        wfBridge.dock(lastDockRect);
+        wfBridge.raise();
+      }
+    }
+    if (active !== lastDockShown) {
+      lastDockShown = active;
+      if (active) { wfBridge.raise(); wfBridge.show(); }
+      else wfBridge.hide();
+    }
+  }
+
+  function startDockSync() {
+    if (dockTimer) return;
+    dockTimer = setInterval(syncBrowserDock, 60);
+  }
+
+  // Any click outside the browser window (desktop, Start menu, another
+  // window) drops it out of the foreground: park the Waterfox window so it
+  // cannot float over the rest of the retro UI.
+  function deactivateBrowser(entry) {
+    if (!entry || !entry.waterfox || !entry.wfReady || !wfBridge) return;
+    if (entry.win.classList.contains('active')) {
+      entry.win.classList.remove('active');
+      entry.paneMsg.textContent = 'Waterfox page hidden — click the window to bring it back.';
+    }
+    if (lastDockShown !== false) {
+      lastDockShown = false;
+      wfBridge.hide();
+    }
+  }
+
+  document.addEventListener('pointerdown', (event) => {
+    const entry = windows.get('browser');
+    if (!entry || entry.win.contains(event.target)) return;
+    deactivateBrowser(entry);
+  }, true);
+
+  // The skin's desktop and Start menu live in the skin iframe, whose clicks
+  // never reach this document. Bind each freshly loaded skin document.
+  let boundSkinDoc = null;
+  function bindSkinDocument() {
+    const frame = skinFrame();
+    const doc = frame && frame.contentDocument;
+    if (!doc || doc === boundSkinDoc) return;
+    boundSkinDoc = doc;
+    doc.addEventListener('pointerdown', () => deactivateBrowser(windows.get('browser')), true);
   }
 
   function formatTime(seconds) {

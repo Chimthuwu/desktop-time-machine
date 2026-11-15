@@ -45,6 +45,21 @@ const dtmBridge = {
     pickMedia: () => ipcRenderer.invoke('dtm:fs-pick-media')
   },
 
+  // Retro "Internet Explorer": a docked, real Waterfox window driven over BiDi.
+  waterfox: {
+    status: () => ipcRenderer.invoke('dtm:waterfox-status'),
+    open: (url) => ipcRenderer.invoke('dtm:waterfox-open', url),
+    navigate: (url) => ipcRenderer.invoke('dtm:waterfox-navigate', url),
+    reload: () => ipcRenderer.invoke('dtm:waterfox-reload'),
+    history: (delta) => ipcRenderer.invoke('dtm:waterfox-history', delta),
+    state: () => ipcRenderer.invoke('dtm:waterfox-state'),
+    dock: (rect) => ipcRenderer.invoke('dtm:waterfox-dock', rect),
+    show: () => ipcRenderer.invoke('dtm:waterfox-show'),
+    hide: () => ipcRenderer.invoke('dtm:waterfox-hide'),
+    raise: () => ipcRenderer.invoke('dtm:waterfox-raise'),
+    close: () => ipcRenderer.invoke('dtm:waterfox-close')
+  },
+
   // Real Windows taskbar mirror (pinned apps / running windows / tray items)
   getTaskbar: () => ipcRenderer.invoke('dtm:shell-taskbar'),
   activateWindow: (pid) => ipcRenderer.invoke('dtm:shell-activate-window', pid),

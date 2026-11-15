@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { isSafePath } = require('../security/permissions');
+const waterfox = require('./waterfox');
 
 // Required manifest fields for a skin to be considered valid
 const MANIFEST_REQUIRED_FIELDS = ['id', 'name', 'era', 'version', 'entry', 'engineCompatibility', 'status'];
@@ -518,6 +519,23 @@ function registerIpcHandlers() {
       return { valid: false, errors: ['skinFolderName must be a string'] };
     }
     return validateManifest(manifest, skinFolderName);
+  });
+
+  // Retro "Internet Explorer" — a docked, real Waterfox window.
+  ipcMain.handle('dtm:waterfox-status', async () => waterfox.status());
+  ipcMain.handle('dtm:waterfox-open', async (_event, url) => waterfox.open(url));
+  ipcMain.handle('dtm:waterfox-navigate', async (_event, url) => waterfox.navigate(url));
+  ipcMain.handle('dtm:waterfox-reload', async () => waterfox.reload());
+  ipcMain.handle('dtm:waterfox-history', async (_event, delta) => waterfox.history(Number(delta)));
+  ipcMain.handle('dtm:waterfox-state', async () => waterfox.state());
+  ipcMain.handle('dtm:waterfox-dock', async (_event, rect) => waterfox.dock(rect));
+  ipcMain.handle('dtm:waterfox-show', async () => waterfox.show());
+  ipcMain.handle('dtm:waterfox-hide', async () => waterfox.hide());
+  ipcMain.handle('dtm:waterfox-raise', async () => waterfox.raise());
+  ipcMain.handle('dtm:waterfox-close', async () => waterfox.close());
+
+  app.on('before-quit', () => {
+    try { waterfox.dispose(); } catch (e) { /* already gone */ }
   });
 }
 
