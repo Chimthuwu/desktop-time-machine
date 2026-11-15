@@ -9,6 +9,7 @@
 
 const chromium = require('./chromium');
 const waterfox = require('./waterfox');
+const browserSetup = require('./browser-setup');
 
 function backend() {
   try {
@@ -19,6 +20,8 @@ function backend() {
 
 module.exports = {
   status: () => backend().status(),
+  // Installs Ungoogled Chromium when this machine has no real engine yet.
+  ensure: (options) => browserSetup.ensure(options),
   open: (url) => backend().open(url),
   navigate: (url) => backend().navigate(url),
   reload: () => backend().reload(),

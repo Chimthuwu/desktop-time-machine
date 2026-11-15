@@ -44,6 +44,28 @@ cd Z:\github\skinsos
 npm start
 ```
 
+### Real browser engine
+
+The retro Internet Explorer is a real Ungoogled Chromium window on a private
+profile, so the app needs that engine on disk. On a machine that does not have
+it, the app provisions it by itself on first launch: it downloads the current
+official Windows installer, runs it silently for the current user, and then
+writes an **Internet Explorer** desktop and Start menu shortcut carrying the
+classic icon. Shortcuts that already exist are left untouched, so a custom icon
+is never replaced.
+
+To hand the folder to someone without internet access, drop the installer in
+`resources/` before you copy it over:
+
+```
+resources/
+  ungoogled-chromium-installer-x64.exe            # or the official
+  ungoogled-chromium_<version>_installer_x64.exe  # release file name
+```
+
+`DTM_CHROMIUM_INSTALLER` can point at an installer anywhere on disk, and
+`DTM_CHROMIUM` at an existing `chrome.exe` to skip provisioning entirely.
+
 ---
 
 ## ⌨️ Shortcuts & Controls

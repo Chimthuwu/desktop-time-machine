@@ -48,6 +48,8 @@ const dtmBridge = {
   // Retro "Internet Explorer": a docked, real Waterfox window driven over BiDi.
   waterfox: {
     status: () => ipcRenderer.invoke('dtm:waterfox-status'),
+    // Installs Ungoogled Chromium if this machine has none, then brands it.
+    ensure: () => ipcRenderer.invoke('dtm:browser-ensure'),
     open: (url) => ipcRenderer.invoke('dtm:waterfox-open', url),
     navigate: (url) => ipcRenderer.invoke('dtm:waterfox-navigate', url),
     reload: () => ipcRenderer.invoke('dtm:waterfox-reload'),

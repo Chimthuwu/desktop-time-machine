@@ -530,6 +530,7 @@ function registerIpcHandlers() {
 
   // Retro "Internet Explorer" — a docked, real Chromium (or Waterfox) window.
   ipcMain.handle('dtm:waterfox-status', async () => browser.status());
+  ipcMain.handle('dtm:browser-ensure', async () => browser.ensure());
   ipcMain.handle('dtm:waterfox-open', async (_event, url) => browser.open(url));
   ipcMain.handle('dtm:waterfox-navigate', async (_event, url) => browser.navigate(url));
   ipcMain.handle('dtm:waterfox-reload', async () => browser.reload());

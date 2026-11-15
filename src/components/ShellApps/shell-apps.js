@@ -262,6 +262,7 @@
   let wfAvailable = null;
   let wfEngine = 'browser';
   const engineName = () => (wfEngine === 'chromium' ? 'Chromium' : wfEngine === 'waterfox' ? 'Waterfox' : 'Browser');
+  let wfSetup = null;
   let lastDockRect = null;
   let lastDockShown = null;
   let dockTimer = null;
@@ -280,6 +281,29 @@
     return wfAvailable;
   }
 
+  // A friend's machine has no Ungoogled Chromium, so the first visit to the
+  // retro browser starts a silent install and reports it in the status bar
+  // until the real engine can take over.
+  function provisionRealBrowser() {
+    if (wfSetup || !wfBridge || typeof wfBridge.ensure !== 'function') return wfSetup;
+    const say = (message) => {
+      const entry = windows.get('browser');
+      if (entry && entry.statusLeft) entry.statusLeft.textContent = message;
+    };
+    say('Setting up Ungoogled Chromium…');
+    wfSetup = wfBridge.ensure()
+      .then(async (result) => {
+        wfAvailable = null;
+        const ok = await waterfoxAvailable();
+        if (ok) say('Ungoogled Chromium is ready — reopen Internet Explorer');
+        else say('Could not set up Ungoogled Chromium' + (result && result.error ? ': ' + result.error : ''));
+        return ok;
+      })
+      .catch(() => { say('Could not set up Ungoogled Chromium'); return false; })
+      .finally(() => { wfSetup = null; });
+    return wfSetup;
+  }
+
   function openBrowser(requestedUrl) {
     const existing = windows.get('browser');
     if (existing) {
@@ -291,8 +315,9 @@
     waterfoxAvailable().then((ok) => {
       const openNow = windows.get('browser');
       if (openNow) { navigateBrowser(openNow, startUrl); return; }
-      if (ok) buildWaterfoxBrowser(startUrl);
-      else buildWebviewBrowser(startUrl);
+      if (ok) { buildWaterfoxBrowser(startUrl); return; }
+      buildWebviewBrowser(startUrl);
+      provisionRealBrowser();
     });
   }
 
@@ -593,7 +618,13 @@
     frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
     frame.body.append(webview, frame.status);
 
-    windows.set('browser', { win: frame.win, webview, titleText: frame.titleText, maximized: false });
+    windows.set('browser', {
+      win: frame.win,
+      webview,
+      titleText: frame.titleText,
+      statusLeft: frame.statusLeft,
+      maximized: false
+    });
     focusWindow('browser');
 
     webview.addEventListener('did-navigate', (e) => {

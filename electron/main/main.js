@@ -7,6 +7,7 @@ const path = require('path');
 const { createMainWindow, getMainWindow } = require('./window-manager');
 const { registerIpcHandlers } = require('./ipc-handlers');
 const { hardenWebviews } = require('./webview-security');
+const browser = require('./browser');
 
 // User request (2026-11-14): the app must stay muted — no startup sounds,
 // skin audio or system beeps out of the speakers, ever.
@@ -39,6 +40,24 @@ if (!gotTheLock) {
     // Load the engine host HTML
     const indexPath = path.join(__dirname, '../../src/index.html');
     mainWindow.loadFile(indexPath);
+
+    // A copy handed to someone else has no Ungoogled Chromium yet, so the real
+    // retro browser engine is provisioned in the background once the desktop is
+    // up. On a machine that already has it this only refreshes branding.
+    mainWindow.webContents.once('did-finish-load', () => {
+      browser.ensure({ onProgress: (step) => {
+        if (step.phase === 'download' && step.total) {
+          const pct = Math.round((step.received / step.total) * 100);
+          if (pct % 10 === 0) console.log('[DTM] Ungoogled Chromium download ' + pct + '%');
+        } else if (step.phase === 'install') {
+          console.log('[DTM] Installing ' + step.file);
+        } else if (step.phase === 'done') {
+          console.log('[DTM] Retro browser ready (' + step.exe + ')');
+        }
+      } }).then((result) => {
+        if (!result || !result.ok) console.log('[DTM] Retro browser setup failed: ' + (result && result.error));
+      }).catch(() => {});
+    });
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

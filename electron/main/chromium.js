@@ -363,4 +363,8 @@ function dispose() {
   if (dockHelper) { dockHelper.dispose(); dockHelper = null; }
 }
 
-module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose };
+module.exports = {
+  status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose,
+  // Used by browser-setup to tell "not installed" apart from "installed elsewhere".
+  executablePath: resolveChromiumPath
+};
