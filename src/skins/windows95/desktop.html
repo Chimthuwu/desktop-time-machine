@@ -16,13 +16,15 @@ button{font:inherit}
 .icon-grid{display:grid;grid-auto-flow:row;grid-template-columns:76px;grid-auto-rows:86px;width:80px;gap:4px}
 .desktop-icon{width:76px;height:82px;display:flex;align-items:center;flex-direction:column;gap:5px;padding:5px 2px;color:white;text-shadow:1px 1px #000;cursor:default;border:1px solid transparent}
 .desktop-icon.selected{background:#000080;border:1px dotted #fff}
+.icon-marquee{position:fixed;border:1px dotted #fff;background:rgba(0,0,128,.10);pointer-events:none;z-index:30000}
 .glyph{font-size:31px;line-height:35px;text-shadow:none;filter:drop-shadow(1px 1px 0 #333)}
 .desktop-icon span:last-child{text-align:center;line-height:14px}
 .taskbar{position:absolute;bottom:0;left:0;right:0;height:38px;background:var(--gray);border-top:2px solid white;display:flex;align-items:center;padding:3px;gap:4px;z-index:10000;box-shadow:0 -1px #808080}
 .start-button{height:30px;padding:2px 8px 2px 5px;font-weight:bold;display:flex;align-items:center;gap:5px}
 .win95-button{background:var(--gray);border:2px solid;border-color:white #404040 #404040 white;box-shadow:inset 1px 1px #dfdfdf;min-height:24px;padding:2px 8px;cursor:pointer}
 .win95-button:active,.win95-button.pressed{border-color:#404040 white white #404040;box-shadow:inset 1px 1px #808080}
-.start-logo{font-size:20px}
+.start-logo{display:flex;align-items:center}
+.start-logo svg{display:block;width:20px;height:18px}
 .task-buttons{display:flex;gap:4px;flex:1;min-width:0;overflow:hidden}
 .real-pinned{display:flex;align-items:center;gap:2px;padding:0 4px;border-left:1px solid #808080;border-right:1px solid #fff;height:29px;max-width:240px;overflow:hidden;flex:none}
 .real-pinned:empty{display:none}
@@ -181,10 +183,10 @@ button{font:inherit}
   </div>
 </div>
 <div class="taskbar">
-  <button class="win95-button start-button" id="startBtn"><span class="start-logo">⊞</span> Start</button>
+  <button class="win95-button start-button" id="startBtn"><span class="start-logo" aria-hidden="true"><svg viewBox="0 0 20 18" width="20" height="18"><path d="M1 3.4 L9.3 2.1 V8.7 H1 Z" fill="#ff0000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 2 L19 0.7 V8.7 H10.2 Z" fill="#00a000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M1 9.7 H9.3 V16.3 L1 15 Z" fill="#0000c0" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 9.7 H19 V17.7 L10.2 16.4 Z" fill="#ffd700" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/></svg></span> Start</button>
   <div class="real-pinned" id="realPinned" title="Apps pinned to your real Windows taskbar"></div>
   <div class="task-buttons" id="taskButtons"></div>
-  <div class="tray" id="trayArea" title="Double click to toggle fullscreen">
+  <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
     <span class="real-tray" id="realTray" title="Real Windows notification area"></span>
     <span id="trayVol" title="Volume">🔊</span>
     <span class="clock" id="clock">4:20 PM</span>
@@ -205,6 +207,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
     e.preventDefault();
     if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
+  } else if (e.ctrlKey && e.key === 'F5') {
+    // Ctrl+F5 is the fullscreen toggle (and must not reload the desktop).
+    e.preventDefault();
+    if (DTM && DTM.system.toggleFullScreen) DTM.system.toggleFullScreen();
   }
 });
 
@@ -1168,7 +1174,52 @@ function drag(w){const bar=w.querySelector('.titlebar');let ox=0,oy=0,moving=fal
 function setupPaint(canvas,w){const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);let down=false;function pos(e){const r=canvas.getBoundingClientRect();return [(e.clientX-r.left)*canvas.width/r.width,(e.clientY-r.top)*canvas.height/r.height]}canvas.addEventListener('pointerdown',e=>{down=true;canvas.setPointerCapture(e.pointerId);const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)});canvas.addEventListener('pointermove',e=>{if(!down)return;const [x,y]=pos(e);ctx.strokeStyle=w.dataset.color||'#000';ctx.lineWidth=5;ctx.lineCap='round';ctx.lineTo(x,y);ctx.stroke()});canvas.addEventListener('pointerup',()=>down=false);canvas.addEventListener('pointercancel',()=>down=false)}
 
 document.getElementById('startBtn').addEventListener('click',()=>menu.classList.toggle('open'));
-document.querySelectorAll('.desktop-icon').forEach(icon=>{icon.addEventListener('click',()=>{document.querySelectorAll('.desktop-icon').forEach(i=>i.classList.remove('selected'));icon.classList.add('selected')});icon.addEventListener('dblclick',()=>{if(icon.dataset.app) openApp(icon.dataset.app); else alert('This is a folder. It is empty!')})});
+
+// DESKTOP ICONS — single click selects, Ctrl+click adds, dragging an empty
+// stretch of desktop draws a selection box like Windows 95 does.
+function clearIconSelection(){document.querySelectorAll('.desktop-icon.selected').forEach(i=>i.classList.remove('selected'))}
+function wireIconSelection(){
+  document.querySelectorAll('.desktop-icon').forEach(icon=>{
+    if(icon._selWired) return;
+    icon._selWired=true;
+    icon.addEventListener('pointerdown',e=>{
+      if(e.button!==0) return;
+      if(e.ctrlKey){icon.classList.toggle('selected');return}
+      clearIconSelection();icon.classList.add('selected');
+    });
+    icon.addEventListener('dblclick',()=>{if(icon.dataset.app) openApp(icon.dataset.app); else alert('This is a folder. It is empty!')});
+  });
+}
+wireIconSelection();
+
+let iconBand=null, bandStart=null, bandBase=[];
+function endIconBand(){if(!iconBand) return;iconBand.remove();iconBand=null;bandStart=null;bandBase=[]}
+desktop.addEventListener('pointerdown',e=>{
+  if(e.button!==0) return;
+  if(e.target.closest('.window')||e.target.closest('.taskbar')||e.target.closest('.context')||e.target.closest('#startMenu')||e.target.closest('.desktop-icon')) return;
+  bandStart={x:e.clientX,y:e.clientY};
+  bandBase=e.ctrlKey?[...document.querySelectorAll('.desktop-icon.selected')]:[];
+  if(!e.ctrlKey) clearIconSelection();
+  iconBand=document.createElement('div');
+  iconBand.className='icon-marquee';
+  iconBand.style.cssText='left:'+e.clientX+'px;top:'+e.clientY+'px;width:0;height:0';
+  document.body.appendChild(iconBand);
+  try{desktop.setPointerCapture(e.pointerId)}catch(err){}
+});
+desktop.addEventListener('pointermove',e=>{
+  if(!iconBand||!bandStart) return;
+  const left=Math.min(e.clientX,bandStart.x), top=Math.min(e.clientY,bandStart.y);
+  const right=Math.max(e.clientX,bandStart.x), bottom=Math.max(e.clientY,bandStart.y);
+  iconBand.style.left=left+'px'; iconBand.style.top=top+'px';
+  iconBand.style.width=(right-left)+'px'; iconBand.style.height=(bottom-top)+'px';
+  document.querySelectorAll('.desktop-icon').forEach(icon=>{
+    const r=icon.getBoundingClientRect();
+    const touched=!(r.right<left||r.left>right||r.bottom<top||r.top>bottom);
+    icon.classList.toggle('selected',touched||bandBase.includes(icon));
+  });
+});
+['pointerup','pointercancel'].forEach(ev=>desktop.addEventListener(ev,endIconBand));
+window.addEventListener('blur',endIconBand);
 
 // Tray Fullscreen Toggle
 document.getElementById('trayArea').addEventListener('dblclick', () => {
@@ -1244,9 +1295,9 @@ document.addEventListener('contextmenu',e=>{
       const newIcon=document.createElement('div');
       newIcon.className='desktop-icon';
       newIcon.innerHTML='<span class="glyph">📁</span><span>New Folder</span>';
-      newIcon.addEventListener('click',()=>{document.querySelectorAll('.desktop-icon').forEach(i=>i.classList.remove('selected'));newIcon.classList.add('selected')});
       newIcon.addEventListener('dblclick',()=>alert('Folder is empty.'));
       document.getElementById('iconGrid').appendChild(newIcon);
+      wireIconSelection();
     }
     if(a==='properties')openApp('display');
     if(a!=='new') c.remove();

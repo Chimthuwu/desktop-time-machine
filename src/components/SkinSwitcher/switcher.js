@@ -59,6 +59,12 @@ class SkinSwitcherUI {
       if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
         e.preventDefault();
         this.toggle();
+      } else if (e.ctrlKey && e.key === 'F5') {
+        // Ctrl+F5 is the app-wide fullscreen toggle (not a page reload).
+        e.preventDefault();
+        if (window.DTM && window.DTM.system && window.DTM.system.toggleFullScreen) {
+          window.DTM.system.toggleFullScreen();
+        }
       } else if (e.key === 'Escape' && this.isOpen) {
         this.close();
       }
