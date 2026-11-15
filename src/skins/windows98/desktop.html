@@ -37,6 +37,8 @@ body { background: var(--win98-bg); }
 .glyph-img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(1px 1px 0 rgba(0,0,0,.35)); }
 .start-item .glyph-img { width: 24px; height: 24px; }
 .quick-launch-btn .glyph-img { width: 16px; height: 16px; }
+.glyph-img { image-rendering: pixelated; }
+.tb-icon { width: 16px; height: 16px; vertical-align: -3px; image-rendering: pixelated; }
 
 /* Taskbar - Windows 98 style with Quick Launch */
 .taskbar { position: absolute; bottom: 0; left: 0; right: 0; height: 38px; background: var(--gray); border-top: 2px solid white; display: flex; align-items: center; padding: 3px; gap: 4px; z-index: 10000; box-shadow: 0 -1px #808080; }
@@ -225,11 +227,12 @@ body { background: var(--win98-bg); }
 <body>
 <div class="desktop" id="desktop">
   <div class="icon-grid" id="iconGrid">
-    <div class="desktop-icon" data-app="computer"><span class="glyph">💻</span><span>My Computer</span></div>
-    <div class="desktop-icon" data-app="mydocs"><span class="glyph">📁</span><span>My Documents</span></div>
-    <div class="desktop-icon" data-app="network"><span class="glyph">🌐</span><span>Network Neighborhood</span></div>
-    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/recycle-bin.svg" alt=""><span>Recycle Bin</span></div>
-    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""><span>Internet Explorer</span></div>
+    <div class="desktop-icon" data-app="computer"><img class="glyph-img" src="../shared/icons/win95/my-computer.ico" alt=""><span>My Computer</span></div>
+    <div class="desktop-icon" data-app="mydocs"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt=""><span>My Documents</span></div>
+    <div class="desktop-icon" data-app="network"><img class="glyph-img" src="../shared/icons/win95/network.ico" alt=""><span>Network Neighborhood</span></div>
+    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/win95/recycle-bin.ico" alt=""><span>Recycle Bin</span></div>
+    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/win95/internet-explorer.ico" alt=""><span>Internet Explorer</span></div>
+  </div>
   </div>
 
   <!-- Channel Bar (Active Desktop) -->
@@ -252,23 +255,23 @@ body { background: var(--win98-bg); }
   <div class="start-menu" id="startMenu">
     <div class="start-side">Windows 98</div>
     <div class="start-items">
-      <div class="start-item" data-launch="windows-update"><span class="glyph">🌐</span><b>Windows Update</b></div>
+      <div class="start-item" data-launch="windows-update"><img class="glyph-img" src="../shared/icons/win95/internet.ico" alt=""><b>Windows Update</b></div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="programs"><span class="glyph">📁</span><b>Programs</b> <span style="margin-left:auto;">▶</span>
+      <div class="start-item" data-launch="programs"><img class="glyph-img" src="../shared/icons/win95/programs.ico" alt=""><b>Programs</b> <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
-          <div class="start-item" data-launch="accessories"><span class="glyph">📁</span>Accessories <span style="margin-left:auto;">▶</span>
+          <div class="start-item" data-launch="accessories"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">Accessories <span style="margin-left:auto;">▶</span>
             <div class="start-submenu">
-              <div class="start-item" data-launch="notepad"><span class="glyph">📝</span>Notepad</div>
-              <div class="start-item" data-launch="paint"><span class="glyph">🎨</span>Paint</div>
+              <div class="start-item" data-launch="notepad"><img class="glyph-img" src="../shared/icons/win95/notepad.ico" alt="">Notepad</div>
+              <div class="start-item" data-launch="paint"><img class="glyph-img" src="../shared/icons/win95/paint.ico" alt="">Paint</div>
               <div class="start-item" data-launch="calculator"><span class="glyph">🔢</span>Calculator</div>
-              <div class="start-item" data-launch="wordpad"><span class="glyph">📄</span>WordPad</div>
+              <div class="start-item" data-launch="wordpad"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">WordPad</div>
               <div class="start-sep"></div>
-              <div class="start-item" data-launch="minesweeper"><span class="glyph">💣</span>Minesweeper</div>
+              <div class="start-item" data-launch="minesweeper"><img class="glyph-img" src="../shared/icons/win95/minesweeper.ico" alt="">Minesweeper</div>
               <div class="start-item" data-launch="solitaire"><span class="glyph">🃏</span>Solitaire</div>
               <div class="start-sep"></div>
-              <div class="start-item" data-launch="system-tools"><span class="glyph">📁</span>System Tools <span style="margin-left:auto;">▶</span>
+              <div class="start-item" data-launch="system-tools"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">System Tools <span style="margin-left:auto;">▶</span>
                 <div class="start-submenu">
-                  <div class="start-item" data-launch="disk-cleanup"><span class="glyph">🗑️</span>Disk Cleanup</div>
+                  <div class="start-item" data-launch="disk-cleanup"><img class="glyph-img" src="../shared/icons/win95/recycle-bin.ico" alt="">Disk Cleanup</div>
                   <div class="start-item" data-launch="disk-defrag"><span class="glyph">💾</span>Disk Defragmenter</div>
                   <div class="start-item" data-launch="sys-info"><span class="glyph">ℹ️</span>System Information</div>
                 </div>
@@ -277,37 +280,37 @@ body { background: var(--win98-bg); }
           </div>
           <div class="start-sep"></div>
           <div class="start-item" data-launch="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt="">Internet Explorer</div>
-          <div class="start-item" data-launch="outlook"><span class="glyph">📧</span>Outlook Express</div>
+          <div class="start-item" data-launch="outlook"><img class="glyph-img" src="../shared/icons/win95/outlook.ico" alt="">Outlook Express</div>
           <div class="start-item" data-launch="net-meeting"><span class="glyph">📞</span>NetMeeting</div>
           <div class="start-sep"></div>
-          <div class="start-item" data-launch="explorer"><span class="glyph">🗂️</span>Windows Explorer</div>
+          <div class="start-item" data-launch="explorer"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">Windows Explorer</div>
         </div>
       </div>
-      <div class="start-item" data-launch="mydocs"><span class="glyph">📄</span>My Documents</div>
-      <div class="start-item" data-launch="favorites"><span class="glyph">⭐</span>Favorites</div>
+      <div class="start-item" data-launch="mydocs"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">My Documents</div>
+      <div class="start-item" data-launch="favorites"><img class="glyph-img" src="../shared/icons/win95/favorites.ico" alt="">Favorites</div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="settings"><span class="glyph">⚙️</span>Settings <span style="margin-left:auto;">▶</span>
+      <div class="start-item" data-launch="settings"><img class="glyph-img" src="../shared/icons/win95/settings.ico" alt="">Settings <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
-          <div class="start-item" data-launch="control"><span class="glyph">🖥️</span>Control Panel</div>
+          <div class="start-item" data-launch="control"><img class="glyph-img" src="../shared/icons/win95/my-computer.ico" alt="">Control Panel</div>
           <div class="start-item" data-launch="taskbar"><span class="glyph">📋</span>Taskbar & Start Menu</div>
-          <div class="start-item" data-launch="folders"><span class="glyph">📁</span>Folder Options</div>
+          <div class="start-item" data-launch="folders"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">Folder Options</div>
           <div class="start-sep"></div>
-          <div class="start-item" data-launch="network"><span class="glyph">🌐</span>Network Connections</div>
+          <div class="start-item" data-launch="network"><img class="glyph-img" src="../shared/icons/win95/internet.ico" alt="">Network Connections</div>
         </div>
       </div>
-      <div class="start-item" data-launch="find"><span class="glyph">🔎</span>Find <span style="margin-left:auto;">▶</span>
+      <div class="start-item" data-launch="find"><img class="glyph-img" src="../shared/icons/win95/find.ico" alt="">Find <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
-          <div class="start-item" data-launch="find-files"><span class="glyph">📄</span>Files or Folders</div>
-          <div class="start-item" data-launch="find-computer"><span class="glyph">💻</span>Computer</div>
+          <div class="start-item" data-launch="find-files"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">Files or Folders</div>
+          <div class="start-item" data-launch="find-computer"><img class="glyph-img" src="../shared/icons/win95/msdos.ico" alt="">Computer</div>
           <div class="start-item" data-launch="find-people"><span class="glyph">👥</span>People</div>
-          <div class="start-item" data-launch="find-web"><span class="glyph">🌐</span>On the Internet</div>
+          <div class="start-item" data-launch="find-web"><img class="glyph-img" src="../shared/icons/win95/internet.ico" alt="">On the Internet</div>
         </div>
       </div>
-      <div class="start-item" data-launch="help"><span class="glyph">❔</span>Help</div>
+      <div class="start-item" data-launch="help"><img class="glyph-img" src="../shared/icons/win95/help.ico" alt="">Help</div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="run"><span class="glyph">▶️</span>Run...</div>
+      <div class="start-item" data-launch="run"><img class="glyph-img" src="../shared/icons/win95/run.ico" alt="">Run...</div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="shutdown"><span class="glyph">🔌</span>Shut Down...</div>
+      <div class="start-item" data-launch="shutdown"><img class="glyph-img" src="../shared/icons/win95/shutdown.ico" alt="">Shut Down...</div>
     </div>
   </div>
 </div>
@@ -315,10 +318,10 @@ body { background: var(--win98-bg); }
 <div class="taskbar">
   <button class="win98-button start-button" id="startBtn"><span class="start-logo" aria-hidden="true"><svg viewBox="0 0 20 18" width="20" height="18"><path d="M1 3.4 L9.3 2.1 V8.7 H1 Z" fill="#ff0000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 2 L19 0.7 V8.7 H10.2 Z" fill="#00a000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M1 9.7 H9.3 V16.3 L1 15 Z" fill="#0000c0" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 9.7 H19 V17.7 L10.2 16.4 Z" fill="#ffd700" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/></svg></span> Start</button>
   <div class="quick-launch" id="quickLaunch">
-    <button class="quick-launch-btn" title="Show Desktop" onclick="showDesktop()"><span class="glyph" style="font-size:14px;">🖥️</span></button>
+    <button class="quick-launch-btn" title="Show Desktop" onclick="showDesktop()"><img class="glyph-img" src="../shared/icons/win95/desktop.ico" alt=""></button>
     <button class="quick-launch-btn" title="Internet Explorer" onclick="openApp('internet')"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""></button>
-    <button class="quick-launch-btn" title="Outlook Express" onclick="openApp('outlook')">📧</button>
-    <button class="quick-launch-btn" title="Windows Explorer" onclick="openApp('explorer')">🗂️</button>
+    <button class="quick-launch-btn" title="Outlook Express" onclick="openApp('outlook')"><img class="glyph-img" src="../shared/icons/win95/outlook.ico" alt=""></button>
+    <button class="quick-launch-btn" title="Windows Explorer" onclick="openApp('explorer')"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt=""></button>
   </div>
   <div class="task-buttons" id="taskButtons"></div>
   <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
@@ -1175,7 +1178,7 @@ function showDesktop() {
 // APPLICATION DEFINITIONS
 const apps = {
   computer: {
-    title: 'My Computer', icon: '💻', width: 480, height: 330,
+    title: 'My Computer', iconSrc: '../shared/icons/win95/my-computer.ico', icon: '💻', width: 480, height: 330,
     body: () => `
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="computer">
@@ -1190,7 +1193,7 @@ const apps = {
   },
   
   mydocs: {
-    title: 'My Documents', icon: '📁', width: 520, height: 350,
+    title: 'My Documents', iconSrc: '../shared/icons/win95/documents.ico', icon: '📁', width: 520, height: 350,
     body: () => `
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="explorer-container">
@@ -1208,7 +1211,7 @@ const apps = {
   },
   
   network: {
-    title: 'Network Neighborhood', icon: '🌐', width: 480, height: 330,
+    title: 'Network Neighborhood', iconSrc: '../shared/icons/win95/network.ico', icon: '🌐', width: 480, height: 330,
     body: () => `
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="computer" style="padding:16px;">
@@ -1221,12 +1224,12 @@ const apps = {
   },
   
   recycle: {
-    title: 'Recycle Bin', icon: '🗑️', width: 390, height: 260,
+    title: 'Recycle Bin', iconSrc: '../shared/icons/win95/recycle-bin.ico', icon: '🗑️', width: 390, height: 260,
     body: () => `<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div><div class="about"><div class="big-logo">🗑️</div><b>Recycle Bin is empty.</b><p>Files you delete will appear here. You can restore them if needed.</p></div><div class="statusbar"><span>0 object(s)</span></div>`
   },
   
   internet: {
-    title: 'Internet Explorer', icon: '🌐', width: 700, height: 520,
+    title: 'Internet Explorer', iconSrc: '../shared/icons/win95/internet-explorer.ico', icon: '🌐', width: 700, height: 520,
     body: () => `<div style="display:flex;flex-direction:column;height:100%;background:#c0c0c0;">
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Favorites</span><span>Help</span></div>
       <div style="padding:3px;display:flex;gap:3px;border-bottom:1px solid #808080;">
@@ -1248,7 +1251,7 @@ const apps = {
   },
   
   outlook: {
-    title: 'Outlook Express', icon: '📧', width: 640, height: 480,
+    title: 'Outlook Express', iconSrc: '../shared/icons/win95/outlook.ico', icon: '📧', width: 640, height: 480,
     body: () => `<div style="display:flex;height:100%;background:#c0c0c0;">
       <div class="menu-row" style="width:100%;"><span>File</span><span>Edit</span><span>View</span><span>Message</span><span>Tools</span><span>Help</span></div>
       <div style="display:flex;height:calc(100% - 25px);">
@@ -1277,7 +1280,7 @@ const apps = {
   },
   
   explorer: {
-    title: 'Windows Explorer', icon: '🗂️', width: 620, height: 440,
+    title: 'Windows Explorer', iconSrc: '../shared/icons/win95/folder.ico', icon: '🗂️', width: 620, height: 440,
     body: () => `
       <div class="explorer-container">
         <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span></div>
@@ -1320,7 +1323,7 @@ const apps = {
   },
   
   display: {
-    title: 'Display Properties', icon: '🖥️', width: 480, height: 460,
+    title: 'Display Properties', iconSrc: '../shared/icons/win95/settings.ico', icon: '🖥️', width: 480, height: 460,
     body: () => `
       <div style="display:flex;height:100%;background:var(--gray);">
         <div class="disp-tabs" style="flex-direction:column;border-right:1px solid #808080;border-bottom:none;width:80px;padding-top:4px;">
@@ -1560,7 +1563,7 @@ const apps = {
   },
   
   minesweeper: {
-    title: 'Minesweeper', icon: '💣', width: 240, height: 320,
+    title: 'Minesweeper', iconSrc: '../shared/icons/win95/minesweeper.ico', icon: '💣', width: 240, height: 320,
     body: () => `
       <div class="menu-row"><span>Game</span><span>Help</span></div>
       <div class="ms-container">
@@ -1580,7 +1583,7 @@ const apps = {
   },
   
   notepad: {
-    title: 'Untitled - Notepad', icon: '📝', width: 520, height: 370,
+    title: 'Untitled - Notepad', iconSrc: '../shared/icons/win95/notepad.ico', icon: '📝', width: 520, height: 370,
     body: () => `
       <div class="menu-row np-menubar">
         <div class="menubar-item"><span>File</span>
@@ -1632,7 +1635,7 @@ WordPad is a rich text editor that lets you create documents with formatting, fo
   },
   
   paint: {
-    title: 'untitled - Paint', icon: '🎨', width: 560, height: 420,
+    title: 'untitled - Paint', iconSrc: '../shared/icons/win95/paint.ico', icon: '🎨', width: 560, height: 420,
     body: () => `<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></div><div class="paint-tools"><button class="win98-button" data-tool="pencil" title="Pencil">✏️</button><button class="win98-button" data-tool="brush" title="Brush">🖌️</button><button class="win98-button" data-tool="eraser" title="Eraser">🧽</button><button class="win98-button" data-tool="line" title="Line">📏</button><button class="win98-button" data-tool="rect" title="Rectangle">▭</button><button class="win98-button" data-tool="ellipse" title="Ellipse">⭘</button><button class="win98-button" data-tool="fill" title="Fill">🪣</button><button class="win98-button" data-tool="picker" title="Color Picker">💧</button><button class="win98-button" data-tool="text" title="Text">A</button><button class="win98-button" data-tool="select" title="Select">⬜</button></div><div style="padding:4px;border-bottom:1px solid #808080;background:var(--gray);display:flex;gap:4px;"><span>Colors:</span><button class="win98-button" data-color="#000000" style="background:#000;width:24px;height:24px;"></button><button class="win98-button" data-color="#808080" style="background:#808080;width:24px;height:24px;"></button><button class="win98-button" data-color="#ff0000" style="background:#f00;width:24px;height:24px;"></button><button class="win98-button" data-color="#ffff00" style="background:#ff0;width:24px;height:24px;"></button><button class="win98-button" data-color="#00ff00" style="background:#0f0;width:24px;height:24px;"></button><button class="win98-button" data-color="#0000ff" style="background:#00f;width:24px;height:24px;"></button><button class="win98-button" data-color="#ff00ff" style="background:#f0f;width:24px;height:24px;"></button><button class="win98-button" data-color="#00ffff" style="background:#0ff;width:24px;height:24px;"></button><button class="win98-button" data-color="#ffffff" style="background:#fff;border:1px solid #808080;width:24px;height:24px;"></button></div><canvas class="paint" width="900" height="560"></canvas>`
   },
   
@@ -1683,7 +1686,7 @@ WordPad is a rich text editor that lets you create documents with formatting, fo
   },
   
   shutdown: {
-    title: 'Shut Down Windows', icon: '🔌', width: 360, height: 220,
+    title: 'Shut Down Windows', iconSrc: '../shared/icons/win95/shutdown.ico', icon: '🔌', width: 360, height: 220,
     body: () => `
       <div class="about" style="text-align:left;padding:15px;">
         <p style="font-weight:bold;">What do you want the computer to do?</p>
@@ -1776,7 +1779,7 @@ function openApp(key) {
   w.style.top = Math.max(12, Math.min(innerHeight - app.height - 60, 65 + winCount * 20)) + 'px';
   winCount++;
   
-  w.innerHTML = `<div class="titlebar"><span>${app.icon}</span><span class="win-title">${app.title}</span><div class="title-controls"><button class="win98-button" data-min>_</button><button class="win98-button" data-max>□</button><button class="win98-button" data-close>×</button></div></div><div class="window-body">${app.body()}</div>`;
+  w.innerHTML = `<div class="titlebar">${appIconMarkup(app)}<span class="win-title">${app.title}</span><div class="title-controls"><button class="win98-button" data-min>_</button><button class="win98-button" data-max>□</button><button class="win98-button" data-close>×</button></div></div><div class="window-body">${app.body()}</div>`;
   
   desktop.appendChild(w);
   makeTask(w);
@@ -1824,10 +1827,24 @@ function openApp(key) {
   }
 }
 
+function appIconMarkup(app) {
+  return app.iconSrc ? '<img class="tb-icon" src="' + app.iconSrc + '" alt="">' : app.icon;
+}
+
 function makeTask(w) {
   const b = document.createElement('button');
   b.className = 'win98-button task-button';
-  b.textContent = apps[w.dataset.app].icon + ' ' + apps[w.dataset.app].title;
+  const app = apps[w.dataset.app];
+  if (app.iconSrc) {
+    const im = document.createElement('img');
+    im.className = 'tb-icon';
+    im.src = app.iconSrc;
+    im.alt = '';
+    b.appendChild(im);
+    b.appendChild(document.createTextNode(' ' + app.title));
+  } else {
+    b.textContent = app.icon + ' ' + app.title;
+  }
   b.addEventListener('click', () => w.style.display === 'none' ? restore(w) : w === active && w.style.display !== 'none' ? minimize(w) : focus(w));
   b.dataset.for = w.dataset.app;
   taskButtons.appendChild(b);

@@ -21,6 +21,8 @@ button{font:inherit}
 .desktop-icon span:last-child{text-align:center;line-height:14px}
 .glyph-img{width:32px;height:32px;object-fit:contain;image-rendering:auto;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35))}
 .start-item .glyph-img{width:24px;height:24px}
+.glyph-img{image-rendering:pixelated}
+.tb-icon{width:16px;height:16px;vertical-align:-3px;image-rendering:pixelated}
 .taskbar{position:absolute;bottom:0;left:0;right:0;height:38px;background:var(--gray);border-top:2px solid white;display:flex;align-items:center;padding:3px;gap:4px;z-index:10000;box-shadow:0 -1px #808080}
 .start-button{height:30px;padding:2px 8px 2px 5px;font-weight:bold;display:flex;align-items:center;gap:5px}
 .win95-button{background:var(--gray);border:2px solid;border-color:white #404040 #404040 white;box-shadow:inset 1px 1px #dfdfdf;min-height:24px;padding:2px 8px;cursor:pointer}
@@ -140,47 +142,48 @@ button{font:inherit}
 <body>
 <div class="desktop" id="desktop">
   <div class="icon-grid" id="iconGrid">
-    <div class="desktop-icon" data-app="timemachine"><span class="glyph">⏳</span><span>Time Machine</span></div>
-    <div class="desktop-icon" data-app="computer"><span class="glyph">🖥️</span><span>My Computer</span></div>
-    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/recycle-bin.svg" alt=""><span>Recycle Bin</span></div>
-    <div class="desktop-icon" data-app="minesweeper"><span class="glyph">💣</span><span>Minesweeper</span></div>
-    <div class="desktop-icon" data-app="notepad"><span class="glyph">📝</span><span>Notepad</span></div>
-    <div class="desktop-icon" data-app="paint"><span class="glyph">🎨</span><span>Paint</span></div>
-    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""><span>The Internet</span></div>
-    <div class="desktop-icon" data-app="terminal"><span class="glyph">💻</span><span>MS-DOS Prompt</span></div>
-    <div class="desktop-icon" data-app="discord"><span class="glyph">💬</span><span>Discord</span></div>
-    <div class="desktop-icon" data-app="doom"><span class="glyph">👹</span><span>DOOM</span></div>
+    <div class="desktop-icon" data-app="timemachine"><img class="glyph-img" src="../shared/icons/win95/time-machine.ico" alt=""><span>Time Machine</span></div>
+    <div class="desktop-icon" data-app="computer"><img class="glyph-img" src="../shared/icons/win95/my-computer.ico" alt=""><span>My Computer</span></div>
+    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/win95/recycle-bin.ico" alt=""><span>Recycle Bin</span></div>
+    <div class="desktop-icon" data-app="minesweeper"><img class="glyph-img" src="../shared/icons/win95/minesweeper.ico" alt=""><span>Minesweeper</span></div>
+    <div class="desktop-icon" data-app="notepad"><img class="glyph-img" src="../shared/icons/win95/notepad.ico" alt=""><span>Notepad</span></div>
+    <div class="desktop-icon" data-app="paint"><img class="glyph-img" src="../shared/icons/win95/paint.ico" alt=""><span>Paint</span></div>
+    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/win95/internet-explorer.ico" alt=""><span>The Internet</span></div>
+    <div class="desktop-icon" data-app="terminal"><img class="glyph-img" src="../shared/icons/win95/msdos.ico" alt=""><span>MS-DOS Prompt</span></div>
+    <div class="desktop-icon" data-app="discord"><img class="glyph-img" src="../shared/icons/win95/discord.ico" alt=""><span>Discord</span></div>
+    <div class="desktop-icon" data-app="doom"><img class="glyph-img" src="../shared/icons/win95/doom.ico" alt=""><span>DOOM</span></div>
+  </div>
   </div>
   
   <div class="start-menu" id="startMenu">
     <div class="start-side">Windows 95</div>
     <div class="start-items">
       <div class="start-item" data-launch="timemachine">
-        <span class="glyph">⏳</span><b>Desktop Time Machine...</b>
+        <img class="glyph-img" src="../shared/icons/win95/time-machine.ico" alt=""><b>Desktop Time Machine...</b>
       </div>
       <div class="start-sep"></div>
       <div class="start-item" data-launch="programs">
-        <span class="glyph">📁</span><b>Programs</b> <span style="margin-left:auto;">▶</span>
+        <img class="glyph-img" src="../shared/icons/win95/programs.ico" alt=""><b>Programs</b> <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
           <div class="start-item" data-launch="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt="">Internet Explorer</div>
-          <div class="start-item" data-launch="discord"><span class="glyph">💬</span>Discord</div>
-          <div class="start-item" data-launch="terminal"><span class="glyph">💻</span>MS-DOS Prompt</div>
-          <div class="start-item" data-launch="minesweeper"><span class="glyph">💣</span>Minesweeper</div>
-          <div class="start-item" data-launch="notepad"><span class="glyph">📝</span>Notepad</div>
-          <div class="start-item" data-launch="paint"><span class="glyph">🎨</span>Paint</div>
-          <div class="start-item" data-launch="explorer"><span class="glyph">🗂️</span>Windows Explorer</div>
+          <div class="start-item" data-launch="discord"><img class="glyph-img" src="../shared/icons/win95/discord.ico" alt="">Discord</div>
+          <div class="start-item" data-launch="terminal"><img class="glyph-img" src="../shared/icons/win95/msdos.ico" alt="">MS-DOS Prompt</div>
+          <div class="start-item" data-launch="minesweeper"><img class="glyph-img" src="../shared/icons/win95/minesweeper.ico" alt="">Minesweeper</div>
+          <div class="start-item" data-launch="notepad"><img class="glyph-img" src="../shared/icons/win95/notepad.ico" alt="">Notepad</div>
+          <div class="start-item" data-launch="paint"><img class="glyph-img" src="../shared/icons/win95/paint.ico" alt="">Paint</div>
+          <div class="start-item" data-launch="explorer"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">Windows Explorer</div>
           <div class="start-sep"></div>
-          <div class="start-item" data-launch="doom"><span class="glyph">👹</span>DOOM</div>
+          <div class="start-item" data-launch="doom"><img class="glyph-img" src="../shared/icons/win95/doom.ico" alt="">DOOM</div>
         </div>
       </div>
-      <div class="start-item" data-launch="documents"><span class="glyph">📄</span>Documents</div>
-      <div class="start-item" data-launch="settings"><span class="glyph">⚙️</span>Settings</div>
-      <div class="start-item" data-launch="find"><span class="glyph">🔎</span>Find</div>
+      <div class="start-item" data-launch="documents"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">Documents</div>
+      <div class="start-item" data-launch="settings"><img class="glyph-img" src="../shared/icons/win95/settings.ico" alt="">Settings</div>
+      <div class="start-item" data-launch="find"><img class="glyph-img" src="../shared/icons/win95/find.ico" alt="">Find</div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="help"><span class="glyph">❔</span>Help</div>
-      <div class="start-item" data-launch="run"><span class="glyph">▶️</span>Run...</div>
+      <div class="start-item" data-launch="help"><img class="glyph-img" src="../shared/icons/win95/help.ico" alt="">Help</div>
+      <div class="start-item" data-launch="run"><img class="glyph-img" src="../shared/icons/win95/run.ico" alt="">Run...</div>
       <div class="start-sep"></div>
-      <div class="start-item" data-launch="shutdown"><span class="glyph">🔌</span>Shut Down...</div>
+      <div class="start-item" data-launch="shutdown"><img class="glyph-img" src="../shared/icons/win95/shutdown.ico" alt="">Shut Down...</div>
     </div>
   </div>
 </div>
@@ -741,7 +744,7 @@ function screensaverOptions(selected) {
 }
 
 const apps={
- computer:{title:'My Computer',icon:'🖥️',width:480,height:330,body:()=>`
+ computer:{title:'My Computer',icon:'🖥️',iconSrc:'../shared/icons/win95/my-computer.ico',width:480,height:330,body:()=>`
   <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
   <div class="computer">
     <div class="computer-item" onclick="openApp('explorer')"><span class="glyph">💽</span>(C:) Local Disk</div>
@@ -753,7 +756,7 @@ const apps={
   </div>
   <div class="statusbar"><span>6 object(s)</span><span>Host: Windows PC</span></div>`},
  
- explorer:{title:'Windows Explorer - Real Filesystem',icon:'🗂️',width:620,height:440,body:()=>`
+ explorer:{title:'Windows Explorer - Real Filesystem',icon:'🗂️',iconSrc:'../shared/icons/win95/folder.ico',width:620,height:440,body:()=>`
   <div class="explorer-container">
     <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span></div>
     <div class="explorer-toolbar">
@@ -772,9 +775,9 @@ const apps={
     <div class="statusbar"><span id="exp-status">Ready</span><span>Real Windows Filesystem</span></div>
   </div>`},
 
- recycle:{title:'Recycle Bin',icon:'🗑️',width:390,height:260,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div><div class="about"><div class="big-logo">🗑️</div><b>Recycle Bin is empty.</b><p>Files you delete will appear here.</p></div><div class="statusbar"><span>0 object(s)</span></div>`},
+ recycle:{title:'Recycle Bin',icon:'🗑️',iconSrc:'../shared/icons/win95/recycle-bin.ico',width:390,height:260,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div><div class="about"><div class="big-logo">🗑️</div><b>Recycle Bin is empty.</b><p>Files you delete will appear here.</p></div><div class="statusbar"><span>0 object(s)</span></div>`},
  
- minesweeper:{title:'Minesweeper',icon:'💣',width:240,height:320,body:()=>`
+ minesweeper:{title:'Minesweeper',icon:'💣',iconSrc:'../shared/icons/win95/minesweeper.ico',width:240,height:320,body:()=>`
   <div class="menu-row"><span>Game</span><span>Help</span></div>
   <div class="ms-container">
     <div class="ms-header">
@@ -785,24 +788,24 @@ const apps={
     <div class="ms-grid"></div>
   </div>`},
 
- notepad:{title:'Untitled - Notepad',icon:'📝',width:520,height:370,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>Search</span><span>Help</span></div><textarea class="notepad" spellcheck="false">Welcome to Windows 95 on Desktop Time Machine!\n\nIt feels good to be here.\n\nType something or enjoy the authentic retro environment!</textarea>`},
+ notepad:{title:'Untitled - Notepad',icon:'📝',iconSrc:'../shared/icons/win95/notepad.ico',width:520,height:370,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>Search</span><span>Help</span></div><textarea class="notepad" spellcheck="false">Welcome to Windows 95 on Desktop Time Machine!\n\nIt feels good to be here.\n\nType something or enjoy the authentic retro environment!</textarea>`},
  
- paint:{title:'untitled - Paint',icon:'🎨',width:560,height:420,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></div><div class="paint-tools"><button class="win95-button" data-color="#000000">■</button><button class="win95-button" data-color="#ff0000">■</button><button class="win95-button" data-color="#0000ff">■</button><button class="win95-button" data-color="#008000">■</button><button class="win95-button" data-color="#ffff00">■</button><button class="win95-button" data-color="#ffffff">□</button></div><canvas class="paint" width="900" height="560"></canvas>`},
+ paint:{title:'untitled - Paint',icon:'🎨',iconSrc:'../shared/icons/win95/paint.ico',width:560,height:420,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></div><div class="paint-tools"><button class="win95-button" data-color="#000000">■</button><button class="win95-button" data-color="#ff0000">■</button><button class="win95-button" data-color="#0000ff">■</button><button class="win95-button" data-color="#008000">■</button><button class="win95-button" data-color="#ffff00">■</button><button class="win95-button" data-color="#ffffff">□</button></div><canvas class="paint" width="900" height="560"></canvas>`},
  
- internet:{title:'The Internet - Microsoft Internet Explorer',icon:'🌐',width:700,height:520,body:()=>`
+ internet:{title:'The Internet - Microsoft Internet Explorer',icon:'🌐',iconSrc:'../shared/icons/win95/internet-explorer.ico',width:700,height:520,body:()=>`
   <div class="about"><div class="big-logo">🌐</div><b>Internet Explorer opens in a real browser window.</b><p>Close this window and choose The Internet again.</p></div>`},
 
- terminal:{title:'MS-DOS Prompt',icon:'💻',width:620,height:390,body:()=>`
+ terminal:{title:'MS-DOS Prompt',icon:'💻',iconSrc:'../shared/icons/win95/msdos.ico',width:620,height:390,body:()=>`
   <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
   <div class="term-screen" id="termScreen">
     <div id="termLog"></div>
     <div class="term-line"><span id="termPrompt">C:\\&gt;</span><input class="term-in" id="termInput" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   </div>`},
 
- discord:{title:'Discord',icon:'💬',width:900,height:600,body:()=>`
+ discord:{title:'Discord',icon:'💬',iconSrc:'../shared/icons/win95/discord.ico',width:900,height:600,body:()=>`
   <div class="about"><div class="big-logo">💬</div><b>Discord opens in a real web app window.</b><p>Close this window and choose Discord again.</p></div>`},
 
- display:{title:'Display Properties',icon:'🖥️',width:500,height:430,body:()=>`
+ display:{title:'Display Properties',icon:'🖥️',iconSrc:'../shared/icons/win95/settings.ico',width:500,height:430,body:()=>`
   <div style="display:flex;height:100%;padding:4px;background:var(--gray);">
     <div class="display-tabs">
       <button class="win95-button display-tab active" data-tab="background">Background</button>
@@ -887,7 +890,7 @@ const apps={
     </div>
   </div>`},
 
- timemachine:{title:'Desktop Time Machine — Era Selector',icon:'⏳',width:420,height:260,body:()=>`
+ timemachine:{title:'Desktop Time Machine — Era Selector',icon:'⏳',iconSrc:'../shared/icons/win95/time-machine.ico',width:420,height:260,body:()=>`
   <div class="about">
     <div class="big-logo">⏳</div>
     <h2>Desktop Time Machine</h2>
@@ -896,7 +899,7 @@ const apps={
     <button class="win95-button" onclick="if(window.parent)window.parent.postMessage('dtm:open-switcher','*');" style="font-weight:bold;padding:6px 16px;">Open OS Museum (F8)</button>
   </div>`},
 
- shutdown:{title:'Shut Down Windows',icon:'🔌',width:360,height:220,body:()=>`
+ shutdown:{title:'Shut Down Windows',icon:'🔌',iconSrc:'../shared/icons/win95/shutdown.ico',width:360,height:220,body:()=>`
   <div class="about" style="text-align:left;padding:15px;">
     <p style="font-weight:bold;">What do you want the computer to do?</p>
     <p><label><input type="radio" name="shutdown_opt" value="exit" checked> Shut down and return to Windows</label></p>
@@ -923,7 +926,7 @@ const apps={
     </ul>
   </div>`},
 
- doom:{title:'DOOM',icon:'👹',width:680,height:480,body:()=>`
+ doom:{title:'DOOM',icon:'👹',iconSrc:'../shared/icons/win95/doom.ico',width:680,height:480,body:()=>`
   <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
   <iframe src="https://thedoggybrad.github.io/doom_on_js-dos/" width="100%" height="100%" frameborder="0" allowfullscreen style="display:block;background:#000;"></iframe>`}
 };
@@ -1118,7 +1121,7 @@ function openApp(key, opts){
  const w=document.createElement('section');w.className='window';w.dataset.app=key;w.style.width=app.width+'px';w.style.height=app.height+'px';
  w.style.left=Math.max(12,Math.min(innerWidth-app.width-15,100+winCount*24))+'px';
  w.style.top=Math.max(12,Math.min(innerHeight-app.height-60,65+winCount*20))+'px';winCount++;
- w.innerHTML=`<div class="titlebar"><span>${app.icon}</span><span class="win-title">${app.title}</span><div class="title-controls"><button class="win95-button" data-min>_</button><button class="win95-button" data-max>□</button><button class="win95-button" data-close>×</button></div></div><div class="window-body">${app.body()}</div>`;
+ w.innerHTML=`<div class="titlebar">${appIconMarkup(app)}<span class="win-title">${app.title}</span><div class="title-controls"><button class="win95-button" data-min>_</button><button class="win95-button" data-max>□</button><button class="win95-button" data-close>×</button></div></div><div class="window-body">${app.body()}</div>`;
  desktop.appendChild(w);makeTask(w);focus(w);
  w.addEventListener('pointerdown',()=>focus(w));
  w.querySelector('[data-close]').addEventListener('click',()=>close(w));
@@ -1167,7 +1170,8 @@ function openApp(key, opts){
  }
 }
 
-function makeTask(w){const b=document.createElement('button');b.className='win95-button task-button';b.textContent=apps[w.dataset.app].icon+' '+apps[w.dataset.app].title;b.addEventListener('click',()=>w.style.display==='none'?restore(w):w===active&&w.style.display!=='none'?minimize(w):focus(w));b.dataset.for=w.dataset.app;taskButtons.appendChild(b);w._task=b}
+function appIconMarkup(app){return app.iconSrc?'<img class="tb-icon" src="'+app.iconSrc+'" alt="">':app.icon}
+function makeTask(w){const b=document.createElement('button');b.className='win95-button task-button';const app=apps[w.dataset.app];if(app.iconSrc){const im=document.createElement('img');im.className='tb-icon';im.src=app.iconSrc;im.alt='';b.appendChild(im);b.appendChild(document.createTextNode(' '+app.title))}else{b.textContent=app.icon+' '+app.title}b.addEventListener('click',()=>w.style.display==='none'?restore(w):w===active&&w.style.display!=='none'?minimize(w):focus(w));b.dataset.for=w.dataset.app;taskButtons.appendChild(b);w._task=b}
 function focus(w){if(active&&active!==w){active.querySelector('.titlebar').classList.add('inactive');active._task?.classList.remove('pressed')}active=w;w.style.display='flex';w.style.zIndex=++z;w.querySelector('.titlebar').classList.remove('inactive');w._task?.classList.add('pressed')}
 function minimize(w){w.style.display='none';w._task?.classList.remove('pressed');if(active===w)active=null}
 function restore(w){w.style.display='flex';focus(w)}
@@ -1317,9 +1321,9 @@ window.openApp = openApp;
 // Shell web apps (browser, Discord) report state so their taskbar buttons match.
 function setupWebappTasks() {
   const meta = {
-    browser: { icon: '🌐', title: 'Internet Explorer' },
-    discord: { icon: '💬', title: 'Discord' },
-    mediaplayer: { icon: '🎬', title: 'Windows Media Player' }
+    browser: { icon: '🌐', iconSrc: '../shared/icons/win95/internet-explorer.ico', title: 'Internet Explorer' },
+    discord: { icon: '💬', iconSrc: '../shared/icons/win95/discord.ico', title: 'Discord' },
+    mediaplayer: { icon: '🎬', iconSrc: '../shared/icons/win95/media.ico', title: 'Windows Media Player' }
   };
   const buttons = new Map();
   window.addEventListener('message', (e) => {
@@ -1341,7 +1345,9 @@ function setupWebappTasks() {
       taskButtons.appendChild(b);
       buttons.set(d.app, b);
     }
-    b.textContent = m.icon + ' ' + m.title;
+    b.textContent = '';
+    if (m.iconSrc) { const im = document.createElement('img'); im.className = 'tb-icon'; im.src = m.iconSrc; im.alt = ''; b.appendChild(im); }
+    b.appendChild(document.createTextNode((m.iconSrc ? ' ' : m.icon + ' ') + m.title));
     b.classList.toggle('pressed', !d.minimized);
   });
 }
