@@ -72,6 +72,7 @@
   function closeWindow(app) {
     const entry = windows.get(app);
     if (!entry) return;
+    if (app === 'browser') closeMenus();
     if (entry.video) { try { entry.video.pause(); } catch (e) {} }
     try { if (entry.webview) entry.webview.stop(); } catch (e) {}
     if (entry.waterfox && wfBridge) {
@@ -263,6 +264,7 @@
   let dockTimer = null;
   let stateTimer = null;
   let lastAssertAt = 0;
+  let overlayHold = false;
 
   async function waterfoxAvailable() {
     if (wfAvailable !== null) return wfAvailable;
@@ -331,6 +333,107 @@
     return { win, body, toolbar, status, statusLeft, titleText, startUrl };
   }
 
+  // -------------------------------------------------------------------------
+  // 1998-style menu bar (File / View)
+  //
+  // The docked Waterfox window is a separate Windows window sitting above this
+  // one, so a dropdown opened over the page area would be hidden behind it.
+  // Opening a menu therefore parks the page (the same way clicking outside
+  // does) and closing the menu docks it again.
+  // -------------------------------------------------------------------------
+
+  let openMenu = null;
+  let menuRelease = null;
+
+  function closeMenus() {
+    if (openMenu) {
+      openMenu.wrap.classList.remove('open');
+      openMenu.list.setAttribute('aria-hidden', 'true');
+      openMenu = null;
+    }
+    if (menuRelease) {
+      const release = menuRelease;
+      menuRelease = null;
+      release();
+    }
+  }
+
+  function makeMenuBar(defs, holdPage) {
+    const menubar = document.createElement('div');
+    menubar.className = 'dtmshell-menubar';
+
+    defs.forEach((def) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'dtmshell-menu';
+      const title = document.createElement('button');
+      title.className = 'dtmshell-menu-title';
+      title.textContent = def.label;
+      const list = document.createElement('div');
+      list.className = 'dtmshell-menu-list';
+      list.setAttribute('role', 'menu');
+      list.setAttribute('aria-hidden', 'true');
+
+      const openThis = () => {
+        if (openMenu && openMenu.wrap === wrap) return;
+        closeMenus();
+        wrap.classList.add('open');
+        list.setAttribute('aria-hidden', 'false');
+        openMenu = { wrap, title, list };
+        if (holdPage) menuRelease = holdPage();
+      };
+      title.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (openMenu && openMenu.wrap === wrap) closeMenus();
+        else openThis();
+      });
+      // Once one menu is down, sliding across the bar switches menus.
+      title.addEventListener('mouseenter', () => { if (openMenu) openThis(); });
+
+      def.items.forEach((item) => {
+        if (item === '-') {
+          const sep = document.createElement('div');
+          sep.className = 'dtmshell-menu-sep';
+          list.appendChild(sep);
+          return;
+        }
+        const button = document.createElement('button');
+        button.className = 'dtmshell-menu-item';
+        button.textContent = item.label;
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          closeMenus();
+          try { item.action(); } catch (e) { /* command failed, keep the window usable */ }
+        });
+        list.appendChild(button);
+      });
+
+      wrap.append(title, list);
+      menubar.appendChild(wrap);
+    });
+
+    return menubar;
+  }
+
+  function browserMenuDefinitions(cmd) {
+    return [
+      { label: 'File', items: [
+        { label: 'Open Location…', action: cmd.openLocation },
+        '-',
+        { label: 'Back', action: cmd.back },
+        { label: 'Forward', action: cmd.forward },
+        { label: 'Refresh', action: cmd.refresh },
+        { label: 'Go to Home Page', action: cmd.home },
+        '-',
+        { label: 'Close', action: cmd.close }
+      ] },
+      { label: 'View', items: [
+        { label: 'Back', action: cmd.back },
+        { label: 'Forward', action: cmd.forward },
+        { label: 'Refresh', action: cmd.refresh }
+      ] }
+    ];
+  }
+
   function browserButton(label, title, fn) {
     const b = document.createElement('button');
     b.className = 'dtmshell-btn';
@@ -376,14 +479,39 @@
 
     const address = browserAddress(frame, (value) => navigateBrowser(entry, value));
     entry.addressInput = address;
+
+    const cmd = {
+      back: () => { wfBridge.history(-1).then(() => refreshBrowserState(entry)); },
+      forward: () => { wfBridge.history(1).then(() => refreshBrowserState(entry)); },
+      refresh: () => { wfBridge.reload().then(() => refreshBrowserState(entry)); },
+      home: () => navigateBrowser(entry, APP_CONFIG.browser.url),
+      openLocation: () => { address.focus(); address.select(); },
+      close: () => closeWindow('browser')
+    };
+
+    // Park the page while a dropdown is open so it cannot cover the menu.
+    const holdPage = () => {
+      if (!entry.wfReady) return null;
+      overlayHold = true;
+      lastDockShown = false;
+      try { wfBridge.hide(); } catch (e) {}
+      return () => {
+        overlayHold = false;
+        lastDockRect = null;
+        lastDockShown = null;
+        if (windows.has('browser')) syncBrowserDock();
+      };
+    };
+
     frame.toolbar.append(
-      browserButton('⬅ Back', 'Back', () => { wfBridge.history(-1).then(() => refreshBrowserState(entry)); }),
-      browserButton('➡ Forward', 'Forward', () => { wfBridge.history(1).then(() => refreshBrowserState(entry)); }),
-      browserButton('Refresh', 'Refresh', () => { wfBridge.reload().then(() => refreshBrowserState(entry)); }),
-      browserButton('Home', 'Home', () => navigateBrowser(entry, APP_CONFIG.browser.url)),
+      browserButton('⬅ Back', 'Back', cmd.back),
+      browserButton('➡ Forward', 'Forward', cmd.forward),
+      browserButton('Refresh', 'Refresh', cmd.refresh),
+      browserButton('Home', 'Home', cmd.home),
       address,
       browserButton('Go', 'Go', () => navigateBrowser(entry, address.value))
     );
+    frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
     frame.body.append(pane, frame.status);
 
     windows.set('browser', entry);
@@ -430,15 +558,33 @@
     const address = browserAddress(frame, (value) => {
       try { webview.loadURL(normalizeUrl(value)); } catch (e) {}
     });
+
+    const cmd = {
+      back: () => { try { webview.goBack(); } catch (e) {} },
+      forward: () => { try { webview.goForward(); } catch (e) {} },
+      refresh: () => { try { webview.reload(); } catch (e) {} },
+      home: () => { try { webview.loadURL(APP_CONFIG.browser.url); } catch (e) {} },
+      openLocation: () => { address.focus(); address.select(); },
+      close: () => closeWindow('browser')
+    };
+
+    // Chromium can draw the dropdown over the webview, but hiding the page
+    // while the menu is open keeps the list readable in every case.
+    const holdPage = () => {
+      webview.style.visibility = 'hidden';
+      return () => { if (webview.isConnected) webview.style.visibility = ''; };
+    };
+
     frame.toolbar.append(
-      browserButton('⬅ Back', 'Back', () => { try { webview.goBack(); } catch (e) {} }),
-      browserButton('➡ Forward', 'Forward', () => { try { webview.goForward(); } catch (e) {} }),
+      browserButton('⬅ Back', 'Back', cmd.back),
+      browserButton('➡ Forward', 'Forward', cmd.forward),
       browserButton('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} }),
-      browserButton('Refresh', 'Refresh', () => { try { webview.reload(); } catch (e) {} }),
-      browserButton('Home', 'Home', () => { try { webview.loadURL(APP_CONFIG.browser.url); } catch (e) {} }),
+      browserButton('Refresh', 'Refresh', cmd.refresh),
+      browserButton('Home', 'Home', cmd.home),
       address,
       browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} })
     );
+    frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
     frame.body.append(webview, frame.status);
 
     windows.set('browser', { win: frame.win, webview, titleText: frame.titleText, maximized: false });
@@ -525,6 +671,7 @@
 
   function syncBrowserDock() {
     bindSkinDocument();
+    if (overlayHold) return;
     const entry = windows.get('browser');
     if (!entry || !entry.waterfox || !entry.wfReady || !wfBridge) return;
     // Minimizing the whole shell must not leave a page floating on the desktop.
@@ -575,6 +722,17 @@
     const entry = windows.get('browser');
     if (!entry || entry.win.contains(event.target)) return;
     deactivateBrowser(entry);
+  }, true);
+
+  // Dismiss an open menu on any click elsewhere, or on Escape.
+  document.addEventListener('pointerdown', (event) => {
+    if (!openMenu) return;
+    if (openMenu.wrap.contains(event.target)) return;
+    closeMenus();
+  }, true);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && openMenu) closeMenus();
   }, true);
 
   // The skin's desktop and Start menu live in the skin iframe, whose clicks

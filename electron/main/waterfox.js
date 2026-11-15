@@ -433,6 +433,12 @@ function dock(rect) {
 
 function show() {
   helperSend('show');
+  // Kiosk mode re-applies its fullscreen geometry a moment after being shown,
+  // which would leave the page covering the whole screen. Re-assert the
+  // docked rect as that transition settles.
+  [300, 900, 1800, 3000].forEach((delay) => {
+    setTimeout(() => { if (isRunning()) helperSend('raise'); }, delay);
+  });
   return { ok: true };
 }
 
