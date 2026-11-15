@@ -17,17 +17,21 @@ const { app } = require('electron');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { createDock } = require('./window-dock');
 
 const PROFILE_MARKER = 'waterfox-ie';
 const WINDOW_CLASS_HINT = 'waterfox';
 const MIN_PORT = 9300;
 const PORT_RANGE = 90;
 
-let helper = null; // long-lived PowerShell process
-let helperReady = null;
-let helperQueue = [];
 let instance = null; // { proc, port, ws, context, sessionId, url, title }
 let openPromise = null;
+let dockHelper = null;
+
+function dockApi() {
+  if (!dockHelper) dockHelper = createDock({ dir: profileDir(), marker: PROFILE_MARKER, processName: 'waterfox.exe' });
+  return dockHelper;
+}
 
 // ---------------------------------------------------------------------------
 // Waterfox discovery & profile
@@ -99,146 +103,6 @@ function ensureProfile() {
     // A read-only profile dir is not fatal; Waterfox will just use its defaults.
   }
   return dir;
-}
-
-// ---------------------------------------------------------------------------
-// Window helper (user32 via PowerShell)
-// ---------------------------------------------------------------------------
-
-const HELPER_SCRIPT = [
-  "$ErrorActionPreference = 'SilentlyContinue'",
-  'Add-Type -TypeDefinition @"',
-  'using System;',
-  'using System.Runtime.InteropServices;',
-  'public class DtmWin {',
-  '  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L; public int T; public int R; public int B; }',
-  '  [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int t, bool repaint);',
-  '  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);',
-  '  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int t, uint flags);',
-  '  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);',
-  '  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);',
-  '}',
-  '"@',
-  '$script:hwnd = [IntPtr]::Zero',
-  '$script:rect = @(0, 0, 0, 0)',
-  'function Find-MainWindow([string]$marker) {',
-  '  for ($i = 0; $i -lt 120; $i++) {',
-  '    $procs = @(Get-CimInstance Win32_Process -Filter "Name=\'waterfox.exe\'" |',
-  '      Where-Object { $_.CommandLine -and $_.CommandLine.Contains($marker) } |',
-  '      ForEach-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue } |',
-  '      Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero })',
-  '    if ($procs.Count -gt 0) { return $procs[0].MainWindowHandle }',
-  '    Start-Sleep -Milliseconds 250',
-  '  }',
-  '  return [IntPtr]::Zero',
-  '}',
-  '"ready"',
-  '[Console]::Out.Flush()',
-  'while ($true) {',
-  '  $line = [Console]::ReadLine()',
-  '  if ($null -eq $line) { break }',
-  '  $p = $line.Trim() -split "\\s+"',
-  '  if ($p.Length -eq 0) { continue }',
-  '  try {',
-  '    switch ($p[0]) {',
-  "      'find' {",
-  '        $script:hwnd = Find-MainWindow $p[1]',
-  '        if ($script:hwnd -ne [IntPtr]::Zero) { "hwnd=" + $script:hwnd.ToInt64() } else { "hwnd=0" }',
-  '      }',
-  "      'move' {",
-  '        if ($script:hwnd -eq [IntPtr]::Zero) { "err nohwnd"; break }',
-  '        $script:rect = @([int]$p[1], [int]$p[2], [int]$p[3], [int]$p[4])',
-  '        [void][DtmWin]::MoveWindow($script:hwnd, $script:rect[0], $script:rect[1], $script:rect[2], $script:rect[3], $true)',
-  '        "ok"',
-  '      }',
-  "      'show' {",
-  '        if ($script:hwnd -eq [IntPtr]::Zero) { "err nohwnd"; break }',
-  '        [void][DtmWin]::ShowWindow($script:hwnd, 8)',
-  '        if ($script:rect[2] -gt 0) { [void][DtmWin]::MoveWindow($script:hwnd, $script:rect[0], $script:rect[1], $script:rect[2], $script:rect[3], $true) }',
-  '        [void][DtmWin]::SetWindowPos($script:hwnd, [IntPtr]::Zero, 0, 0, 0, 0, 0x0013)',
-  '        "ok"',
-  '      }',
-  "      'hide' {",
-  '        if ($script:hwnd -eq [IntPtr]::Zero) { "err nohwnd"; break }',
-  '        [void][DtmWin]::ShowWindow($script:hwnd, 0)',
-  '        "ok"',
-  '      }',
-  "      'raise' {",
-  '        if ($script:hwnd -eq [IntPtr]::Zero) { "err nohwnd"; break }',
-  '        if ($script:rect[2] -gt 0) { [void][DtmWin]::MoveWindow($script:hwnd, $script:rect[0], $script:rect[1], $script:rect[2], $script:rect[3], $true) }',
-  '        [void][DtmWin]::SetWindowPos($script:hwnd, [IntPtr]::Zero, 0, 0, 0, 0, 0x0013)',
-  '        "ok"',
-  '      }',
-  "      'close' {",
-  '        if ($script:hwnd -eq [IntPtr]::Zero) { "err nohwnd"; break }',
-  '        [void][DtmWin]::PostMessage($script:hwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)',
-  '        "ok"',
-  '      }',
-  "      'quit' {",
-  '        "bye"',
-  '        break',
-  '      }',
-  '      default { "err unknown" }',
-  '    }',
-  '  } catch { "err " + $_.Exception.Message }',
-  '  [Console]::Out.Flush()',
-  '}',
-  ''
-].join('\r\n');
-
-function ensureHelper() {
-  if (helperReady) return helperReady;
-  helperReady = new Promise((resolve, reject) => {
-    let scriptPath;
-    try {
-      const dir = profileDir();
-      fs.mkdirSync(dir, { recursive: true });
-      scriptPath = path.join(dir, 'dock-window.ps1');
-      fs.writeFileSync(scriptPath, HELPER_SCRIPT, 'utf8');
-    } catch (e) { reject(e); return; }
-
-    const powershell = process.env.SystemRoot
-      ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
-      : 'powershell.exe';
-    try {
-      helper = spawn(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath], {
-        windowsHide: true,
-        stdio: ['pipe', 'pipe', 'ignore']
-      });
-    } catch (e) { reject(e); return; }
-
-    helper.on('error', (err) => { helper = null; reject(err); });
-    helper.on('exit', () => { helper = null; helperReady = null; });
-    helper.stdin.on('error', () => {});
-
-    let buffer = '';
-    const onData = (chunk) => {
-      buffer += chunk.toString();
-      let idx;
-      while ((idx = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, idx).trim();
-        buffer = buffer.slice(idx + 1);
-        if (line === 'ready') resolve(true);
-        helperQueue.shift();
-      }
-    };
-    helper.stdout.on('data', onData);
-    setTimeout(() => reject(new Error('window helper did not start')), 10000).unref();
-  });
-  return helperReady;
-}
-
-function helperSend(command) {
-  if (!helper || !helper.stdin.writable) return;
-  helperQueue.push(command);
-  try { helper.stdin.write(command + '\r\n'); } catch (e) { /* helper died */ }
-}
-
-async function findWindow() {
-  await ensureHelper();
-  helperSend('find ' + PROFILE_MARKER);
-  // The helper answers asynchronously; give it room to find the window.
-  await new Promise((r) => setTimeout(r, 1200));
 }
 
 // ---------------------------------------------------------------------------
@@ -371,9 +235,10 @@ async function open(rawUrl) {
       return { ok: false, error: e.message };
     }
 
-    await ensureHelper();
-    await findWindow();
-    helperSend('hide');
+    const d = dockApi();
+    await d.ensure();
+    await d.find();
+    d.send('hide');
     return { ok: true };
   })().finally(() => { openPromise = null; });
   return openPromise;
@@ -427,28 +292,28 @@ function dock(rect) {
   const y = Math.round(Number(rect.y) || 0);
   const w = Math.max(120, Math.round(Number(rect.w) || 0));
   const h = Math.max(80, Math.round(Number(rect.h) || 0));
-  helperSend('move ' + x + ' ' + y + ' ' + w + ' ' + h);
+  dockApi().send('move ' + x + ' ' + y + ' ' + w + ' ' + h);
   return { ok: true };
 }
 
 function show() {
-  helperSend('show');
+  dockApi().send('show');
   // Kiosk mode re-applies its fullscreen geometry a moment after being shown,
   // which would leave the page covering the whole screen. Re-assert the
   // docked rect as that transition settles.
   [300, 900, 1800, 3000].forEach((delay) => {
-    setTimeout(() => { if (isRunning()) helperSend('raise'); }, delay);
+    setTimeout(() => { if (isRunning()) dockApi().send('raise'); }, delay);
   });
   return { ok: true };
 }
 
 function hide() {
-  helperSend('hide');
+  dockApi().send('hide');
   return { ok: true };
 }
 
 function raise() {
-  helperSend('raise');
+  dockApi().send('raise');
   return { ok: true };
 }
 
@@ -456,7 +321,7 @@ function close() {
   if (!instance) return { ok: true };
   const proc = instance.proc;
   try { if (instance.ws) instance.ws.close(); } catch (e) {}
-  helperSend('close');
+  dockApi().send('close');
   instance = null;
   setTimeout(() => {
     if (!proc || proc.killed) return;
@@ -470,13 +335,7 @@ function close() {
 
 function dispose() {
   try { close(); } catch (e) {}
-  if (helper) {
-    try { helperSend('quit'); } catch (e) {}
-    try { helper.stdin.end(); } catch (e) {}
-    try { helper.kill(); } catch (e) {}
-    helper = null;
-    helperReady = null;
-  }
+  if (dockHelper) { dockHelper.dispose(); dockHelper = null; }
 }
 
 module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose };

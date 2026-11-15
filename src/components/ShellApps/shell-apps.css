@@ -104,7 +104,7 @@
 .dtmshell-menu-item:hover { background: #000080; color: #fff; }
 .dtmshell-menu-sep { height: 0; margin: 3px 2px; border-top: 1px solid #808080; border-bottom: 1px solid #fff; }
 
-/* Page area of the retro Internet Explorer; the docked Waterfox window is
+/* Page area of the retro Internet Explorer; the docked browser window is
    positioned over this element by the shell. */
 .dtmshell-pane {
   flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;

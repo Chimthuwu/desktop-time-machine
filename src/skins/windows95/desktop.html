@@ -19,6 +19,8 @@ button{font:inherit}
 .icon-marquee{position:fixed;border:1px dotted #fff;background:rgba(0,0,128,.10);pointer-events:none;z-index:30000}
 .glyph{font-size:31px;line-height:35px;text-shadow:none;filter:drop-shadow(1px 1px 0 #333)}
 .desktop-icon span:last-child{text-align:center;line-height:14px}
+.glyph-img{width:32px;height:32px;object-fit:contain;image-rendering:auto;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35))}
+.start-item .glyph-img{width:24px;height:24px}
 .taskbar{position:absolute;bottom:0;left:0;right:0;height:38px;background:var(--gray);border-top:2px solid white;display:flex;align-items:center;padding:3px;gap:4px;z-index:10000;box-shadow:0 -1px #808080}
 .start-button{height:30px;padding:2px 8px 2px 5px;font-weight:bold;display:flex;align-items:center;gap:5px}
 .win95-button{background:var(--gray);border:2px solid;border-color:white #404040 #404040 white;box-shadow:inset 1px 1px #dfdfdf;min-height:24px;padding:2px 8px;cursor:pointer}
@@ -140,11 +142,11 @@ button{font:inherit}
   <div class="icon-grid" id="iconGrid">
     <div class="desktop-icon" data-app="timemachine"><span class="glyph">⏳</span><span>Time Machine</span></div>
     <div class="desktop-icon" data-app="computer"><span class="glyph">🖥️</span><span>My Computer</span></div>
-    <div class="desktop-icon" data-app="recycle"><span class="glyph">🗑️</span><span>Recycle Bin</span></div>
+    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/recycle-bin.svg" alt=""><span>Recycle Bin</span></div>
     <div class="desktop-icon" data-app="minesweeper"><span class="glyph">💣</span><span>Minesweeper</span></div>
     <div class="desktop-icon" data-app="notepad"><span class="glyph">📝</span><span>Notepad</span></div>
     <div class="desktop-icon" data-app="paint"><span class="glyph">🎨</span><span>Paint</span></div>
-    <div class="desktop-icon" data-app="internet"><span class="glyph">🌐</span><span>The Internet</span></div>
+    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""><span>The Internet</span></div>
     <div class="desktop-icon" data-app="terminal"><span class="glyph">💻</span><span>MS-DOS Prompt</span></div>
     <div class="desktop-icon" data-app="discord"><span class="glyph">💬</span><span>Discord</span></div>
     <div class="desktop-icon" data-app="doom"><span class="glyph">👹</span><span>DOOM</span></div>
@@ -160,7 +162,7 @@ button{font:inherit}
       <div class="start-item" data-launch="programs">
         <span class="glyph">📁</span><b>Programs</b> <span style="margin-left:auto;">▶</span>
         <div class="start-submenu">
-          <div class="start-item" data-launch="internet"><span class="glyph">🌐</span>Internet Explorer</div>
+          <div class="start-item" data-launch="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt="">Internet Explorer</div>
           <div class="start-item" data-launch="discord"><span class="glyph">💬</span>Discord</div>
           <div class="start-item" data-launch="terminal"><span class="glyph">💻</span>MS-DOS Prompt</div>
           <div class="start-item" data-launch="minesweeper"><span class="glyph">💣</span>Minesweeper</div>

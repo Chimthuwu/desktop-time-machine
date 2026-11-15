@@ -34,6 +34,9 @@ body { background: var(--win98-bg); }
 .icon-marquee { position: fixed; border: 1px dotted #fff; background: rgba(0,0,128,.10); pointer-events: none; z-index: 30000; }
 .glyph { font-size: 31px; line-height: 35px; text-shadow: none; filter: drop-shadow(1px 1px 0 #333); }
 .desktop-icon span:last-child { text-align: center; line-height: 14px; }
+.glyph-img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(1px 1px 0 rgba(0,0,0,.35)); }
+.start-item .glyph-img { width: 24px; height: 24px; }
+.quick-launch-btn .glyph-img { width: 16px; height: 16px; }
 
 /* Taskbar - Windows 98 style with Quick Launch */
 .taskbar { position: absolute; bottom: 0; left: 0; right: 0; height: 38px; background: var(--gray); border-top: 2px solid white; display: flex; align-items: center; padding: 3px; gap: 4px; z-index: 10000; box-shadow: 0 -1px #808080; }
@@ -225,8 +228,8 @@ body { background: var(--win98-bg); }
     <div class="desktop-icon" data-app="computer"><span class="glyph">💻</span><span>My Computer</span></div>
     <div class="desktop-icon" data-app="mydocs"><span class="glyph">📁</span><span>My Documents</span></div>
     <div class="desktop-icon" data-app="network"><span class="glyph">🌐</span><span>Network Neighborhood</span></div>
-    <div class="desktop-icon" data-app="recycle"><span class="glyph">🗑️</span><span>Recycle Bin</span></div>
-    <div class="desktop-icon" data-app="internet"><span class="glyph">🌐</span><span>Internet Explorer</span></div>
+    <div class="desktop-icon" data-app="recycle"><img class="glyph-img" src="../shared/icons/recycle-bin.svg" alt=""><span>Recycle Bin</span></div>
+    <div class="desktop-icon" data-app="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""><span>Internet Explorer</span></div>
   </div>
 
   <!-- Channel Bar (Active Desktop) -->
@@ -273,7 +276,7 @@ body { background: var(--win98-bg); }
             </div>
           </div>
           <div class="start-sep"></div>
-          <div class="start-item" data-launch="internet"><span class="glyph">🌐</span>Internet Explorer</div>
+          <div class="start-item" data-launch="internet"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt="">Internet Explorer</div>
           <div class="start-item" data-launch="outlook"><span class="glyph">📧</span>Outlook Express</div>
           <div class="start-item" data-launch="net-meeting"><span class="glyph">📞</span>NetMeeting</div>
           <div class="start-sep"></div>
@@ -313,7 +316,7 @@ body { background: var(--win98-bg); }
   <button class="win98-button start-button" id="startBtn"><span class="start-logo" aria-hidden="true"><svg viewBox="0 0 20 18" width="20" height="18"><path d="M1 3.4 L9.3 2.1 V8.7 H1 Z" fill="#ff0000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 2 L19 0.7 V8.7 H10.2 Z" fill="#00a000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M1 9.7 H9.3 V16.3 L1 15 Z" fill="#0000c0" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 9.7 H19 V17.7 L10.2 16.4 Z" fill="#ffd700" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/></svg></span> Start</button>
   <div class="quick-launch" id="quickLaunch">
     <button class="quick-launch-btn" title="Show Desktop" onclick="showDesktop()"><span class="glyph" style="font-size:14px;">🖥️</span></button>
-    <button class="quick-launch-btn" title="Internet Explorer" onclick="openApp('internet')">🌐</button>
+    <button class="quick-launch-btn" title="Internet Explorer" onclick="openApp('internet')"><img class="glyph-img" src="../shared/icons/internet-explorer.ico" alt=""></button>
     <button class="quick-launch-btn" title="Outlook Express" onclick="openApp('outlook')">📧</button>
     <button class="quick-launch-btn" title="Windows Explorer" onclick="openApp('explorer')">🗂️</button>
   </div>

@@ -248,17 +248,20 @@
   }
 
   // -------------------------------------------------------------------------
-  // Retro "Internet Explorer" — a docked, real Waterfox window
+  // Retro "Internet Explorer" — a docked, real browser window
   //
-  // Waterfox is Firefox-based, so its engine cannot render inside a <webview>.
-  // Instead a private Waterfox kiosk window is docked into this window's page
-  // area, which keeps real Waterfox rendering (logins, certificates) inside
-  // the 1998 window furniture. Navigation is driven over WebDriver BiDi.
+  // The browser engine is a separate process (Ungoogled Chromium by default,
+  // Waterfox as a fallback), so it cannot render inside a <webview>. Instead a
+  // private, chrome-less instance is docked into this window's page area,
+  // which keeps real browser rendering (logins, certificates) inside the 1998
+  // window furniture. Navigation is driven over DevTools (or WebDriver BiDi).
   // -------------------------------------------------------------------------
 
   const preloadBridge = window.dtmPreload || {};
   const wfBridge = preloadBridge.waterfox || null;
   let wfAvailable = null;
+  let wfEngine = 'browser';
+  const engineName = () => (wfEngine === 'chromium' ? 'Chromium' : wfEngine === 'waterfox' ? 'Waterfox' : 'Browser');
   let lastDockRect = null;
   let lastDockShown = null;
   let dockTimer = null;
@@ -269,8 +272,11 @@
   async function waterfoxAvailable() {
     if (wfAvailable !== null) return wfAvailable;
     if (!wfBridge) { wfAvailable = false; return false; }
-    try { const s = await wfBridge.status(); wfAvailable = !!(s && s.available); }
-    catch (e) { wfAvailable = false; }
+    try {
+      const s = await wfBridge.status();
+      wfAvailable = !!(s && s.available);
+      if (s && s.engine) wfEngine = s.engine;
+    } catch (e) { wfAvailable = false; }
     return wfAvailable;
   }
 
@@ -463,7 +469,7 @@
     pane.className = 'dtmshell-pane';
     const paneMsg = document.createElement('div');
     paneMsg.className = 'dtmshell-pane-msg';
-    paneMsg.textContent = 'Starting Waterfox…';
+    paneMsg.textContent = 'Starting ' + engineName() + '…';
     pane.appendChild(paneMsg);
 
     const entry = {
@@ -522,25 +528,25 @@
     entry.begin = () => {
       entry.wfReady = false;
       entry.stateFails = 0;
-      entry.paneMsg.textContent = 'Starting Waterfox…';
-      entry.statusLeft.textContent = 'Starting Waterfox…';
+      entry.paneMsg.textContent = 'Starting ' + engineName() + '…';
+      entry.statusLeft.textContent = 'Starting ' + engineName() + '…';
       wfBridge.open(startUrl).then((res) => {
         if (!windows.has('browser')) { try { wfBridge.close(); } catch (e) {} return; }
         if (!res || !res.ok) {
-          entry.paneMsg.textContent = 'Could not start Waterfox' + (res && res.error ? ': ' + res.error : '.');
-          entry.statusLeft.textContent = 'Waterfox unavailable';
+          entry.paneMsg.textContent = 'Could not start ' + engineName() + (res && res.error ? ': ' + res.error : '.');
+          entry.statusLeft.textContent = engineName() + ' unavailable';
           return;
         }
         entry.wfReady = true;
-        entry.paneMsg.textContent = 'Waterfox page hidden — click the window to bring it back.';
-        entry.statusLeft.textContent = 'Waterfox is rendering this page';
+        entry.paneMsg.textContent = engineName() + ' page hidden — click the window to bring it back.';
+        entry.statusLeft.textContent = engineName() + ' is rendering this page';
         lastDockRect = null;
         lastDockShown = null;
         syncBrowserDock();
         startStatePolling();
         refreshBrowserState(entry);
       }).catch((e) => {
-        entry.paneMsg.textContent = 'Could not start Waterfox: ' + e.message;
+        entry.paneMsg.textContent = 'Could not start ' + engineName() + ': ' + e.message;
       });
     };
 
@@ -631,8 +637,8 @@
           entry.wfReady = false;
           lastDockRect = null;
           lastDockShown = null;
-          entry.paneMsg.textContent = 'Waterfox was closed — click the window to open it again.';
-          entry.statusLeft.textContent = 'Waterfox closed';
+          entry.paneMsg.textContent = engineName() + ' was closed — click the window to open it again.';
+          entry.statusLeft.textContent = engineName() + ' closed';
           try { wfBridge.hide(); } catch (e) {}
         }
         return;
@@ -710,7 +716,7 @@
     if (!entry || !entry.waterfox || !entry.wfReady || !wfBridge) return;
     if (entry.win.classList.contains('active')) {
       entry.win.classList.remove('active');
-      entry.paneMsg.textContent = 'Waterfox page hidden — click the window to bring it back.';
+      entry.paneMsg.textContent = engineName() + ' page hidden — click the window to bring it back.';
     }
     if (lastDockShown !== false) {
       lastDockShown = false;
