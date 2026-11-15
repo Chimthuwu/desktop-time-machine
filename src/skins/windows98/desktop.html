@@ -57,6 +57,13 @@ body { background: var(--win98-bg); }
 .task-buttons { display: flex; gap: 4px; flex: 1; min-width: 0; }
 .task-button { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; height: 29px; font-weight: bold; }
 .tray { height: 29px; border: 2px solid; border-color: #808080 white white #808080; display: flex; align-items: center; padding: 0 9px; gap: 8px; min-width: 78px; }
+.tray-overflow-btn { width: 16px; height: 16px; font-size: 10px; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: #000; }
+.tray-overflow-btn:hover { background: #c0c0c0; }
+.real-tray { display: flex; align-items: center; gap: 2px; }
+.real-tray img { flex: none; width: 16px; height: 16px; display: block; image-rendering: pixelated; }
+#trayVol { display: flex; align-items: center; cursor: pointer; }
+#trayVol img { width: 16px; height: 16px; display: block; image-rendering: pixelated; }
+#trayVol.muted img { opacity: .35; }
 .clock { font-variant-numeric: tabular-nums; font-size: 11px; }
 
 /* Windows with gradient title bars (Windows 98 signature) */
@@ -163,7 +170,7 @@ body { background: var(--win98-bg); }
 
 /* Display Properties */
 .disp-tabs { display: flex; border-bottom: 1px solid #808080; background: var(--gray); padding: 0 4px; }
-.disp-tab { padding: 4px 12px; cursor: pointer; border: 1px solid transparent; margin-bottom: -1px; background: var(--gray); }
+.disp-tab { padding: 4px 8px; cursor: pointer; border: 1px solid transparent; margin-bottom: -1px; background: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .disp-tab.active { border-color: white #404040 #404040 white; background: #fff; border-bottom: 1px solid #fff; margin-bottom: 0; }
 .disp-panel { padding: 16px; display: none; }
 .disp-panel.active { display: block; }
@@ -325,7 +332,9 @@ body { background: var(--win98-bg); }
   </div>
   <div class="task-buttons" id="taskButtons"></div>
   <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
-    <span id="trayVol" title="Volume">🔊</span>
+    <button class="tray-overflow-btn" id="trayOverflowBtn" title="Show hidden icons" type="button" onclick="toggleWin98Overflow()">▲</button>
+    <span class="real-tray" id="realTray" title="Real Windows notification area" style="display:flex;align-items:center;gap:2px;"></span>
+    <span id="trayVol" title="Volume — click to adjust"><img class="tray-vol-icon" src="../shared/icons/win95/volume.ico" alt=""></span>
     <span id="trayNet" title="Network">📡</span>
     <span class="clock" id="clock">4:20 PM</span>
   </div>
@@ -710,19 +719,227 @@ function setupExplorer(win, initialPath) {
   loadPath(currentPath);
 }
 
-// SOLITAIRE (Klondike) - Basic Implementation
+// SOLITAIRE (Klondike)
 function setupSolitaire(w) {
-  // Simplified solitaire - just a placeholder with basic UI
-  const body = w.querySelector('.window-body');
-  body.innerHTML = `
-    <div class="menu-row"><span>Game</span><span>Help</span></div>
-    <div style="padding:20px;text-align:center;background:#008000;color:white;height:calc(100% - 25px);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div style="font-size:24px;margin-bottom:20px;">🃏</div>
-      <h3>Solitaire</h3>
-      <p style="margin:10px 0;">Windows 98 Klondike Solitaire</p>
-      <p style="font-size:11px;opacity:0.8;">Full implementation would include drag-and-drop card logic, draw pile, foundation piles, and win detection.</p>
-      <button class="win98-button" onclick="this.closest('.window').querySelector('[data-close]').click()" style="margin-top:20px;padding:6px 20px;">Close</button>
-    </div>`;
+  const S = ['♠','♣','♥','♦'];
+  const R = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const isRed = (s) => s === '♥' || s === '♦';
+  let stock = [], waste = [], foundations = [[],[],[],[]], tableau = [[],[],[],[],[],[],[]];
+  let drag = null; // {cards, from, el}
+
+  function newGame() {
+    const deck = [];
+    for (let s of S) for (let r of R) deck.push({ s, r, faceUp: false });
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [deck[i],deck[j]] = [deck[j],deck[i]]; }
+    stock = deck; waste = []; foundations = [[],[],[],[]]; tableau = [[],[],[],[],[],[],[]];
+    for (let c = 0; c < 7; c++) for (let r = 0; r <= c; r++) { const card = stock.pop(); card.faceUp = (r === c); tableau[c].push(card); }
+    render();
+  }
+
+  function cardEl(card, idx, total) {
+    const el = document.createElement('div');
+    el.className = 'sol-card' + (card.faceUp ? '' : ' facedown');
+    el.style.cssText = 'width:70px;height:95px;border-radius:4px;border:1px solid #000;background:#fff;position:absolute;left:0;top:' + (idx*22) + 'px;display:flex;flex-direction:column;justify-content:space-between;padding:4px;font-size:13px;font-weight:bold;color:' + (isRed(card.s) ? '#c00' : '#000') + ';cursor:' + (card.faceUp ? 'grab' : 'default') + ';box-shadow:1px 1px 2px rgba(0,0,0,.4);user-select:none;';
+    if (card.faceUp) {
+      el.innerHTML = '<span>' + card.r + '</span><span style="text-align:center;font-size:22px;">' + card.s + '</span><span style="text-align:right;">' + card.r + '</span>';
+      el.addEventListener('pointerdown', (e) => startDrag(e, card, el));
+    } else {
+      el.style.background = 'repeating-linear-gradient(45deg,#1a4a8a,#1a4a8a 4px,#2a5a9a 4px,#2a5a9a 8px)';
+    }
+    return el;
+  }
+
+  function render() {
+    const stockEl = w.querySelector('#sol-stock');
+    const wasteEl = w.querySelector('#sol-waste');
+    const foundEl = w.querySelector('#sol-found');
+    const tabEl = w.querySelector('#sol-tab');
+    stockEl.innerHTML = ''; wasteEl.innerHTML = ''; foundEl.innerHTML = ''; tabEl.innerHTML = '';
+    // stock
+    if (stock.length) {
+      const top = stock[stock.length-1];
+      const c = { s: top.s, r: top.r, faceUp: false };
+      const el = cardEl(c, 0, 1);
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', drawStock);
+      stockEl.appendChild(el);
+    } else {
+      const e = document.createElement('div');
+      e.style.cssText = 'width:70px;height:95px;border:2px dashed rgba(255,255,255,.5);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;cursor:pointer;';
+      e.textContent = '↻';
+      e.addEventListener('click', resetStock);
+      stockEl.appendChild(e);
+    }
+    // waste (show top 1-3)
+    const show = waste.slice(-3);
+    show.forEach((card, i) => {
+      const el = cardEl(card, 0, 1);
+      el.style.left = (i*18) + 'px';
+      wasteEl.appendChild(el);
+      if (i === show.length-1) el.addEventListener('pointerdown', (e) => startDrag(e, card, el, 'waste'));
+    });
+    // foundations
+    for (let f = 0; f < 4; f++) {
+      const pile = foundations[f];
+      const slot = document.createElement('div');
+      slot.style.cssText = 'width:70px;height:95px;border:2px dashed rgba(255,255,255,.5);border-radius:4px;position:relative;';
+      slot.dataset.foundation = f;
+      slot.addEventListener('pointerup', (e) => endDrag(e, { type: 'foundation', idx: f }));
+      slot.addEventListener('pointermove', (e) => { if (drag) e.preventDefault(); });
+      if (pile.length) {
+        const el = cardEl(pile[pile.length-1], 0, 1);
+        el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0';
+        slot.appendChild(el);
+      } else {
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);font-size:24px;';
+        lbl.textContent = S[f];
+        slot.appendChild(lbl);
+      }
+      foundEl.appendChild(slot);
+    }
+    // tableau
+    for (let c = 0; c < 7; c++) {
+      const col = tableau[c];
+      const slot = document.createElement('div');
+      slot.style.cssText = 'width:70px;flex:1;position:relative;min-height:95px;';
+      slot.dataset.tableau = c;
+      slot.addEventListener('pointerup', (e) => endDrag(e, { type: 'tableau', idx: c }));
+      col.forEach((card, idx) => {
+        const el = cardEl(card, idx, col.length);
+        if (card.faceUp) el.addEventListener('pointerdown', (e) => startDrag(e, card, el, 'tableau', c, idx));
+        slot.appendChild(el);
+      });
+      // empty slot clickable target
+      if (!col.length) {
+        const e = document.createElement('div');
+        e.style.cssText = 'width:70px;height:95px;border:2px dashed rgba(255,255,255,.5);border-radius:4px;';
+        slot.appendChild(e);
+      }
+      tabEl.appendChild(slot);
+    }
+  }
+
+  function drawStock() {
+    if (!stock.length) return;
+    const card = stock.pop();
+    card.faceUp = true;
+    waste.push(card);
+    render();
+  }
+  function resetStock() {
+    if (waste.length === 0) return;
+    while (waste.length) { const c = waste.pop(); c.faceUp = false; stock.push(c); }
+    render();
+  }
+
+  function startDrag(e, card, el, from, colIdx, cardIdx) {
+    if (!card.faceUp) return;
+    e.preventDefault();
+    // determine cards to drag
+    let cards = [card];
+    let fromInfo = { type: from || 'tableau', idx: colIdx };
+    if (from === 'tableau') {
+      const col = tableau[colIdx];
+      const i = col.indexOf(card);
+      cards = col.slice(i);
+      fromInfo = { type: 'tableau', idx: colIdx, startIdx: i };
+    } else if (from === 'waste') {
+      fromInfo = { type: 'waste' };
+    }
+    // create drag clone
+    const clone = document.createElement('div');
+    clone.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+    cards.forEach((cd, i) => {
+      const ce = cardEl(cd, 0, 1);
+      ce.style.position = 'absolute';
+      ce.style.top = (i*22) + 'px';
+      ce.style.left = '0';
+      clone.appendChild(ce);
+    });
+    document.body.appendChild(clone);
+    const move = (ev) => {
+      clone.style.left = (ev.clientX - 35) + 'px';
+      clone.style.top = (ev.clientY - 20) + 'px';
+    };
+    move(e);
+    const up = (ev) => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      clone.remove();
+      // find drop target
+      const els = document.elementsFromPoint(ev.clientX, ev.clientY);
+      let target = null;
+      for (const el of els) {
+        let cur = el;
+        while (cur && cur !== document.body) {
+          if (cur.dataset && cur.dataset.foundation !== undefined) { target = { type: 'foundation', idx: Number(cur.dataset.foundation) }; break; }
+          if (cur.dataset && cur.dataset.tableau !== undefined) { target = { type: 'tableau', idx: Number(cur.dataset.tableau) }; break; }
+          cur = cur.parentElement;
+        }
+        if (target) break;
+      }
+      if (target) tryMove(cards, fromInfo, target);
+      drag = null;
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    drag = { cards, fromInfo };
+  }
+
+  function canPlaceTableau(card, col) {
+    if (col.length === 0) return card.r === 'K';
+    const top = col[col.length-1];
+    if (!top.faceUp) return false;
+    return isRed(top.s) !== isRed(card.s) && R.indexOf(card.r) === R.indexOf(top.r) - 1;
+  }
+  function canPlaceFoundation(card, pile) {
+    if (pile.length === 0) return card.r === 'A';
+    const top = pile[pile.length-1];
+    return top.s === card.s && R.indexOf(card.r) === R.indexOf(top.r) + 1;
+  }
+
+  function tryMove(cards, fromInfo, target) {
+    const card = cards[0];
+    if (target.type === 'foundation') {
+      if (cards.length !== 1) return;
+      if (!canPlaceFoundation(card, foundations[target.idx])) return;
+      // remove from source
+      removeFromSource(cards, fromInfo);
+      card.faceUp = true;
+      foundations[target.idx].push(card);
+    } else if (target.type === 'tableau') {
+      const col = tableau[target.idx];
+      if (!canPlaceTableau(card, col)) return;
+      removeFromSource(cards, fromInfo);
+      cards.forEach(c => { c.faceUp = true; col.push(c); });
+      // flip top of source column if needed
+      if (fromInfo.type === 'tableau') {
+        const src = tableau[fromInfo.idx];
+        if (src.length && !src[src.length-1].faceUp) src[src.length-1].faceUp = true;
+      }
+    }
+    render();
+    checkWin();
+  }
+  function removeFromSource(cards, fromInfo) {
+    if (fromInfo.type === 'waste') {
+      waste.pop();
+    } else if (fromInfo.type === 'tableau') {
+      const col = tableau[fromInfo.idx];
+      col.splice(fromInfo.startIdx);
+    } else if (fromInfo.type === 'foundation') {
+      foundations[fromInfo.idx].pop();
+    }
+  }
+  function checkWin() {
+    if (foundations.every(f => f.length === 13)) {
+      setTimeout(() => alert('You win!'), 100);
+    }
+  }
+
+  window._solNewGame = newGame;
+  newGame();
 }
 
 // SYSTEM PROPERTIES
@@ -769,7 +986,8 @@ function setupDisplayProps(w) {
     const wp = WALLPAPERS[sel.value] || WALLPAPERS.default;
     const style = wallpaperStyle(sel.value, modeSel.value);
     Object.keys(style).forEach((prop) => { previewDesk.style[prop] = style[prop]; });
-    modeSel.disabled = wp.kind === 'color';
+    modeSel.disabled = wp.kind !== 'image';
+    if (wp.kind === 'pattern') modeSel.value = 'tile';
     scalePreview();
   }
   sel.addEventListener('change', paintPreview);
@@ -1129,7 +1347,9 @@ function wallpaperStyle(key, mode) {
   if (wp.image) {
     style.backgroundImage = wp.image;
     const natural = wp.size || (wp.w + 'px ' + wp.h + 'px');
-    if (mode === 'tile') {
+    // A pattern is a tile bitmap: stretching it to the screen turns four
+    // 16px buttons into four giant grey slabs, so it always tiles.
+    if (mode === 'tile' || wp.kind === 'pattern') {
       style.backgroundRepeat = 'repeat';
       style.backgroundSize = natural;
       style.backgroundPosition = '0 0';
@@ -1142,7 +1362,8 @@ function wallpaperStyle(key, mode) {
   return style;
 }
 function applyWallpaper(key, mode) {
-  const nextMode = mode || currentWallpaperMode(key);
+  const wp = WALLPAPERS[key] || WALLPAPERS.default;
+  const nextMode = wp.kind === 'pattern' ? 'tile' : (mode || currentWallpaperMode(key));
   const style = wallpaperStyle(key, nextMode);
   Object.keys(style).forEach((prop) => { document.body.style[prop] = style[prop]; });
   try {
@@ -1326,13 +1547,13 @@ const apps = {
     title: 'Display Properties', iconSrc: '../shared/icons/win95/settings.ico', icon: '🖥️', width: 480, height: 460,
     body: () => `
       <div style="display:flex;height:100%;background:var(--gray);">
-        <div class="disp-tabs" style="flex-direction:column;border-right:1px solid #808080;border-bottom:none;width:80px;padding-top:4px;">
+        <div class="disp-tabs" style="flex-direction:column;border-right:1px solid #808080;border-bottom:none;width:106px;padding-top:4px;">
           <div class="disp-tab active" data-tab="background" style="width:100%;margin:2px 4px 0 4px;">Background</div>
           <div class="disp-tab" data-tab="screensaver" style="width:100%;margin:2px 4px;">Screen Saver</div>
           <div class="disp-tab" data-tab="appearance" style="width:100%;margin:2px 4px;">Appearance</div>
           <div class="disp-tab" data-tab="settings" style="width:100%;margin:2px 4px 4px;">Settings</div>
         </div>
-        <div style="flex:1;display:flex;flex-direction:column;margin:6px;border:2px solid;border-color:#808080 white white #808080;padding:10px;overflow:auto;">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;margin:6px;border:2px solid;border-color:#808080 white white #808080;padding:10px;overflow:auto;">
           <div id="disp-background" class="disp-panel active">
             <div style="font-weight:bold;margin-bottom:8px;">Desktop Background</div>
             <div class="wp-layout">
@@ -1456,7 +1677,7 @@ const apps = {
           <div class="sysprop-tab" data-tab="file-system">File System</div>
           <div class="sysprop-tab" data-tab="memory">Memory</div>
         </div>
-        <div style="flex:1;display:flex;flex-direction:column;margin:6px;border:2px solid;border-color:#808080 white white #808080;padding:10px;overflow:auto;">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;margin:6px;border:2px solid;border-color:#808080 white white #808080;padding:10px;overflow:auto;">
           <div id="sysprop-general" class="sysprop-panel active">
             <div style="display:flex;gap:20px;margin-bottom:16px;">
               <div style="font-size:48px;">💻</div>
@@ -1578,7 +1799,7 @@ const apps = {
   
   solitaire: {
     title: 'Solitaire', icon: '🃏', width: 520, height: 400,
-    body: () => `<div class="menu-row"><span>Game</span><span>Help</span></div><div style="background:#008000;color:#fff;height:calc(100% - 25px);display:flex;align-items:center;justify-content:center;flex-direction:column;"><div style="font-size:32px;margin-bottom:10px;">🃏</div><h3>Solitaire</h3><p style="margin:10px 0;max-width:300px;text-align:center;">Windows 98 Klondike Solitaire - Drag and drop cards to build foundations.</p><button class="win98-button" onclick="this.closest('.window').querySelector('[data-close]').click()" style="margin-top:20px;padding:6px 20px;">Close</button></div>`,
+    body: () => `<div class="menu-row"><span>Game</span><span>Help</span></div><div class="sol-body" style="background:#008000;height:calc(100% - 25px);padding:6px;display:flex;flex-direction:column;gap:6px;"><div class="sol-top" style="display:flex;gap:8px;align-items:flex-start;"><button class="win98-button" onclick="window._solNewGame&&window._solNewGame()" style="height:24px;">New Game</button><div class="sol-stock" id="sol-stock" style="width:70px;height:95px;position:relative;"></div><div class="sol-waste" id="sol-waste" style="width:70px;height:95px;position:relative;"></div><div style="flex:1;"></div><div class="sol-found" id="sol-found" style="display:flex;gap:6px;"></div></div><div class="sol-tab" id="sol-tab" style="display:flex;gap:6px;flex:1;"></div></div>`,
     onSetup: setupSolitaire
   },
   
@@ -1917,7 +2138,9 @@ let iconBand = null, bandStart = null, bandBase = [];
 function endIconBand() { if (!iconBand) return; iconBand.remove(); iconBand = null; bandStart = null; bandBase = []; }
 desktop.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
-  if (e.target.closest('.window') || e.target.closest('.taskbar') || e.target.closest('.context') || e.target.closest('#startMenu') || e.target.closest('.desktop-icon')) return;
+  // A mirrored file icon (or its marquee) handles its own click/drag; starting
+  // the background rubber band here would capture the pointer and fight it.
+  if (e.target.closest('.window') || e.target.closest('.taskbar') || e.target.closest('.context') || e.target.closest('#startMenu') || e.target.closest('.desktop-icon') || e.target.closest('.dtm-icon') || e.target.closest('.dtm-marquee')) return;
   bandStart = { x: e.clientX, y: e.clientY };
   bandBase = e.ctrlKey ? [...document.querySelectorAll('.desktop-icon.selected')] : [];
   if (!e.ctrlKey) clearIconSelection();
@@ -1929,6 +2152,9 @@ desktop.addEventListener('pointerdown', e => {
 });
 desktop.addEventListener('pointermove', e => {
   if (!iconBand || !bandStart) return;
+  // Only drag the band while the button is held; a stray move must not keep
+  // resizing it after the release was missed.
+  if (e.buttons === 0) { endIconBand(); return; }
   const left = Math.min(e.clientX, bandStart.x), top = Math.min(e.clientY, bandStart.y);
   const right = Math.max(e.clientX, bandStart.x), bottom = Math.max(e.clientY, bandStart.y);
   iconBand.style.left = left + 'px'; iconBand.style.top = top + 'px';
@@ -2080,6 +2306,210 @@ window.addEventListener('unload', () => {
 // Restore the saved desktop background before the first window appears.
 applyWallpaper(currentWallpaper());
 
+
+
+function showOverflowPopup(imgSrc) {
+  let pop = document.getElementById('overflowPopup');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'overflowPopup';
+    pop.style.cssText = 'position:fixed;bottom:42px;right:8px;z-index:9999;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;padding:4px;box-shadow:2px 2px 0 #000;display:none;';
+    const img = document.createElement('img');
+    img.id = 'overflowPopupImg';
+    img.style.cssText = 'display:block;max-width:360px;max-height:480px;';
+    pop.appendChild(img);
+    const close = document.createElement('button');
+    close.textContent = 'x';
+    close.style.cssText = 'position:absolute;top:2px;right:2px;width:16px;height:16px;padding:0;font:bold 11px Tahoma;cursor:pointer;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;';
+    close.addEventListener('click', () => hideOverflowPopup());
+    pop.appendChild(close);
+    document.body.appendChild(pop);
+  }
+  const img = document.getElementById('overflowPopupImg');
+  img.src = imgSrc;
+  img.onclick = (ev) => {
+    const rect = img.getBoundingClientRect();
+    const scaleX = img.naturalWidth / rect.width;
+    const scaleY = img.naturalHeight / rect.height;
+    const x = Math.round((ev.clientX - rect.left) * scaleX);
+    const y = Math.round((ev.clientY - rect.top) * scaleY);
+    if (DTM && DTM.system && DTM.system.clickTrayOverflowAt) {
+      DTM.system.clickTrayOverflowAt(x, y).catch(() => {});
+    }
+    hideOverflowPopup();
+  };
+  img.style.cursor = 'pointer';
+  pop.style.display = 'block';
+}
+function hideOverflowPopup() {
+  const pop = document.getElementById('overflowPopup');
+  if (pop) pop.style.display = 'none';
+}
+function setupWin98RealTaskbar() {
+  const trayEl = document.getElementById('realTray');
+  if (!trayEl || !DTM || !DTM.system || !DTM.system.getTaskbar) return;
+  const state = { traySig: null, winSig: null };
+  const TRAY_ART = {
+    network: '../shared/icons/win95/network.ico',
+    volume: '../shared/icons/win95/volume.ico',
+    battery: '../shared/icons/win95/battery.ico',
+    input: '../shared/icons/win95/input.ico',
+    notification: '../shared/icons/win95/notification.ico'
+  };
+  function trayArt(item) {
+    if (item.icon) return item.icon;
+    if (item.kind && TRAY_ART[item.kind]) return TRAY_ART[item.kind];
+    return null;
+  }
+  function trayGlyph(name) {
+    const n = String(name || '').toLowerCase();
+    if (/network|internet|ethernet|wi-?fi|wlan/.test(n)) return '🌐';
+    if (/volume|sound|audio|speaker/.test(n)) return '🔊';
+    if (/battery|power/.test(n)) return '🔋';
+    if (/security|shield|defender|virus/.test(n)) return '🛡️';
+    if (/bluetooth/.test(n)) return '🔵';
+    if (/notification/.test(n)) return '🔔';
+    return '▫';
+  }
+  function clearRealTaskButtons() {
+    taskButtons.querySelectorAll('.real-task').forEach(b => b.remove());
+  }
+  function renderWindows(windows) {
+    clearRealTaskButtons();
+    const seen = new Set();
+    (windows || []).filter(w => { if (seen.has(w.pid)) return false; seen.add(w.pid); return true; }).forEach(w => {
+      const b = document.createElement('button');
+      b.className = 'win98-button task-button real-task';
+      b.title = w.title + (w.processName ? ' (' + w.processName + ')' : '') + ' — real Windows window';
+      let iconSrc = w.icon;
+      if (/powershell|cmd|windowsterminal|terminal|bash|wsl/i.test((w.processName || '') + ' ' + (w.title || ''))) {
+        iconSrc = '../shared/icons/win95/msdos.ico';
+      }
+      if (iconSrc) {
+        const img = document.createElement('img');
+        img.className = 'tb-icon';
+        img.src = iconSrc; img.alt = '';
+        b.appendChild(img);
+      }
+      const label = document.createElement('span');
+      label.textContent = w.title;
+      b.appendChild(label);
+      b.addEventListener('click', () => {
+        if (DTM.system.activateWindow) DTM.system.activateWindow(w.pid).catch(e => {});
+      });
+      taskButtons.appendChild(b);
+    });
+  }
+  async function refresh() {
+    try {
+      const data = await DTM.system.getTaskbar();
+      const wlist = (data && data.windows) || [];
+      const wsig = wlist.map(w => (w.title || '') + ':' + (w.pid || '')).join('|');
+      if (wsig !== state.winSig) {
+        state.winSig = wsig;
+        renderWindows(wlist);
+      }
+      // The touch-keyboard indicator is shell furniture rather than an app tray
+      // icon, and the promoted-icon container can draw the same art as its own
+      // child, which reads as a duplicate; both are dropped.
+      const seen = new Set();
+      const list = (data && data.tray || []).filter(t => {
+        if (t.kind === 'input') return false;
+        const key = trayArt(t) || trayGlyph(t.name);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const sig = list.map(t => (t.name || '') + ':' + (t.kind || '') + ':' + (t.icon ? 'i' : '')).join('|');
+      if (sig === state.traySig) return;
+      state.traySig = sig;
+      trayEl.innerHTML = '';
+      list.forEach(t => {
+        const s = document.createElement('span');
+        s.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;';
+        const art = trayArt(t);
+        if (art) {
+          const img = document.createElement('img');
+          img.src = art; img.alt = '';
+          s.appendChild(img);
+        } else {
+          s.textContent = trayGlyph(t.name);
+        }
+        s.title = (t.name || 'Notification area icon');
+        trayEl.appendChild(s);
+      });
+      const vol = document.getElementById('trayVol');
+      if (vol) vol.style.display = '';
+    } catch (e) { /* best-effort */ }
+  }
+  refresh();
+  setInterval(refresh, 5000);
+}
+
+async function toggleWin98Overflow() {
+  if (!DTM || !DTM.system || !DTM.system.toggleTrayOverflow) return;
+  try {
+    const res = await DTM.system.toggleTrayOverflow();
+    if (res && res.open && res.image) showOverflowPopup(res.image);
+    else hideOverflowPopup();
+  } catch (e) { /* best-effort */ }
+}
+
+if (DTM && DTM.system && DTM.system.getTaskbar) setupWin98RealTaskbar();
+
+  // Volume control popup
+  (function setupVolume() {
+    const vol = document.getElementById('trayVol');
+    if (!vol || !DTM || !DTM.system) return;
+    vol.style.cursor = 'pointer';
+    vol.style.userSelect = 'none';
+    let popup = null;
+    function closePopup() { if (popup) { popup.remove(); popup = null; } }
+    function openPopup() {
+      closePopup();
+      popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;z-index:9999;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:2px 2px 0 #000;font:11px Tahoma;';
+      const label = document.createElement('div');
+      label.textContent = 'Volume';
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.value = '50';
+      slider.style.width = '120px';
+      const muteBtn = document.createElement('button');
+      muteBtn.className = 'win98-button';
+      muteBtn.textContent = 'Mute';
+      muteBtn.style.padding = '2px 8px';
+      popup.append(label, slider, muteBtn);
+      document.body.appendChild(popup);
+      const box = vol.getBoundingClientRect();
+      popup.style.left = Math.max(4, box.right - popup.offsetWidth) + 'px';
+      popup.style.top = Math.max(4, box.top - popup.offsetHeight - 4) + 'px';
+      // The initial read is async, so it must not overwrite a slider the user
+      // has already grabbed.
+      let touched = false;
+      DTM.system.getVolume().then(v => {
+        if (!touched) slider.value = Math.round((v.level || 0) * 100);
+        muteBtn.textContent = v.muted ? 'Unmute' : 'Mute';
+        vol.classList.toggle('muted', !!v.muted);
+      }).catch(() => {});
+      slider.addEventListener('pointerdown', () => { touched = true; });
+      slider.addEventListener('input', () => {
+        touched = true;
+        DTM.system.setVolume(Number(slider.value) / 100).catch(() => {});
+      });
+      muteBtn.addEventListener('click', () => {
+        DTM.system.getVolume().then(v => {
+          DTM.system.setVolume(v.level, !v.muted).then(() => {
+            muteBtn.textContent = v.muted ? 'Mute' : 'Unmute';
+            vol.classList.toggle('muted', !v.muted);
+          }).catch(() => {});
+        }).catch(() => {});
+      });
+    }
+    vol.addEventListener('click', (e) => { e.stopPropagation(); if (popup) closePopup(); else openPopup(); });
+    // The click usually lands on the speaker image inside the button, so the
+    // "outside" test has to look at the whole button.
+    document.addEventListener('click', (e) => { if (popup && !popup.contains(e.target) && !vol.contains(e.target)) closePopup(); });
+  })();
 openApp('about');
 window.openApp = openApp;
 })();

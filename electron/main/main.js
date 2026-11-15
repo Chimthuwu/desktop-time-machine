@@ -9,9 +9,9 @@ const { registerIpcHandlers } = require('./ipc-handlers');
 const { hardenWebviews } = require('./webview-security');
 const browser = require('./browser');
 
-// User request (2026-11-14): the app must stay muted — no startup sounds,
-// skin audio or system beeps out of the speakers, ever.
-app.commandLine.appendSwitch('mute-audio');
+// Skin beeps/UI sounds stay muted (see setAudioMuted below), but the global
+// mute-audio switch is intentionally NOT used: it would also silence the
+// retro browser/Discord webviews, which need working audio for calls.
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -29,6 +29,35 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     registerIpcHandlers();
 
+    // Grant media/display-capture permissions so the retro browser and Discord
+    // webviews can use the microphone, camera and (where supported) screen
+    // sharing instead of being silently denied by Chromium's defaults.
+    const { desktopCapturer } = require('electron');
+    const configureSession = (s) => {
+      if (!s) return;
+      try {
+        s.setPermissionRequestHandler((webContents, permission, callback) => {
+          const allowed = ['media', 'display-capture', 'geolocation', 'notifications', 'clipboard-read', 'clipboard-sanitized-write'];
+          callback(allowed.includes(permission));
+        });
+      } catch {}
+      try { s.setPermissionCheckHandler(() => true); } catch {}
+      try {
+        s.setDisplayMediaRequestHandler(async (request, callback) => {
+          try {
+            const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+            const screen = sources.find((x) => String(x.id).startsWith('screen')) || sources[0];
+            if (screen) callback({ video: screen });
+            else callback({});
+          } catch (e) {
+            try { callback({}); } catch {}
+          }
+        }, { useSystemPicker: false });
+      } catch {}
+    };
+    configureSession(session.defaultSession);
+    try { configureSession(session.fromPartition('persist:dtm-web')); } catch {}
+
     // Chromium keeps file:// skin scripts in its disk cache between launches.
     // Without this, a launch after an update can render the previous desktop
     // mirror. Clearing it at boot keeps skin updates visible.
@@ -36,6 +65,10 @@ if (!gotTheLock) {
 
     const mainWindow = createMainWindow();
     hardenWebviews(mainWindow.webContents);
+    // Keep the skin's UI beeps (MS-DOS prompt, macos8 chimes) silent while
+    // leaving the browser/Discord webviews audible — they have their own
+    // WebContents and are not affected by this flag.
+    try { mainWindow.webContents.setAudioMuted(true); } catch {}
 
     // Load the engine host HTML
     const indexPath = path.join(__dirname, '../../src/index.html');

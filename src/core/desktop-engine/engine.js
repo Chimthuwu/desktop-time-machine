@@ -224,6 +224,18 @@ class DesktopEngine {
       invokeTrayItem: (name) => this.preload.invokeTrayItem
         ? this.preload.invokeTrayItem(name)
         : Promise.reject(new Error('Notification area is unavailable in this host')),
+      toggleTrayOverflow: () => this.preload.toggleTrayOverflow
+        ? this.preload.toggleTrayOverflow()
+        : Promise.reject(new Error('Notification area is unavailable in this host')),
+      clickTrayOverflowAt: (x, y) => this.preload.clickTrayOverflowAt
+        ? this.preload.clickTrayOverflowAt(x, y)
+        : Promise.reject(new Error('Notification area is unavailable in this host')),
+      getVolume: () => this.preload.getVolume
+        ? this.preload.getVolume()
+        : Promise.resolve({ level: 1, muted: false }),
+      setVolume: (level, muted) => this.preload.setVolume
+        ? this.preload.setVolume(level, muted)
+        : Promise.resolve({ success: false }),
       toggleFullScreen: () => this.preload.toggleFullScreen(),
       minimizeWindow: () => this.preload.minimizeWindow(),
       maximizeWindow: () => this.preload.maximizeWindow(),

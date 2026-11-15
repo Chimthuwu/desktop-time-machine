@@ -53,8 +53,6 @@
     if (!entry) return;
     entry.win.style.display = 'flex';
     entry.win.style.zIndex = String(++zTop);
-    entry.win.classList.remove('max');
-    entry.maximized = false;
     setActive(app);
     notifySkin(app, true, false);
     // The docked Waterfox window is a real Windows window; re-raise it above
@@ -98,6 +96,8 @@
     if (!entry) return;
     entry.maximized = !entry.maximized;
     entry.win.classList.toggle('max', entry.maximized);
+    const maxBtn = entry.win.querySelector('.dtmshell-buttons button:nth-child(2)');
+    if (maxBtn) { maxBtn.textContent = entry.maximized ? '❐' : '□'; maxBtn.title = entry.maximized ? 'Restore' : 'Maximize'; }
     focusWindow(app);
   }
 
@@ -120,7 +120,11 @@
     return wrap;
   }
 
-  function makeDraggable(win, handle) {
+  function makeDraggable(win, handle, app) {
+    handle.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button')) return;
+      if (app) toggleMaximize(app);
+    });
     let ox = 0, oy = 0, dragging = false;
     handle.addEventListener('pointerdown', (e) => {
       if (e.target.closest('button')) return;
@@ -206,6 +210,7 @@
     const webview = document.createElement('webview');
     webview.className = 'dtmshell-web';
     webview.setAttribute('partition', PARTITION);
+    webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     webview.setAttribute('src', normalizeUrl(requestedUrl || config.url));
     body.appendChild(webview);
 
@@ -222,7 +227,7 @@
     win.append(titlebar, body);
     layer.appendChild(win);
     windows.set(app, { win, webview, titleText, maximized: false });
-    makeDraggable(win, titlebar);
+    makeDraggable(win, titlebar, app);
 
     win.addEventListener('pointerdown', () => focusWindow(app));
 
@@ -311,14 +316,10 @@
       focusWindow('browser');
       return;
     }
-    const startUrl = normalizeUrl(requestedUrl || APP_CONFIG.browser.url);
-    waterfoxAvailable().then((ok) => {
-      const openNow = windows.get('browser');
-      if (openNow) { navigateBrowser(openNow, startUrl); return; }
-      if (ok) { buildWaterfoxBrowser(startUrl); return; }
-      buildWebviewBrowser(startUrl);
-      provisionRealBrowser();
-    });
+    // The page is drawn by an inline <webview>, exactly like Discord: the retro
+    // window shows the site the moment it opens, with no second browser window,
+    // no docking step and no extra host taskbar button.
+    buildWebviewBrowser(normalizeUrl(requestedUrl || APP_CONFIG.browser.url));
   }
 
   function browserChrome(startUrl) {
@@ -358,7 +359,7 @@
 
     win.append(titlebar, body);
     layer.appendChild(win);
-    makeDraggable(win, titlebar);
+    makeDraggable(win, titlebar, 'browser');
     win.addEventListener('pointerdown', () => focusWindow('browser'));
 
     return { win, body, toolbar, status, statusLeft, titleText, startUrl };
@@ -584,6 +585,7 @@
     const webview = document.createElement('webview');
     webview.className = 'dtmshell-web';
     webview.setAttribute('partition', PARTITION);
+    webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     webview.setAttribute('src', startUrl);
 
     const address = browserAddress(frame, (value) => {
@@ -903,7 +905,7 @@
 
     const entry = { win, video, titleText, maximized: false, clipName: null };
     windows.set(app, entry);
-    makeDraggable(win, titlebar);
+    makeDraggable(win, titlebar, 'mediaplayer');
     win.addEventListener('pointerdown', () => focusWindow(app));
     video.volume = 0.7;
 

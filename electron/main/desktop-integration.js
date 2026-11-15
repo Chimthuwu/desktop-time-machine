@@ -404,6 +404,58 @@ async function getIconSource(filePath) {
   return iconPath;
 }
 
+// Electron's shell lookup answers with a canned "generic application" icon for
+// a lot of executables (notepad.exe included), which made a desktop full of
+// identical blank icons. The canned answer is fingerprinted once per size so it
+// can be replaced with an icon extracted by Windows itself.
+const genericIconCache = new Map();
+const extractedIconCache = new Map();
+const EXTRACTED_ICON_LIMIT = 500;
+
+async function genericIconUrl(size) {
+  const key = String(size);
+  if (genericIconCache.has(key)) return genericIconCache.get(key);
+  let url = null;
+  try {
+    const probe = path.join(os.tmpdir(), 'dtm-icon-probe-not-a-real-file.exe');
+    url = (await getApp().getFileIcon(probe, { size })).toDataURL();
+  } catch { url = null; }
+  genericIconCache.set(key, url);
+  return url;
+}
+
+// System.Drawing reads the icon resource directly, so it handles the modern
+// PNG-compressed frames Electron cannot decode. Cached per file mtime.
+async function extractShellIcon(filePath) {
+  const key = String(filePath).toLowerCase();
+  let mtime = 0;
+  try { mtime = (await fsp.stat(filePath)).mtimeMs; } catch { return null; }
+  const cached = extractedIconCache.get(key);
+  if (cached && cached.mtime === mtime) return cached.url;
+
+  const b64 = toBase64(filePath);
+  const script =
+    'Add-Type -AssemblyName System.Drawing\n' +
+    '$p = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\'' + b64 + '\'))\n' +
+    '$ico = [System.Drawing.Icon]::ExtractAssociatedIcon($p)\n' +
+    'if (-not $ico) { exit 1 }\n' +
+    '$ms = New-Object System.IO.MemoryStream\n' +
+    '$ico.ToBitmap().Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)\n' +
+    '[Console]::Out.Write([System.Convert]::ToBase64String($ms.ToArray()))\n';
+
+  let url = null;
+  try {
+    const out = String(await withTimeout(runPowerShell(script), 6000, '') || '').trim();
+    if (out && /^[A-Za-z0-9+/=]+$/.test(out) && out.length > 200) {
+      url = 'data:image/png;base64,' + out;
+    }
+  } catch { url = null; }
+
+  if (extractedIconCache.size > EXTRACTED_ICON_LIMIT) extractedIconCache.clear();
+  extractedIconCache.set(key, { mtime, url });
+  return url;
+}
+
 async function getFileIcon(filePath, size = 32) {
   const resolved = path.resolve(filePath);
   if (!isSafePath(resolved)) throw new Error('Access denied: icon path outside permitted boundaries');
@@ -427,7 +479,12 @@ async function getFileIcon(filePath, size = 32) {
 
   const app = getApp();
   const nativeImage = await app.getFileIcon(iconPath, { size });
-  return nativeImage.toDataURL();
+  const url = nativeImage.toDataURL();
+  if (/^data:image\//.test(url) && url === await genericIconUrl(size)) {
+    const extracted = await extractShellIcon(iconPath);
+    if (extracted) return extracted;
+  }
+  return url;
 }
 
 // Explorer's Properties > Change Icon writes the shortcut's IconLocation. Do
@@ -763,6 +820,69 @@ async function listTrayItems() {
   }
 }
 
+async function toggleTrayOverflow() {
+  const script =
+    'Add-Type -AssemblyName UIAutomationClient\n' +
+    'Add-Type -AssemblyName UIAutomationTypes\n' +
+    'Add-Type -ReferencedAssemblies System.Drawing,System.Windows.Forms @\'\n' +
+    'using System;\n' +
+    'using System.Runtime.InteropServices;\n' +
+    'using System.Drawing;\n' +
+    'using System.Drawing.Imaging;\n' +
+    'using System.IO;\n' +
+    'using System.Windows.Forms;\n' +
+    'public class Cap {\n' +
+    '  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left,Top,Right,Bottom; }\n' +
+    '  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);\n' +
+    '  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint n);\n' +
+    '  public static string Capture(IntPtr hwnd) {\n' +
+    '    RECT rc; GetWindowRect(hwnd, out rc);\n' +
+    '    int w = rc.Right-rc.Left; int h = rc.Bottom-rc.Top;\n' +
+    '    if (w<=0 || h<=0) return "";\n' +
+    '    using (var bmp = new Bitmap(w,h)) {\n' +
+    '      using (var g = Graphics.FromImage(bmp)) {\n' +
+    '        var hdc = g.GetHdc();\n' +
+    '        PrintWindow(hwnd, hdc, 0);\n' +
+    '        g.ReleaseHdc(hdc);\n' +
+    '      }\n' +
+    '      using (var ms = new MemoryStream()) { bmp.Save(ms, ImageFormat.Png); return Convert.ToBase64String(ms.ToArray()); }\n' +
+    '    }\n' +
+    '  }\n' +
+    '}\n' +
+    '\'@\n' +
+    '$root = [System.Windows.Automation.AutomationElement]::RootElement\n' +
+    '$cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "TrayNotifyWnd")\n' +
+    '$tray = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)\n' +
+    'if (-not $tray) { throw "tray not found" }\n' +
+    '$all = $tray.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)\n' +
+    '$chev = $null\n' +
+    'foreach ($b in $all) { if ($b.Current.ClassName -eq "Button") { $chev = $b; break } }\n' +
+    'if (-not $chev) { throw "chevron not found" }\n' +
+    '$hwnd = $chev.Current.NativeWindowHandle\n' +
+    'if ($hwnd -eq 0) { throw "no hwnd" }\n' +
+    'Add-Type -MemberDefinition \'[DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);\' -Name U -Namespace Dtm\n' +
+    '$before = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "NotifyIconOverflowWindow")))\n' +
+    '$wasOpen = ($before -ne $null)\n' +
+    '[Dtm.U]::SendMessage([IntPtr]$hwnd, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null\n' +
+    'Start-Sleep -Milliseconds 900\n' +
+    '$after = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "NotifyIconOverflowWindow")))\n' +
+    'if ($after -ne $null -and -not $wasOpen) {\n' +
+    '  $img = [Cap]::Capture($after.Current.NativeWindowHandle)\n' +
+    '  $o = @{ success = $true; open = $true; image = ("data:image/png;base64," + $img) }\n' +
+    '} elseif ($after -eq $null) {\n' +
+    '  $o = @{ success = $true; open = $false; image = $null }\n' +
+    '} else {\n' +
+    '  $o = @{ success = $true; open = $true; image = $null }\n' +
+    '}\n' +
+    '$o | ConvertTo-Json -Compress\n';
+  try {
+    const json = await withTimeout(runPowerShell(script, true), 8000, null);
+    return json || { success: true };
+  } catch (e) {
+    throw new Error((e && e.message) ? e.message : 'Could not toggle notification area overflow');
+  }
+}
+
 let _taskbarCache = null;
 let _taskbarCacheAt = 0;
 
@@ -782,7 +902,17 @@ async function activateWindow(pid) {
   const id = Number(pid);
   if (!Number.isInteger(id) || id <= 0) throw new Error('Invalid window process');
   if (!_lastWindowPids.has(id)) throw new Error('That window is no longer running');
-  await runPowerShell('(New-Object -ComObject WScript.Shell).AppActivate(' + id + ')');
+  // AppActivate alone often fails to raise a minimized window or to steal
+  // focus from the foreground app; restore + SetForegroundWindow is reliable.
+  const script =
+    '$p = Get-Process -Id ' + id + ' -ErrorAction SilentlyContinue\n' +
+    'if (-not $p) { throw \'process gone\' }\n' +
+    '$h = $p.MainWindowHandle\n' +
+    'if ($h -eq 0) { throw \'no window handle\' }\n' +
+    'if (-not ([System.Management.Automation.PSTypeName]"Dtm.W").Type) { Add-Type -MemberDefinition \'[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr h,int c); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);\' -Name W -Namespace Dtm }\n' +
+    '[Dtm.W]::ShowWindowAsync($h, 9) | Out-Null\n' +
+    '[Dtm.W]::SetForegroundWindow($h) | Out-Null\n';
+  await runPowerShell(script);
   return { success: true, pid: id };
 }
 
@@ -949,6 +1079,71 @@ async function invokeTrayItem(name) {
   return { success: true, action: 'settings', settings: fallback.label, name: wanted };
 }
 
+const VOLUME_SCRIPT = path.join(__dirname, 'system-volume.ps1');
+
+function runVolumeScript(args) {
+  return new Promise((resolve, reject) => {
+    execFile('powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', VOLUME_SCRIPT].concat(args),
+      { windowsHide: true, timeout: 8000, maxBuffer: 1 << 20, encoding: 'utf8' },
+      (err, stdout, stderr) => {
+        if (err) return reject(new Error(String(stderr || err.message).trim()));
+        const text = String(stdout || '').trim();
+        try { resolve(JSON.parse(text)); }
+        catch { reject(new Error('invalid volume response')); }
+      });
+  });
+}
+
+async function getSystemVolume() {
+  if (process.platform !== 'win32') return { level: 1, muted: false };
+  try {
+    const state = await runVolumeScript(['-Action', 'get']);
+    return { level: Number(state.level) || 0, muted: !!state.muted };
+  } catch {
+    return { level: 1, muted: false };
+  }
+}
+
+async function setSystemVolume(level, muted) {
+  const l = Number(level);
+  if (!Number.isFinite(l)) throw new Error('Invalid volume level');
+  const clamped = Math.max(0, Math.min(1, l));
+  if (process.platform !== 'win32') return { success: false };
+  const args = ['-Action', 'set', '-Level', String(clamped)];
+  if (muted !== null && muted !== undefined) args.push('-Muted', muted ? '1' : '0');
+  const result = await runVolumeScript(args);
+  return { success: result.success !== false, level: clamped };
+}
+
+async function clickTrayOverflowAt(relX, relY) {
+  const x = Math.round(Number(relX));
+  const y = Math.round(Number(relY));
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) {
+    throw new Error('Invalid coordinates');
+  }
+  const script =
+    'Add-Type -AssemblyName UIAutomationClient\n' +
+    'Add-Type -AssemblyName UIAutomationTypes\n' +
+    '$root = [System.Windows.Automation.AutomationElement]::RootElement\n' +
+    '$ow = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "NotifyIconOverflowWindow")))\n' +
+    'if (-not $ow) { throw "overflow not open" }\n' +
+    '$hwnd = $ow.Current.NativeWindowHandle\n' +
+    'if ($hwnd -eq 0) { throw "no hwnd" }\n' +
+    'Add-Type -MemberDefinition \'[DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);\' -Name U -Namespace Dtm\n' +
+    '$lp = [IntPtr]((' + y + ' -shl 16) -bor (' + x + ' -band 0xFFFF))\n' +
+    '[Dtm.U]::SendMessage([IntPtr]$hwnd, 0x0201, [IntPtr]::Zero, $lp) | Out-Null\n' +  // WM_LBUTTONDOWN
+    'Start-Sleep -Milliseconds 40\n' +
+    '[Dtm.U]::SendMessage([IntPtr]$hwnd, 0x0202, [IntPtr]::Zero, $lp) | Out-Null\n' +  // WM_LBUTTONUP
+    '\'ok\'\n';
+  try {
+    await withTimeout(runPowerShell(script), 5000, null);
+    return { success: true };
+  } catch (e) {
+    throw new Error((e && e.message) ? e.message : 'Could not click notification area overflow');
+  }
+}
+
 module.exports = {
   getDesktopPaths,
   resolveShortcut,
@@ -963,6 +1158,10 @@ module.exports = {
   getNetworkLocations,
   getTaskbarState,
   invokeTrayItem,
+  toggleTrayOverflow,
+  clickTrayOverflowAt,
+  getSystemVolume,
+  setSystemVolume,
   activateWindow,
   openTerminal,
   runTerminalCommand

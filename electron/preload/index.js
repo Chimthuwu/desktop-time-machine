@@ -68,6 +68,10 @@ const dtmBridge = {
   getTaskbar: () => ipcRenderer.invoke('dtm:shell-taskbar'),
   activateWindow: (pid) => ipcRenderer.invoke('dtm:shell-activate-window', pid),
   invokeTrayItem: (name) => ipcRenderer.invoke('dtm:shell-tray-invoke', name),
+  toggleTrayOverflow: () => ipcRenderer.invoke('dtm:shell-tray-overflow'),
+  clickTrayOverflowAt: (x, y) => ipcRenderer.invoke('dtm:shell-tray-overflow-click', x, y),
+  getVolume: () => ipcRenderer.invoke('dtm:system-volume-get'),
+  setVolume: (level, muted) => ipcRenderer.invoke('dtm:system-volume-set', level, muted),
   openTerminal: (dirPath) => ipcRenderer.invoke('dtm:open-terminal', dirPath),
   runTerminal: (command, cwd) => ipcRenderer.invoke('dtm:terminal-run', command, cwd),
 

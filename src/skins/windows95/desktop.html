@@ -39,12 +39,18 @@ button{font:inherit}
 .real-task{max-width:150px;font-weight:normal}
 .real-task img{width:15px;height:15px;margin-right:3px;vertical-align:-3px}
 .real-tray{display:flex;align-items:center;gap:2px;max-width:150px;overflow:hidden}
-.real-tray img{width:15px;height:15px;image-rendering:pixelated}
+.real-tray img{flex:none;width:16px;height:16px;display:block;image-rendering:pixelated}
+#trayVol{display:flex;align-items:center;cursor:pointer}
+#trayVol img{width:16px;height:16px;display:block;image-rendering:pixelated}
+#trayVol.muted img{opacity:.35}
 .real-tray-glyph{display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:0;padding:1px;margin:0;border:0;background:none;cursor:pointer}
 .real-tray-glyph:hover{background:#c0c0c0}
 .real-tray-glyph:active{transform:translate(1px,1px)}
 .real-tray-glyph.busy{opacity:.5}
 .real-tray-glyph.denied{outline:1px dotted #a00000}
+.real-tray-overflow{flex:none;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:0;padding:0;margin:0;border:0;background:none;cursor:pointer;color:#000}
+.real-tray-overflow:hover{background:#c0c0c0}
+.real-tray-overflow:active{transform:translate(1px,1px)}
 .task-button{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;height:29px;font-weight:bold}
 .tray{height:29px;border:2px solid;border-color:#808080 white white #808080;display:flex;align-items:center;padding:0 9px;gap:8px;min-width:78px}
 .clock{font-variant-numeric:tabular-nums}
@@ -88,7 +94,7 @@ button{font:inherit}
 .term-line{display:flex;gap:2px;align-items:baseline}
 .term-in{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:inherit;padding:0}
 .display-tabs{display:flex;flex-direction:column;gap:2px;padding:4px 4px 0 4px}
-.display-tab{width:70px;height:22px;font-size:11px}
+.display-tab{width:88px;height:22px;font-size:11px;white-space:nowrap;padding:0 2px}
 .display-tab.active{font-weight:bold;border-color:#808080 #fff #fff #808080;background:#dfdfdf}
 .display-panel{flex:1;display:flex;flex-direction:column;margin-left:6px;border:2px solid;border-color:#808080 #fff #fff #808080;padding:10px;min-width:0}
 /* Display Properties — live monitor preview */
@@ -196,8 +202,9 @@ button{font:inherit}
   <div class="real-pinned" id="realPinned" title="Apps pinned to your real Windows taskbar"></div>
   <div class="task-buttons" id="taskButtons"></div>
   <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
+    <button class="real-tray-overflow" id="realTrayOverflow" title="Show hidden icons" type="button">▲</button>
     <span class="real-tray" id="realTray" title="Real Windows notification area"></span>
-    <span id="trayVol" title="Volume">🔊</span>
+    <span id="trayVol" title="Volume — click to adjust"><img class="tray-vol-icon" src="../shared/icons/win95/volume.ico" alt=""></span>
     <span class="clock" id="clock">4:20 PM</span>
   </div>
 </div>
@@ -703,7 +710,9 @@ function wallpaperStyle(key, mode) {
   if (wp.image) {
     style.backgroundImage = wp.image;
     const natural = wp.size || (wp.w + 'px ' + wp.h + 'px');
-    if (mode === 'tile') {
+    // A pattern is a tile bitmap: stretching it to the screen turns four
+    // 16px buttons into four giant grey slabs, so it always tiles.
+    if (mode === 'tile' || wp.kind === 'pattern') {
       style.backgroundRepeat = 'repeat';
       style.backgroundSize = natural;
       style.backgroundPosition = '0 0';
@@ -716,7 +725,8 @@ function wallpaperStyle(key, mode) {
   return style;
 }
 function applyWallpaper(key, mode) {
-  const nextMode = mode || currentWallpaperMode(key);
+  const wp = WALLPAPERS[key] || WALLPAPERS.teal;
+  const nextMode = wp.kind === 'pattern' ? 'tile' : (mode || currentWallpaperMode(key));
   const style = wallpaperStyle(key, nextMode);
   Object.keys(style).forEach((prop) => { document.body.style[prop] = style[prop]; });
   try {
@@ -963,7 +973,8 @@ function setupDisplay(w) {
     const wp = WALLPAPERS[sel.value] || WALLPAPERS.teal;
     const style = wallpaperStyle(sel.value, modeSel.value);
     Object.keys(style).forEach((prop) => { previewDesk.style[prop] = style[prop]; });
-    modeSel.disabled = wp.kind === 'color';
+    modeSel.disabled = wp.kind !== 'image';
+    if (wp.kind === 'pattern') modeSel.value = 'tile';
     scalePreview();
   }
   sel.addEventListener('change', paintPreview);
@@ -1376,11 +1387,60 @@ setInterval(() => {
   if (wait > 0 && Date.now() - lastActivity >= wait * 60000) startScreensaver(type);
 }, 15000);
 
+function showOverflowPopup(imgSrc) {
+  let pop = document.getElementById('overflowPopup');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'overflowPopup';
+    pop.style.cssText = 'position:fixed;bottom:42px;right:8px;z-index:9999;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;padding:4px;box-shadow:2px 2px 0 #000;display:none;';
+    const img = document.createElement('img');
+    img.id = 'overflowPopupImg';
+    img.style.cssText = 'display:block;max-width:360px;max-height:480px;';
+    pop.appendChild(img);
+    const close = document.createElement('button');
+    close.textContent = 'x';
+    close.style.cssText = 'position:absolute;top:2px;right:2px;width:16px;height:16px;padding:0;font:bold 11px Tahoma;cursor:pointer;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;';
+    close.addEventListener('click', () => hideOverflowPopup());
+    pop.appendChild(close);
+    document.body.appendChild(pop);
+  }
+  const img = document.getElementById('overflowPopupImg');
+  img.src = imgSrc;
+  img.onclick = (ev) => {
+    const rect = img.getBoundingClientRect();
+    const scaleX = img.naturalWidth / rect.width;
+    const scaleY = img.naturalHeight / rect.height;
+    const x = Math.round((ev.clientX - rect.left) * scaleX);
+    const y = Math.round((ev.clientY - rect.top) * scaleY);
+    if (DTM && DTM.system && DTM.system.clickTrayOverflowAt) {
+      DTM.system.clickTrayOverflowAt(x, y).catch(() => {});
+    }
+    hideOverflowPopup();
+  };
+  img.style.cursor = 'pointer';
+  pop.style.display = 'block';
+}
+function hideOverflowPopup() {
+  const pop = document.getElementById('overflowPopup');
+  if (pop) pop.style.display = 'none';
+}
+
 // REAL WINDOWS TASKBAR MIRROR — pinned apps, running windows, tray items.
 function setupRealTaskbar() {
   const pinnedEl = document.getElementById('realPinned');
   const trayEl = document.getElementById('realTray');
+  const overflowEl = document.getElementById('realTrayOverflow');
   if (!pinnedEl || !trayEl || !DTM || !DTM.system || !DTM.system.getTaskbar) return;
+  if (overflowEl && DTM.system.toggleTrayOverflow) {
+    overflowEl.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        const res = await DTM.system.toggleTrayOverflow();
+        if (res && res.open && res.image) showOverflowPopup(res.image);
+        else hideOverflowPopup();
+      } catch (err) { /* best-effort */ }
+    });
+  }
   const state = { pinSig: null, traySig: null, busy: false };
 
   function clearRealTaskButtons() {
@@ -1421,13 +1481,20 @@ function setupRealTaskbar() {
 
   function renderWindows(windows) {
     clearRealTaskButtons();
-    (windows || []).forEach(w => {
+    const seen = new Set();
+    (windows || []).filter(w => { if (seen.has(w.pid)) return false; seen.add(w.pid); return true; }).forEach(w => {
       const b = document.createElement('button');
       b.className = 'win95-button task-button real-task';
       b.title = w.title + (w.processName ? ' (' + w.processName + ')' : '') + ' — real Windows window';
-      if (w.icon) {
+      let iconSrc = w.icon;
+      // Terminals wear the classic MS-DOS Prompt icon so the mirrored entry
+      // looks retro even though it still activates the real window.
+      if (/powershell|cmd|windowsterminal|terminal|bash|wsl/i.test((w.processName || '') + ' ' + (w.title || ''))) {
+        iconSrc = '../shared/icons/win95/msdos.ico';
+      }
+      if (iconSrc) {
         const img = document.createElement('img');
-        img.src = w.icon; img.alt = '';
+        img.src = iconSrc; img.alt = '';
         b.appendChild(img);
       }
       const label = document.createElement('span');
@@ -1473,8 +1540,34 @@ function setupRealTaskbar() {
     return '▫';
   }
 
-  // Clicking a mirrored icon runs the real tray button, so the genuine Windows
-  // flyout opens instead of a look-alike.
+  // The retro desktop never jumps out to the real Windows shell on a plain
+  // click, so a tray icon opens a Win95-style menu first; the real flyout is
+  // still reachable, but only as an explicit choice.
+  function showTrayMenu(item, button) {
+    const open = document.querySelector('.context');
+    document.querySelectorAll('.context').forEach((m) => m.remove());
+    // Clicking the same icon again closes its menu instead of reopening it.
+    if (open && open._trayFor === item.name) return;
+    const menu = document.createElement('div');
+    menu.className = 'context';
+    menu._trayFor = item.name;
+    menu.style.position = 'fixed';
+    const head = document.createElement('div');
+    head.textContent = item.name || 'Notification area icon';
+    head.style.cssText = 'color:#808080;text-shadow:1px 1px #fff;pointer-events:none;';
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:#808080;border-bottom:1px solid #fff;margin:2px 4px;padding:0;pointer-events:none;';
+    const openItem = document.createElement('div');
+    openItem.textContent = 'Open in Windows...';
+    openItem.addEventListener('click', () => { menu.remove(); openTrayItem(item, button); });
+    menu.append(head, sep, openItem);
+    document.body.appendChild(menu);
+    const box = button.getBoundingClientRect();
+    const width = menu.offsetWidth || 190;
+    menu.style.left = Math.max(4, Math.min(window.innerWidth - width - 4, box.right - width)) + 'px';
+    menu.style.top = Math.max(4, box.top - menu.offsetHeight - 4) + 'px';
+  }
+
   async function openTrayItem(item, button) {
     if (state.trayBusy) return;
     state.trayBusy = true;
@@ -1493,7 +1586,17 @@ function setupRealTaskbar() {
   }
 
   function renderTray(tray) {
-    const list = tray || [];
+    // The touch-keyboard indicator is shell furniture rather than an app tray
+    // icon, and the promoted-icon container can draw the same art as its own
+    // child, which reads as a duplicate; both are dropped.
+    const seen = new Set();
+    const list = (tray || []).filter(t => {
+      if (t.kind === 'input') return false;
+      const key = trayArt(t) || trayGlyph(t.name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     const sig = list.map(t => (t.name || '') + ':' + (t.kind || '') + ':' + (t.icon ? 'i' : '')).join('|');
     if (sig === state.traySig) return;
     state.traySig = sig;
@@ -1503,7 +1606,7 @@ function setupRealTaskbar() {
       s.type = 'button';
       s.className = 'real-tray-glyph';
       const owner = t.processName && !/^explorer$/i.test(t.processName) ? ' (' + t.processName + ')' : '';
-      s.title = (t.name || 'Notification area icon') + owner + ' — click to open it';
+      s.title = (t.name || 'Notification area icon') + owner + ' — click for the Windows 95 menu';
       const art = trayArt(t);
       if (art) {
         const img = document.createElement('img');
@@ -1512,11 +1615,17 @@ function setupRealTaskbar() {
       } else {
         s.textContent = trayGlyph(t.name);
       }
-      s.addEventListener('click', () => openTrayItem(t, s));
+      // Keep the menu through the button's own pointerdown so a second click
+      // can toggle it shut rather than being cleared by the document handler.
+      s.addEventListener('pointerdown', (e) => {
+        const open = document.querySelector('.context');
+        if (open && open._trayFor === t.name) e.stopPropagation();
+      });
+      s.addEventListener('click', (e) => { e.stopPropagation(); showTrayMenu(t, s); });
       trayEl.appendChild(s);
     });
     const vol = document.getElementById('trayVol');
-    if (vol) vol.style.display = list.length ? 'none' : '';
+    if (vol) vol.style.display = '';
   }
 
   async function refresh() {
@@ -1540,6 +1649,61 @@ function setupRealTaskbar() {
   window.addEventListener('unload', () => clearInterval(interval));
 }
 setupRealTaskbar();
+
+  // Volume control popup
+  (function setupVolume() {
+    const vol = document.getElementById('trayVol');
+    if (!vol) return;
+    vol.style.cursor = 'pointer';
+    vol.style.userSelect = 'none';
+    let popup = null;
+    function closePopup() { if (popup) { popup.remove(); popup = null; } }
+    function openPopup() {
+      closePopup();
+      popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;z-index:9999;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:2px 2px 0 #000;font:11px Tahoma;';
+      const label = document.createElement('div');
+      label.textContent = 'Volume';
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.value = '50';
+      slider.style.width = '120px';
+      const muteBtn = document.createElement('button');
+      muteBtn.className = 'win95-button';
+      muteBtn.textContent = 'Mute';
+      muteBtn.style.padding = '2px 8px';
+      popup.append(label, slider, muteBtn);
+      document.body.appendChild(popup);
+      // position above trayVol
+      const box = vol.getBoundingClientRect();
+      popup.style.left = Math.max(4, box.right - popup.offsetWidth) + 'px';
+      popup.style.top = Math.max(4, box.top - popup.offsetHeight - 4) + 'px';
+      // The initial read is async, so it must not overwrite a slider the user
+      // has already grabbed.
+      let touched = false;
+      DTM.system.getVolume().then(v => {
+        if (!touched) slider.value = Math.round((v.level || 0) * 100);
+        muteBtn.textContent = v.muted ? 'Unmute' : 'Mute';
+        vol.classList.toggle('muted', !!v.muted);
+      }).catch(() => {});
+      slider.addEventListener('pointerdown', () => { touched = true; });
+      slider.addEventListener('input', () => {
+        touched = true;
+        DTM.system.setVolume(Number(slider.value) / 100).catch(() => {});
+      });
+      muteBtn.addEventListener('click', () => {
+        DTM.system.getVolume().then(v => {
+          DTM.system.setVolume(v.level, !v.muted).then(() => {
+            muteBtn.textContent = v.muted ? 'Mute' : 'Unmute';
+            vol.classList.toggle('muted', !v.muted);
+          }).catch(() => {});
+        }).catch(() => {});
+      });
+    }
+    vol.addEventListener('click', (e) => { e.stopPropagation(); if (popup) closePopup(); else openPopup(); });
+    // The click usually lands on the speaker image inside the button, so the
+    // "outside" test has to look at the whole button.
+    document.addEventListener('click', (e) => { if (popup && !popup.contains(e.target) && !vol.contains(e.target)) closePopup(); });
+  })();
 })();
 </script>
 <script>

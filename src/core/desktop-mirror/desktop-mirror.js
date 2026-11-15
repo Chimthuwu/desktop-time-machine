@@ -194,6 +194,12 @@
   const WATERFOX_NAME_RE = /waterfox/i;
   const WATERFOX_TARGET_RE = /(^|[\\/])waterfox(\.exe)?$/i;
 
+  // The retro browser is a Chromium window, so a desktop shortcut that launches
+  // Chrome/Chromium — including one re-labelled "Internet Explorer" with the
+  // classic icon — belongs to the in-app browser, not to a real browser window.
+  const BROWSER_SHORTCUT_NAMES = /^(waterfox|internet explorer|google chrome|chrome|chromium|microsoft edge|ms edge)$/i;
+  const BROWSER_TARGETS = /(^|[\\/])(waterfox|chrome|chromium|msedge|iexplore)(\.exe)?$/i;
+
   // Retro apps owned by the shell (see components/ShellApps).
   const RETRO_APP_RULES = [
     { app: 'discord', re: /discord/i },
@@ -215,12 +221,19 @@
 
   function isRetroBrowserShortcut(DTM, item) {
     if (!item || item.isDirectory) return Promise.resolve(false);
-    if (WATERFOX_NAME_RE.test(item.name || '')) return Promise.resolve(true);
+    const label = String(item.name || '').replace(/\.(lnk|url)$/i, '').trim();
+    if (BROWSER_SHORTCUT_NAMES.test(label) || WATERFOX_NAME_RE.test(item.name || '')) return Promise.resolve(true);
     // Shortcut targets are resolved lazily, only for the item being opened.
     if (!DTM || !DTM.fs || typeof DTM.fs.resolveShortcut !== 'function') return Promise.resolve(false);
-    if (!/\.lnk$/i.test(item.path || '')) return Promise.resolve(false);
+    if (!/\.(lnk|url)$/i.test(item.path || '')) return Promise.resolve(false);
     return DTM.fs.resolveShortcut(item.path)
-      .then((sc) => WATERFOX_TARGET_RE.test(String((sc && sc.target) || '')))
+      .then((sc) => {
+        const target = String((sc && sc.target) || '');
+        if (!target) return false;
+        // .url shortcuts carry a web address rather than an executable.
+        if (/^(https?|file):/i.test(target) && !BROWSER_TARGETS.test(target)) return true;
+        return BROWSER_TARGETS.test(target) || WATERFOX_TARGET_RE.test(target);
+      })
       .catch(() => false);
   }
 
@@ -320,6 +333,7 @@
     entry.watchedPaths.clear();
     try {
       if (entry.view && entry.onResize) entry.view.removeEventListener('resize', entry.onResize);
+      if (entry.resizeObserver) entry.resizeObserver.disconnect();
     } catch {}
     try {
       if (entry.layer && entry.layer.parentNode) entry.layer.remove();
@@ -965,18 +979,42 @@
     const columnFlow = skinId === 'windows95' || skinId === 'windows98';
     const SYSTEM_SLOTS = { computer: 0, recycle: 1, network: 2 };
 
+    // A skin that is mounted before its viewport has a size reports a zero
+    // height, which used to collapse every icon into one row running off the
+    // screen. Fall back to the window so a slot always has real geometry.
+    function layerSize() {
+      let w = layer.clientWidth;
+      let h = layer.clientHeight;
+      if (!w) w = view.innerWidth || 0;
+      if (!h) h = Math.max(0, (view.innerHeight || 0) - 42);
+      return { w, h };
+    }
+
     function placeIcon(icon, slot) {
-      const rows = Math.max(1, Math.floor((layer.clientHeight - ICON_PAD * 2) / TILE_H));
+      const size = layerSize();
+      const rows = Math.max(1, Math.floor((size.h - ICON_PAD * 2) / TILE_H));
+      const cols = Math.max(1, Math.floor((size.w - ICON_PAD * 2) / TILE_W));
       let col, rowN;
       if (columnFlow) {
         col = Math.floor(slot / rows);
         rowN = slot % rows;
       } else {
-        col = slot % 6;
-        rowN = Math.floor(slot / 6);
+        col = slot % cols;
+        rowN = Math.floor(slot / cols);
       }
       icon.style.left = (ICON_PAD + col * TILE_W) + 'px';
       icon.style.top = (ICON_PAD + rowN * TILE_H) + 'px';
+    }
+
+    // A stored position can predate the current viewport (or a smaller window),
+    // which would strand an icon outside the visible desktop for good.
+    function savedPosition(key) {
+      const saved = store.get(key);
+      if (!saved || typeof saved.x !== 'number' || typeof saved.y !== 'number') return null;
+      const size = layerSize();
+      if (size.w > 0 && (saved.x < 0 || saved.x > size.w - 24)) return null;
+      if (size.h > 0 && (saved.y < 0 || saved.y > size.h - 24)) return null;
+      return saved;
     }
 
     function clearSelection() {
@@ -995,9 +1033,80 @@
       state.selection.add(iconKey(icon));
     }
 
+    // Releases that never reach the icon (an ancestor captured the pointer)
+    // still end every in-flight drag, so nothing stays glued to the cursor.
+    const activeDrags = new Set();
+    ['pointerup', 'pointercancel'].forEach((type) => {
+      view.addEventListener(type, () => { activeDrags.forEach((stop) => stop()); }, true);
+    });
+    view.addEventListener('blur', () => { activeDrags.forEach((stop) => stop()); });
+
+    // Dragging one icon moves every icon that is selected with it, keeping the
+    // arrangement the user picked, and each moved icon keeps its new position.
+    function makeIconDraggable(icon, storeKey) {
+      const DRAG_THRESHOLD = 3;
+      let down = false, dragged = false, startX = 0, startY = 0, group = [];
+
+      icon.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        const key = iconKey(icon);
+        const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+        // Clicking an unselected icon selects it first, exactly like Explorer.
+        if (!state.selection.has(key)) {
+          if (!additive) clearSelection();
+          icon.classList.add('selected');
+          state.selection.add(key);
+        }
+        down = true;
+        dragged = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        const selected = Array.from(layer.querySelectorAll('.dtm-icon.selected'));
+        group = (selected.length ? selected : [icon]).map((node) => ({
+          node, x: node.offsetLeft, y: node.offsetTop
+        }));
+        try { icon.setPointerCapture(e.pointerId); } catch {}
+      });
+
+      icon.addEventListener('pointermove', (e) => {
+        if (!down) return;
+        // A move only drags while the button is still held. Without this a
+        // click whose pointerup lands elsewhere leaves the icon glued to the
+        // cursor, so it slides around on a plain hover.
+        if (e.buttons === 0) { down = false; return; }
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!dragged && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+        dragged = true;
+        group.forEach((entry) => {
+          entry.node.style.left = Math.max(0, entry.x + dx) + 'px';
+          entry.node.style.top = Math.max(0, entry.y + dy) + 'px';
+        });
+      });
+
+      const stop = () => {
+        if (!down) return;
+        down = false;
+        if (!dragged) return;
+        // The click that follows a drag would otherwise clear the selection.
+        icon._skipClick = true;
+        group.forEach((entry) => {
+          store.set(iconKey(entry.node), {
+            x: entry.node.offsetLeft, y: entry.node.offsetTop
+          });
+        });
+        if (storeKey) store.set(storeKey, { x: icon.offsetLeft, y: icon.offsetTop });
+      };
+      icon.addEventListener('pointerup', stop);
+      icon.addEventListener('pointercancel', stop);
+      // Pointer capture can be taken by an ancestor (the skin's own desktop
+      // rubber band), so the release is also watched on the whole view.
+      activeDrags.add(stop);
+    }
+
     function positionIcon(icon, path, slotOffset) {
-      const saved = store.get(path);
-      if (saved && typeof saved.x === 'number') {
+      const saved = savedPosition(path);
+      if (saved) {
         icon.style.left = saved.x + 'px';
         icon.style.top = saved.y + 'px';
         return;
@@ -1029,14 +1138,21 @@
       icon.append(img, glyph, label);
 
       const fetchAndSet = () => {
-        iconFor(DTM, item.path, 32).then((url) => {
-          if (url) { img.src = url; img.style.display = 'block'; glyph.remove(); }
-        });
+        // Any browser shortcut opens the retro Internet Explorer, so it wears
+        // the classic logo instead of whatever engine it really launches.
+        isRetroBrowserShortcut(DTM, item)
+          .then((isBrowser) => (isBrowser ? '../shared/icons/internet-explorer.ico' : iconFor(DTM, item.path, 32)))
+          .then((url) => {
+            if (url) { img.src = url; img.style.display = 'block'; glyph.remove(); }
+          })
+          .catch(() => {});
       };
       fetchAndSet();
 
       icon.addEventListener('click', (e) => {
         e.stopPropagation();
+        // Finishing a drag must not collapse a multi-selection to one icon.
+        if (icon._skipClick) { icon._skipClick = false; return; }
         selectIcon(icon, e.ctrlKey || e.metaKey || e.shiftKey);
       });
       icon.addEventListener('dblclick', (e) => {
@@ -1048,7 +1164,7 @@
         e.stopPropagation();
         showContextMenu(e.clientX, e.clientY, item, icon);
       });
-      makeDraggable(icon, icon, doc, (x, y) => { store.set(item.path, { x, y }); });
+      makeIconDraggable(icon, item.path);
       return icon;
     }
 
@@ -1068,7 +1184,17 @@
       const label = el(doc, 'div', 'dtm-icon-label', labelText);
       icon.append(img, g, label);
       const showIcon = (u) => { if (u) { img.src = u; img.style.display = 'block'; g.remove(); } };
-      if (kind === 'computer') iconFor(DTM, 'C:\\', 32).then(showIcon);
+      // Windows skins draw the classic shell art: the host has no dependable
+      // icon for special folders (Recycle Bin answers with a generic one) and a
+      // retro desktop looks wrong with Windows 11 artwork on it.
+      const CLASSIC_ART = {
+        computer: '../shared/icons/win95/my-computer.ico',
+        recycle: '../shared/icons/win95/recycle-bin.ico',
+        network: '../shared/icons/win95/network.ico',
+        mediaplayer: '../shared/icons/win95/media.ico'
+      };
+      if (!isMac && CLASSIC_ART[kind]) showIcon(CLASSIC_ART[kind]);
+      else if (kind === 'computer') iconFor(DTM, 'C:\\', 32).then(showIcon);
       else if (kind === 'recycle') iconFor(DTM, 'C:\\$Recycle.Bin', 32).then(showIcon);
       else if (kind === 'mediaplayer') {
         // Prefer the real WMP executable icon, falling back to the glyph.
@@ -1083,11 +1209,15 @@
         tryNext(0);
       }
 
-      icon.addEventListener('click', (e) => { e.stopPropagation(); selectIcon(icon, e.ctrlKey || e.metaKey); });
+      icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (icon._skipClick) { icon._skipClick = false; return; }
+        selectIcon(icon, e.ctrlKey || e.metaKey);
+      });
       icon.addEventListener('dblclick', (e) => { e.stopPropagation(); systemActivate(kind); });
       icon.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showSystemMenu(e.clientX, e.clientY, kind); });
       icon.dataset.systemKind = kind;
-      makeDraggable(icon, icon, doc, (x, y) => { store.set('system:' + kind, { x, y }); });
+      makeIconDraggable(icon, 'system:' + kind);
       return icon;
     }
 
@@ -1631,25 +1761,25 @@
       if (/^windows/i.test(skinId)) systemIcons.push(makeSystemIcon('mediaplayer'));
       systemIcons.forEach((icon) => layer.appendChild(icon));
 
-      arranged.items.forEach((item, idx) => {
+      // My Computer / Recycle Bin / Network keep the first slots, so a busy
+      // desktop can never push them past the right edge and hide them.
+      const firstItemSlot = systemIcons.length;
+      arranged.items.forEach((item) => {
         state.items.push(item);
         const icon = makeIcon(item);
         icon.dataset.index = String(state.items.length - 1);
         layer.appendChild(icon);
-        positionIcon(icon, item.path, layoutActive ? 0 : 3);
+        positionIcon(icon, item.path, firstItemSlot);
       });
 
-      const systemBase = layoutActive ? arranged.items.length : 0;
       systemIcons.forEach((icon, idx) => {
-        const slot = systemBase + idx;
-        icon.dataset.slot = String(slot);
-        const kind = icon.dataset.systemKind;
-        const saved = store.get('system:' + kind);
-        if (saved && typeof saved.x === 'number') {
+        icon.dataset.slot = String(idx);
+        const saved = savedPosition('system:' + icon.dataset.systemKind);
+        if (saved) {
           icon.style.left = saved.x + 'px';
           icon.style.top = saved.y + 'px';
         } else {
-          placeIcon(icon, slot);
+          placeIcon(icon, idx);
         }
       });
       hasRendered = true;
@@ -1760,14 +1890,25 @@
     // saved position and everything else is re-flowed into the new grid.
     renderer.onResize = () => {
       if (renderer.disposed) return;
-      layer.querySelectorAll('.dtm-icon[data-slot]').forEach((icon) => placeIcon(icon, Number(icon.dataset.slot)));
+      // System icons never move with the grid once the user has placed them.
+      layer.querySelectorAll('.dtm-icon[data-system][data-slot]').forEach((icon) => {
+        if (store.get('system:' + icon.dataset.systemKind)) return;
+        placeIcon(icon, Number(icon.dataset.slot));
+      });
       state.items.forEach((item, i) => {
-        if (store.get(item.path)) return;
         const icon = layer.querySelector('.dtm-icon[data-index="' + i + '"]');
-        if (icon) placeIcon(icon, i + (layoutActive ? 0 : 3));
+        if (!icon || store.get(item.path)) return;
+        placeIcon(icon, i + layer.querySelectorAll('.dtm-icon[data-system]').length);
       });
     };
     view.addEventListener('resize', renderer.onResize);
+    // A skin mounted before its viewport had a size only ever gets one resize
+    // event from the iframe; watching the layer catches every geometry change.
+    if (typeof view.ResizeObserver === 'function') {
+      const ro = new view.ResizeObserver(() => renderer.onResize());
+      ro.observe(layer);
+      renderer.resizeObserver = ro;
+    }
 
     render().catch((err) => {
       console.error('[DTM mirror] Desktop render failed:', err);

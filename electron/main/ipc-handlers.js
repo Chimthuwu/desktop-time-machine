@@ -481,6 +481,28 @@ function registerIpcHandlers() {
     return desktopIntegration.invokeTrayItem(name);
   });
 
+  ipcMain.handle('dtm:shell-tray-overflow', async () => {
+    return desktopIntegration.toggleTrayOverflow();
+  });
+
+  ipcMain.handle('dtm:shell-tray-overflow-click', async (_event, x, y) => {
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
+      throw new Error('Invalid coordinates');
+    }
+    return desktopIntegration.clickTrayOverflowAt(x, y);
+  });
+
+  ipcMain.handle('dtm:system-volume-get', async () => {
+    return desktopIntegration.getSystemVolume();
+  });
+
+  ipcMain.handle('dtm:system-volume-set', async (_event, level, muted) => {
+    if (typeof level !== 'number' || !Number.isFinite(level)) {
+      throw new Error('Invalid argument: level must be a number');
+    }
+    return desktopIntegration.setSystemVolume(level, muted === null ? null : !!muted);
+  });
+
   ipcMain.handle('dtm:shell-activate-window', async (_event, pid) => {
     if (typeof pid !== 'number' || !Number.isFinite(pid)) {
       throw new Error('Invalid argument: pid must be a number');
