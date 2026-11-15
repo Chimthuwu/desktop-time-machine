@@ -3,9 +3,10 @@
  * Secure bridge between the Electron main process and renderer preload
  */
 
-const { ipcMain, app } = require('electron');
+const { ipcMain, app, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { isSafePath } = require('../security/permissions');
 
 // Required manifest fields for a skin to be considered valid
@@ -287,6 +288,27 @@ function registerIpcHandlers() {
     assertPathArg(targetPath, 'targetPath');
     const iconSize = Number(size) === 16 || Number(size) === 48 ? Number(size) : 32;
     return desktopIntegration.getFileIcon(targetPath, iconSize);
+  });
+
+  // Pick a local audio/video file for the retro Windows Media Player.
+  ipcMain.handle('dtm:fs-pick-media', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Open Media',
+      properties: ['openFile'],
+      filters: [
+        // Formats the embedded Chromium engine can actually decode.
+        { name: 'Media Files', extensions: ['mp4', 'm4v', 'webm', 'mov', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths.length) return null;
+    const filePath = result.filePaths[0];
+    return {
+      path: filePath,
+      name: path.basename(filePath),
+      // The shell document is loaded from file://, so a file URL loads directly.
+      url: pathToFileURL(filePath).href
+    };
   });
 
   // Safe recycle-bin delete (moves the real file to the Recycle Bin).

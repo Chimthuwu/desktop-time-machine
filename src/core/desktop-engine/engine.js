@@ -108,7 +108,8 @@ class DesktopEngine {
       desktopLayout: () => (backend && backend.desktopLayout) ? backend.desktopLayout()
         : Promise.resolve({ ok: false, items: [], spacing: { x: 76, y: 104 } }),
       desktopLayoutReset: () => (backend && backend.desktopLayoutReset) ? backend.desktopLayoutReset()
-        : Promise.resolve(false)
+        : Promise.resolve(false),
+      pickMedia: () => (backend && backend.pickMedia) ? backend.pickMedia() : Promise.resolve(null)
     };
   }
 

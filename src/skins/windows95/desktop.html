@@ -1395,7 +1395,11 @@ window.openApp = openApp;
 
 // Shell web apps (browser, Discord) report state so their taskbar buttons match.
 function setupWebappTasks() {
-  const meta = { browser: { icon: '🌐', title: 'Internet Explorer' }, discord: { icon: '💬', title: 'Discord' } };
+  const meta = {
+    browser: { icon: '🌐', title: 'Internet Explorer' },
+    discord: { icon: '💬', title: 'Discord' },
+    mediaplayer: { icon: '🎬', title: 'Windows Media Player' }
+  };
   const buttons = new Map();
   window.addEventListener('message', (e) => {
     const d = e.data;
@@ -1493,7 +1497,13 @@ function setupRealTaskbar() {
       const label = document.createElement('span');
       label.textContent = w.title;
       b.appendChild(label);
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
+        // Discord and PotPlayer open their retro counterparts — the real
+        // window (and its title bar) is never raised over the retro session.
+        try {
+          const app = DTM.retroAppForTaskbar && DTM.retroAppForTaskbar({ processName: w.processName, path: w.path });
+          if (app) { DTM.openRetroApp(app, document); return; }
+        } catch {}
         DTM.system.activateWindow(w.pid).catch(e => alert(e.message));
       });
       taskButtons.appendChild(b);

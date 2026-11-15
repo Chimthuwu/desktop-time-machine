@@ -41,7 +41,8 @@ const dtmBridge = {
     unwatch: (subId) => ipcRenderer.invoke('dtm:fs-unwatch', subId),
     network: () => ipcRenderer.invoke('dtm:fs-network'),
     desktopLayout: () => ipcRenderer.invoke('dtm:fs-desktop-layout'),
-    desktopLayoutReset: () => ipcRenderer.invoke('dtm:fs-desktop-layout-reset')
+    desktopLayoutReset: () => ipcRenderer.invoke('dtm:fs-desktop-layout-reset'),
+    pickMedia: () => ipcRenderer.invoke('dtm:fs-pick-media')
   },
 
   // Real Windows taskbar mirror (pinned apps / running windows / tray items)

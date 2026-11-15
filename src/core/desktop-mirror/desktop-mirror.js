@@ -155,14 +155,33 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Real browser shortcuts stay inside the app.
+  // Real app shortcuts stay inside the app.
   //
-  // A Waterfox shortcut is part of the mirrored real desktop, so activating it
-  // opens the in-app retro browser window instead of launching the real
-  // Waterfox binary (which would leave the retro session behind).
+  // Waterfox, Discord and PotPlayer belong to the mirrored real desktop and
+  // taskbar, so activating them opens the retro counterpart instead of
+  // launching — or raising — the real Windows window over the retro session.
   // ---------------------------------------------------------------------------
   const WATERFOX_NAME_RE = /waterfox/i;
   const WATERFOX_TARGET_RE = /(^|[\\/])waterfox(\.exe)?$/i;
+
+  // Retro apps owned by the shell (see components/ShellApps).
+  const RETRO_APP_RULES = [
+    { app: 'discord', re: /discord/i },
+    { app: 'mediaplayer', re: /potplayer/i }
+  ];
+
+  // Maps a desktop item, pinned entry or running window to its retro app.
+  // Window titles are deliberately ignored so a browser tab titled "Discord"
+  // is never hijacked.
+  function retroAppForEntry(entry) {
+    if (!entry) return null;
+    const probe = [entry.name, entry.processName, entry.path].filter(Boolean).join(' ');
+    if (!probe) return null;
+    for (const rule of RETRO_APP_RULES) {
+      if (rule.re.test(probe)) return rule.app;
+    }
+    return null;
+  }
 
   function isRetroBrowserShortcut(DTM, item) {
     if (!item || item.isDirectory) return Promise.resolve(false);
@@ -175,23 +194,30 @@
       .catch(() => false);
   }
 
-  function openRetroBrowser(doc) {
+  function openRetroApp(doc, app) {
+    if (!app) return false;
     const view = doc && doc.defaultView;
     try {
-      // The shell owns the real <webview>, so asking it to launch the browser
-      // works from every skin (Windows and Mac alike).
+      // The shell owns the real windows, so asking it to launch the app works
+      // from every skin (Windows and Mac alike).
       const target = view && view.parent ? view.parent : window;
-      target.postMessage({ type: 'dtm:launch-webapp', app: 'browser' }, '*');
+      target.postMessage({ type: 'dtm:launch-webapp', app }, '*');
       return true;
     } catch {
       return false;
     }
   }
 
-  // Resolves true when the item was handled by opening the retro browser.
+  function openRetroBrowser(doc) {
+    return openRetroApp(doc, 'browser');
+  }
+
+  // Resolves true when the item was handled by opening a retro app.
   async function openRetroShortcut(DTM, doc, item) {
+    const app = retroAppForEntry(item);
+    if (app) return openRetroApp(doc, app);
     if (!(await isRetroBrowserShortcut(DTM, item))) return false;
-    return openRetroBrowser(doc);
+    return openRetroApp(doc, 'browser');
   }
 
   // Per-skin icon position persistence.
@@ -1478,6 +1504,9 @@
     // Skins with their own real-taskbar mirror reuse the same shortcut routing.
     window.dtmEngine.openRetroShortcut = (item, doc) =>
       openRetroShortcut(window.dtmEngine, doc || document, item);
+    // Real taskbar entries (running windows / pinned apps) route the same way.
+    window.dtmEngine.retroAppForTaskbar = retroAppForEntry;
+    window.dtmEngine.openRetroApp = (app, doc) => openRetroApp(doc || document, app);
     // Lightweight diagnostics for verification tooling (no UI impact).
     window.dtmEngine.dtmDesktopStats = () => ({
       mounted: liveRenderers.size,

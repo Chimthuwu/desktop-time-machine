@@ -16,7 +16,8 @@
   const PARTITION = 'persist:dtm-web';
   const APP_CONFIG = {
     browser: { title: 'Internet Explorer 4.0', icon: '🌐', url: 'https://www.google.com/' },
-    discord: { title: 'Discord', icon: '💬', url: 'https://discord.com/app' }
+    discord: { title: 'Discord', icon: '💬', url: 'https://discord.com/app' },
+    mediaplayer: { title: 'Windows Media Player', icon: '🎬' }
   };
 
   // One live window per app, keyed by app id.
@@ -67,7 +68,8 @@
   function closeWindow(app) {
     const entry = windows.get(app);
     if (!entry) return;
-    try { entry.webview.stop(); } catch (e) {}
+    if (entry.video) { try { entry.video.pause(); } catch (e) {} }
+    try { if (entry.webview) entry.webview.stop(); } catch (e) {}
     entry.win.remove();
     windows.delete(app);
     setActive(null);
@@ -140,6 +142,7 @@
   function openWindow(app, requestedUrl) {
     const config = APP_CONFIG[app];
     if (!config) return;
+    if (app === 'mediaplayer') { openMediaPlayer(requestedUrl); return; }
 
     const existing = windows.get(app);
     if (existing) {
@@ -272,6 +275,250 @@
 
     focusWindow(app);
     notifySkin(app, true, false);
+  }
+
+  function formatTime(seconds) {
+    const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s);
+  }
+
+  /**
+   * Windows Media Player 6.4–style window with real local playback.
+   * PotPlayer taskbar entries route here instead of raising the real app.
+   */
+  function openMediaPlayer(clip) {
+    if (typeof clip === 'string') clip = { url: clip };
+    const app = 'mediaplayer';
+    const config = APP_CONFIG[app];
+    const existing = windows.get(app);
+    if (existing) {
+      if (clip && clip.url) loadClip(existing, clip);
+      focusWindow(app);
+      return;
+    }
+
+    const win = document.createElement('div');
+    win.className = 'dtmshell-win dtmwmp active';
+    win.style.left = '88px';
+    win.style.top = '44px';
+    win.style.width = '640px';
+    win.style.height = '540px';
+    win.style.zIndex = String(++zTop);
+
+    const titlebar = document.createElement('div');
+    titlebar.className = 'dtmshell-title';
+    const icon = document.createElement('span');
+    icon.className = 'dtmshell-title-icon';
+    icon.textContent = config.icon;
+    const titleText = document.createElement('span');
+    titleText.className = 'dtmshell-title-text';
+    titleText.textContent = config.title;
+    titlebar.append(icon, titleText, makeButtons(app));
+
+    const body = document.createElement('div');
+    body.className = 'dtmshell-body dtmwmp-body';
+
+    const menubar = document.createElement('div');
+    menubar.className = 'dtmwmp-menubar';
+    body.appendChild(menubar);
+
+    const screen = document.createElement('div');
+    screen.className = 'dtmwmp-screen';
+    const video = document.createElement('video');
+    video.className = 'dtmwmp-video';
+    video.preload = 'metadata';
+    const placeholder = document.createElement('div');
+    placeholder.className = 'dtmwmp-placeholder';
+    placeholder.textContent = 'File ▸ Open…';
+    const placeholderSub = document.createElement('div');
+    placeholderSub.className = 'dtmwmp-placeholder-sub';
+    placeholderSub.textContent = 'Open an audio or video file to play it here.';
+    screen.append(placeholder, placeholderSub, video);
+    body.appendChild(screen);
+
+    const seekRow = document.createElement('div');
+    seekRow.className = 'dtmwmp-seekrow';
+    const seek = document.createElement('input');
+    seek.type = 'range';
+    seek.className = 'dtmwmp-seek';
+    seek.min = '0';
+    seek.max = '0';
+    seek.step = '0.1';
+    seek.value = '0';
+    const timeLabel = document.createElement('span');
+    timeLabel.className = 'dtmwmp-time';
+    timeLabel.textContent = '00:00 / 00:00';
+    seekRow.append(seek, timeLabel);
+    body.appendChild(seekRow);
+
+    const controls = document.createElement('div');
+    controls.className = 'dtmwmp-controls';
+    const mkControl = (label, title, fn) => {
+      const b = document.createElement('button');
+      b.className = 'dtmshell-btn dtmwmp-btn';
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const playBtn = mkControl('▶', 'Play', () => { video.play().catch(() => {}); });
+    const pauseBtn = mkControl('❙❙', 'Pause', () => { video.pause(); });
+    const stopBtn = mkControl('■', 'Stop', () => { video.pause(); video.currentTime = 0; });
+    const muteBtn = mkControl('🔊', 'Mute', () => {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? '🔇' : '🔊';
+    });
+    const volume = document.createElement('input');
+    volume.type = 'range';
+    volume.className = 'dtmwmp-volume';
+    volume.min = '0';
+    volume.max = '100';
+    volume.value = '70';
+    volume.title = 'Volume';
+    volume.addEventListener('input', () => { video.volume = Number(volume.value) / 100; });
+    controls.append(playBtn, pauseBtn, stopBtn, muteBtn, volume);
+    body.appendChild(controls);
+
+    const status = document.createElement('div');
+    status.className = 'dtmshell-status';
+    const statusLeft = document.createElement('span');
+    statusLeft.textContent = 'Ready';
+    const statusRight = document.createElement('span');
+    statusRight.textContent = config.title;
+    status.append(statusLeft, statusRight);
+    body.appendChild(status);
+
+    win.append(titlebar, body);
+    layer.appendChild(win);
+
+    const entry = { win, video, titleText, maximized: false, clipName: null };
+    windows.set(app, entry);
+    makeDraggable(win, titlebar);
+    win.addEventListener('pointerdown', () => focusWindow(app));
+    video.volume = 0.7;
+
+    function showVideo(on) {
+      video.style.display = on ? 'block' : 'none';
+      placeholder.style.display = on ? 'none' : 'block';
+      placeholderSub.style.display = on ? 'none' : 'block';
+    }
+    showVideo(false);
+
+    video.addEventListener('loadedmetadata', () => {
+      seek.max = String(Number.isFinite(video.duration) ? video.duration : 0);
+      timeLabel.textContent = formatTime(0) + ' / ' + formatTime(video.duration);
+      showVideo(true);
+      statusLeft.textContent = entry.clipName || 'Media';
+    });
+    video.addEventListener('timeupdate', () => {
+      if (!seek.dragging) seek.value = String(video.currentTime || 0);
+      timeLabel.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+    });
+    video.addEventListener('error', () => {
+      showVideo(false);
+      statusLeft.textContent = 'Cannot play this file (unsupported format)';
+    });
+    video.addEventListener('ended', () => { statusLeft.textContent = 'Stopped'; });
+    video.addEventListener('play', () => { statusLeft.textContent = entry.clipName || 'Playing'; });
+    video.addEventListener('pause', () => {
+      if (!video.ended && video.currentTime > 0) statusLeft.textContent = 'Paused';
+    });
+
+    seek.addEventListener('pointerdown', () => { seek.dragging = true; });
+    seek.addEventListener('pointerup', () => { seek.dragging = false; });
+    seek.addEventListener('input', () => {
+      if (!Number.isFinite(video.duration)) return;
+      video.currentTime = Number(seek.value) || 0;
+    });
+
+    async function pickAndOpen() {
+      let picked = null;
+      try {
+        const engine = window.dtmEngine;
+        if (engine && engine.fs && engine.fs.pickMedia) picked = await engine.fs.pickMedia();
+      } catch (e) { picked = null; }
+      if (!picked) return;
+      loadClip(entry, { url: picked.url, name: picked.name || picked.path });
+    }
+
+    function setMenu() {
+      const menus = [
+        { label: 'File', items: [
+          { label: 'Open…', run: pickAndOpen },
+          { label: 'Close', run: () => closeWindow(app) }
+        ] },
+        { label: 'View', items: [
+          { label: 'Full Screen', run: () => { video.requestFullscreen && video.requestFullscreen().catch(() => {}); } },
+          { label: 'Normal Size', run: () => toggleMaximize(app) }
+        ] },
+        { label: 'Play', items: [
+          { label: 'Play', run: () => { video.play().catch(() => {}); } },
+          { label: 'Pause', run: () => { video.pause(); } },
+          { label: 'Stop', run: () => { video.pause(); video.currentTime = 0; } }
+        ] },
+        { label: 'Help', items: [
+          { label: 'About Windows Media Player', run: () => { statusLeft.textContent = 'Windows Media Player 6.4 (Desktop Time Machine)'; } }
+        ] }
+      ];
+
+      const closeAll = () => {
+        menubar.querySelectorAll('.dtmwmp-menu-list').forEach((el) => { el.style.display = 'none'; });
+      };
+
+      let openList = null;
+      menus.forEach((menu) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'dtmwmp-menu';
+        const label = document.createElement('button');
+        label.className = 'dtmwmp-menu-title';
+        label.textContent = menu.label;
+        const list = document.createElement('div');
+        list.className = 'dtmwmp-menu-list';
+        list.style.display = 'none';
+        menu.items.forEach((item) => {
+          const row = document.createElement('button');
+          row.className = 'dtmwmp-menu-item';
+          row.textContent = item.label;
+          row.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAll();
+            try { item.run(); } catch (err) {}
+          });
+          list.appendChild(row);
+        });
+        label.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const wasOpen = openList === list && list.style.display !== 'none';
+          closeAll();
+          if (!wasOpen) { list.style.display = 'block'; openList = list; }
+        });
+        wrap.append(label, list);
+        menubar.appendChild(wrap);
+      });
+
+      document.addEventListener('pointerdown', (e) => {
+        if (!menubar.contains(e.target)) closeAll();
+      });
+      win.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+    }
+    setMenu();
+
+    focusWindow(app);
+    notifySkin(app, true, false);
+
+    if (clip && clip.url) loadClip(entry, clip);
+  }
+
+  function loadClip(entry, clip) {
+    if (!entry || !clip || !clip.url) return;
+    entry.clipName = clip.name || 'Media';
+    entry.video.src = clip.url;
+    try { entry.video.load(); } catch (e) {}
+    entry.video.play().catch(() => {});
   }
 
   window.addEventListener('message', (event) => {
