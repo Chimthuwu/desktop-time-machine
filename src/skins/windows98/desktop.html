@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: https:; frame-src 'self' file: https:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file: https:; font-src 'self' data: file:;">
 <title>Windows 98 — Desktop Time Machine</title>
+<link rel="stylesheet" href="../shared/cursors-win.css">
 <style>
 :root {
   --win98-bg: #008080; /* classic Windows 98 teal desktop */
@@ -322,6 +323,7 @@ body { background: var(--win98-bg); }
   </div>
 </div>
 
+<script src="../shared/screensaver.js"></script>
 <script>
 (() => {
 // Connect to DTM Shared Engine
@@ -331,7 +333,7 @@ const desktop = document.getElementById('desktop');
 const menu = document.getElementById('startMenu');
 const taskButtons = document.getElementById('taskButtons');
 const channelBar = document.getElementById('channelBar');
-let z = 20, active = null, winCount = 0, ssAnimId = null, ssOverlay = null;
+let z = 20, active = null, winCount = 0;
 let channelBarOpen = false;
 
 // FORWARD HOTKEYS TO PARENT SHELL
@@ -1148,62 +1150,11 @@ function wallpaperModeOptions(selected) {
 }
 
 // SCREENSAVER
+// Faithful 1995 renderers, shared with the Windows 95 skin.
 function startScreensaver(type) {
-  if (ssOverlay) return;
-  ssOverlay = document.createElement('div');
-  ssOverlay.style = "position:fixed;inset:0;background:#000;z-index:999999;cursor:none;";
-  const canvas = document.createElement('canvas');
-  canvas.width = innerWidth; canvas.height = innerHeight;
-  canvas.style = "display:block;width:100%;height:100%;";
-  ssOverlay.appendChild(canvas);
-  document.body.appendChild(ssOverlay);
-  const ctx = canvas.getContext('2d');
-  
-  const stop = () => {
-    cancelAnimationFrame(ssAnimId);
-    ssOverlay.remove();
-    ssOverlay = null;
-    document.removeEventListener('pointerdown', stop);
-    document.removeEventListener('keydown', stop);
-  };
-  document.addEventListener('pointerdown', stop);
-  document.addEventListener('keydown', stop);
-
-  if (type === 'mystify') {
-    let pts = [
-      {x: canvas.width/2, y: canvas.height/2, dx: 5, dy: 3, c: '#ff0000'},
-      {x: canvas.width/2, y: canvas.height/2, dx: -4, dy: 6, c: '#00ff00'},
-      {x: canvas.width/2, y: canvas.height/2, dx: 6, dy: -5, c: '#0000ff'},
-      {x: canvas.width/2, y: canvas.height/2, dx: -3, dy: -7, c: '#ffff00'}
-    ];
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = 'lighter';
-      pts.forEach(p => { p.x += p.dx; p.y += p.dy; if (p.x < 0 || p.x > canvas.width) p.dx *= -1; if (p.y < 0 || p.y > canvas.height) p.dy *= -1; });
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          ctx.strokeStyle = pts[i].c; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke();
-        }
-      }
-      ssAnimId = requestAnimationFrame(draw);
-    };
-    draw();
-  } else if (type === 'starfield') {
-    const stars = Array.from({length: 400}, () => ({
-      x: (Math.random() - 0.5) * canvas.width,
-      y: (Math.random() - 0.5) * canvas.height,
-      z: Math.random() * canvas.width
-    }));
-    const draw = () => {
-      ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';
-      stars.forEach(s => { s.z -= 15; if (s.z <= 0) { s.x = (Math.random() - 0.5) * canvas.width; s.y = (Math.random() - 0.5) * canvas.height; s.z = canvas.width; } const x = s.x / s.z * canvas.width + canvas.width / 2; const y = s.y / s.z * canvas.height + canvas.height / 2; const size = (1 - s.z / canvas.width) * 4; ctx.fillRect(x, y, size, size); });
-      ssAnimId = requestAnimationFrame(draw);
-    };
-    draw();
-  }
+  if (!window.DTMSaver) return;
+  if (!type || type === 'none') { DTMSaver.stop(); return; }
+  DTMSaver.start(type);
 }
 
 // SHOW DESKTOP (Quick Launch)
@@ -1407,10 +1358,15 @@ const apps = {
             <div style="font-weight:bold;margin-bottom:12px;">Screen Saver</div>
             <div class="screensaver-list">
               <select id="ssSelect">
-                <option value="mystify">Mystify</option>
+                <option value="mystify">Mystify Your Mind</option>
                 <option value="starfield">Starfield Simulation</option>
                 <option value="pipes">3D Pipes</option>
-                <option value="maze">Maze</option>
+                <option value="maze">3D Maze</option>
+                <option value="flyingwindows">Flying Windows</option>
+                <option value="marquee">Scrolling Marquee</option>
+                <option value="curves">Curves and Colors</option>
+                <option value="blank">Blank Screen</option>
+                <option value="none">None</option>
               </select>
             </div>
             <div style="display:flex;align-items:center;gap:5px;margin:10px 0;">
@@ -2050,8 +2006,7 @@ function calcCalculate() {
 // CLEANUP
 window.addEventListener('unload', () => {
   clearInterval(clockInterval);
-  if (ssAnimId) { cancelAnimationFrame(ssAnimId); ssAnimId = null; }
-  if (ssOverlay) { ssOverlay.remove(); ssOverlay = null; }
+  if (window.DTMSaver) DTMSaver.stop();
   document.querySelectorAll('.window').forEach(w => {
     const canvas = w.querySelector('canvas');
     if (canvas) canvas.removeEventListener('pointermove', () => {});

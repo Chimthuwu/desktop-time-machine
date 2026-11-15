@@ -1,0 +1,38 @@
+/*
+ * Classic Macintosh mouse pointers. System 7 through 9 used a solid black
+ * arrow with a white keyline and a watch for busy. The Aqua skin inherits the
+ * same set.
+ */
+
+:root {
+  --cursor-arrow: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'14'%20height%3D'21'%20viewBox%3D'0%200%2014%2021'%20shape-rendering%3D'crispEdges'%3E%3Cpath%20d%3D'M1.5%201.5%20L1.5%2017.5%20L5%2014%20L7%2019.5%20L10.5%2018%20L8.5%2012.5%20L13%2012.5%20Z'%20fill%3D'%23000000'%20stroke%3D'%23ffffff'%20stroke-width%3D'1'%20stroke-linejoin%3D'miter'%2F%3E%3C%2Fsvg%3E") 1 1, default;
+
+  --cursor-hand: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'15'%20height%3D'18'%20viewBox%3D'0%200%2015%2018'%20shape-rendering%3D'crispEdges'%3E%3Cpath%20d%3D'M5.5%201.5%20h1.8%20v6.8%20h1.6%20V6.4%20h1.8%20v1.9%20h1.6%20V7%20h1.8%20v6.4%20c0%202.7%20-1.9%204.3%20-4.4%204.3%20h-2.9%20c-2.4%200%20-3.8%20-1.4%20-4.4%20-3.4%20L1.4%209.6%20c-.3%20-1.1%20.3%20-1.9%201%20-1.9%20.6%200%201%20.3%201.4%201%20L4.9%2011%20V3%20c0%20-.9%20.3%20-1.5%20.6%20-1.5%20z'%20fill%3D'%23ffffff'%20stroke%3D'%23000000'%20stroke-width%3D'1'%2F%3E%3C%2Fsvg%3E") 5 1, pointer;
+
+  --cursor-text: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'8'%20height%3D'17'%20viewBox%3D'0%200%208%2017'%20shape-rendering%3D'crispEdges'%3E%3Cpath%20d%3D'M0%200%20h8%20M0%201%20h1%20v14%20h-1%20z%20M7%201%20h1%20v14%20h-1%20z%20M0%2016%20h8'%20fill%3D'%23000000'%2F%3E%3Crect%20x%3D'3.5'%20y%3D'0'%20width%3D'1'%20height%3D'17'%20fill%3D'%23000000'%2F%3E%3C%2Fsvg%3E") 4 8, text;
+
+  --cursor-wait: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'14'%20height%3D'18'%20viewBox%3D'0%200%2014%2018'%20shape-rendering%3D'crispEdges'%3E%3Ccircle%20cx%3D'7'%20cy%3D'10'%20r%3D'6'%20fill%3D'%23ffffff'%20stroke%3D'%23000000'%20stroke-width%3D'1.4'%2F%3E%3Cpath%20d%3D'M7%2010%20V5.5%20M7%2010%20L10%2012'%20stroke%3D'%23000000'%20stroke-width%3D'1.4'%20fill%3D'none'%2F%3E%3Crect%20x%3D'5'%20y%3D'0'%20width%3D'4'%20height%3D'3'%20fill%3D'%23000000'%2F%3E%3C%2Fsvg%3E") 7 8, wait;
+
+  --cursor-move: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'15'%20height%3D'15'%20viewBox%3D'0%200%2015%2015'%20shape-rendering%3D'crispEdges'%3E%3Cpath%20d%3D'M7.5%200%20L10%203%20H8.5%20V6.5%20H12%20V5%20L15%207.5%20L12%2010%20V8.5%20H8.5%20V12%20H10%20L7.5%2015%20L5%2012%20H6.5%20V8.5%20H3%20V10%20L0%207.5%20L3%205%20V6.5%20H6.5%20V3%20H5%20Z'%20fill%3D'%23000000'%20stroke%3D'%23ffffff'%20stroke-width%3D'0.8'%2F%3E%3C%2Fsvg%3E") 7 7, move;
+
+  --cursor-cross: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'15'%20height%3D'15'%20viewBox%3D'0%200%2015%2015'%20shape-rendering%3D'crispEdges'%3E%3Cpath%20d%3D'M7%200%20h1%20v6%20h6%20v1%20h-6%20v6%20h-1%20v-6%20H1%20V7%20h6%20z'%20fill%3D'%23000000'%20stroke%3D'%23ffffff'%20stroke-width%3D'0.5'%2F%3E%3C%2Fsvg%3E") 7 7, crosshair;
+}
+
+*, *::before, *::after {
+  cursor: var(--cursor-arrow) !important;
+}
+a, a *, [href], .cursor-hand {
+  cursor: var(--cursor-hand) !important;
+}
+input:not([type=button]):not([type=checkbox]):not([type=radio]),
+textarea, [contenteditable="true"] {
+  cursor: var(--cursor-text) !important;
+}
+.dtm-cursor-wait, html[data-busy="true"] *, html[data-busy="true"] {
+  cursor: var(--cursor-wait) !important;
+}
+
+/* The app window has no title bar, so the window is moved by dragging a bar
+   background that the skin would otherwise leave inert. */
+.menubar { -webkit-app-region: drag; }
+.menubar > * { -webkit-app-region: no-drag; }

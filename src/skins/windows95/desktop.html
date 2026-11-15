@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file:; frame-src 'self' file: https://www.google.com https://thedoggybrad.github.io; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file: https:; font-src 'self' data: file:;">
 <title>Windows 95 — Desktop Time Machine</title>
+<link rel="stylesheet" href="../shared/cursors-win.css">
 <style>
 :root{--gray:#c0c0c0;--dark:#808080;--darker:#404040;--white:#fff;--navy:#000080;--blue:#1084d0}
 *{box-sizing:border-box}
@@ -190,13 +191,14 @@ button{font:inherit}
   </div>
 </div>
 
+<script src="../shared/screensaver.js"></script>
 <script>
 (() => {
 // Connect to DTM Shared Engine
 const DTM = (window.parent && window.parent.DTM) ? window.parent.DTM : (window.DTM || null);
 
 const desktop=document.getElementById('desktop'), menu=document.getElementById('startMenu'), taskButtons=document.getElementById('taskButtons');
-let z=20, active=null, winCount=0, ssAnimId=null, ssOverlay=null;
+let z=20, active=null, winCount=0;
 
 // FORWARD HOTKEYS TO PARENT SHELL
 window.addEventListener('keydown', (e) => {
@@ -647,12 +649,14 @@ const WALLPAPERS = {
 };
 const WALLPAPER_MODES = [['center', 'Center'], ['tile', 'Tile'], ['stretch', 'Stretch']];
 const SCREENSAVERS = [
-  ['mystify', 'Mystify'],
+  ['mystify', 'Mystify Your Mind'],
   ['starfield', 'Starfield Simulation'],
   ['pipes', '3D Pipes'],
-  ['flyingwindows', '3D Flying Windows'],
-  ['bubbles', 'Bubbles'],
-  ['marquee', 'Marquee']
+  ['maze', '3D Maze'],
+  ['flyingwindows', 'Flying Windows'],
+  ['marquee', 'Scrolling Marquee'],
+  ['curves', 'Curves and Colors'],
+  ['blank', 'Blank Screen']
 ];
 const WALLPAPER_KEY = 'dtm.wallpaper.windows95';
 const WALLPAPER_MODE_KEY = 'dtm.wallpaper-mode.windows95';
@@ -1075,142 +1079,13 @@ function setupTerminal(w, opts) {
   });
 }
 
-// SCREENSAVER FUNCTIONS
+// SCREENSAVER
+// The faithful 1995 renderers live in ../shared/screensaver.js so every
+// Windows skin shows the same set.
 function startScreensaver(type) {
-  if(ssOverlay) return;
-  ssOverlay=document.createElement('div');
-  ssOverlay.style="position:fixed;inset:0;background:#000;z-index:999999;cursor:none;";
-  const canvas=document.createElement('canvas');
-  canvas.width=innerWidth; canvas.height=innerHeight;
-  canvas.style="display:block;width:100%;height:100%;";
-  ssOverlay.appendChild(canvas);
-  document.body.appendChild(ssOverlay);
-  const ctx=canvas.getContext('2d');
-  
-  const stop=()=>{
-    cancelAnimationFrame(ssAnimId);
-    ssOverlay.remove();
-    ssOverlay=null;
-    document.removeEventListener('pointerdown',stop);
-    document.removeEventListener('keydown',stop);
-  };
-  document.addEventListener('pointerdown',stop);
-  document.addEventListener('keydown',stop);
-
-  if(type==='mystify'){
-    let pts=[
-      {x:canvas.width/2, y:canvas.height/2, dx:5, dy:3, c:'#ff0000'},
-      {x:canvas.width/2, y:canvas.height/2, dx:-4, dy:6, c:'#00ff00'},
-      {x:canvas.width/2, y:canvas.height/2, dx:6, dy:-5, c:'#0000ff'},
-      {x:canvas.width/2, y:canvas.height/2, dx:-3, dy:-7, c:'#ffff00'}
-    ];
-    const draw=()=>{
-      ctx.fillStyle='rgba(0,0,0,0.08)';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.globalCompositeOperation='lighter';
-      pts.forEach(p=>{
-        p.x+=p.dx; p.y+=p.dy;
-        if(p.x<0||p.x>canvas.width) p.dx*=-1;
-        if(p.y<0||p.y>canvas.height) p.dy*=-1;
-      });
-      for(let i=0;i<pts.length;i++){
-        for(let j=i+1;j<pts.length;j++){
-          ctx.strokeStyle=pts[i].c;
-          ctx.lineWidth=2;
-          ctx.beginPath();
-          ctx.moveTo(pts[i].x, pts[i].y);
-          ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.stroke();
-        }
-      }
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='starfield'){
-    const stars=Array.from({length:400},()=>({
-      x:(Math.random()-0.5)*canvas.width,
-      y:(Math.random()-0.5)*canvas.height,
-      z:Math.random()*canvas.width
-    }));
-    const draw=()=>{
-      ctx.fillStyle='black';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle='white';
-      stars.forEach(s=>{
-        s.z-=15;
-        if(s.z<=0){ s.x=(Math.random()-0.5)*canvas.width; s.y=(Math.random()-0.5)*canvas.height; s.z=canvas.width; }
-        const x=s.x/s.z*canvas.width+canvas.width/2;
-        const y=s.y/s.z*canvas.height+canvas.height/2;
-        const size=(1-s.z/canvas.width)*4;
-        ctx.fillRect(x,y,size,size);
-      });
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='pipes'){
-    const colors=['#00ff66','#00e5ff','#ff4dff','#ffe600','#ff8a00','#7dff00'];
-    const segs=colors.map((color,i)=>({x:canvas.width/2,y:canvas.height/2,dx:Math.cos(i*Math.PI/3)*4,dy:Math.sin(i*Math.PI/3)*4,color,pts:[{x:canvas.width/2,y:canvas.height/2}]}));
-    const draw=()=>{
-      ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      segs.forEach(s=>{
-        if(Math.random()<0.035){ const a=Math.atan2(s.dy,s.dx)+(Math.random()-0.5)*Math.PI/2; s.dx=Math.cos(a)*4; s.dy=Math.sin(a)*4; }
-        s.x+=s.dx; s.y+=s.dy;
-        if(s.x<0||s.x>canvas.width||s.y<0||s.y>canvas.height){
-          s.dx*=-1; s.dy*=-1;
-          s.x=Math.max(4,Math.min(canvas.width-4,s.x));
-          s.y=Math.max(4,Math.min(canvas.height-4,s.y));
-        }
-        s.pts.push({x:s.x,y:s.y}); if(s.pts.length>260) s.pts.shift();
-        ctx.strokeStyle=s.color; ctx.lineWidth=3; ctx.beginPath();
-        s.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke();
-      });
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='flyingwindows'){
-    const wins=Array.from({length:14},()=>({x:(Math.random()-0.5)*canvas.width,y:(Math.random()-0.5)*canvas.height,z:Math.random()*canvas.width+40}));
-    const draw=()=>{
-      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      wins.forEach(o=>{
-        o.z-=3; if(o.z<=1){ o.x=(Math.random()-0.5)*canvas.width; o.y=(Math.random()-0.5)*canvas.height; o.z=canvas.width; }
-        const scale=canvas.width/o.z; const x=o.x*scale+canvas.width/2; const y=o.y*scale+canvas.height/2;
-        const size=Math.max(2,80*scale/6);
-        if(size>canvas.width*1.5||x<-size||y<-size||x>canvas.width+size||y>canvas.height+size) return;
-        ctx.fillStyle='#c0c0c0'; ctx.fillRect(x,y,size,size*0.9);
-        ctx.fillStyle='#000080'; ctx.fillRect(x,y,size,size*0.18);
-        ctx.strokeStyle='#404040'; ctx.lineWidth=1; ctx.strokeRect(x,y,size,size*0.9);
-      });
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='bubbles'){
-    const bubbles=Array.from({length:45},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:4+Math.random()*24,s:0.5+Math.random()*1.6}));
-    const draw=()=>{
-      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      bubbles.forEach(b=>{
-        b.y-=b.s; b.x+=Math.sin(b.y/40)*0.5;
-        if(b.y<-b.r){ b.y=canvas.height+b.r; b.x=Math.random()*canvas.width; }
-        const g=ctx.createRadialGradient(b.x-b.r/3,b.y-b.r/3,1,b.x,b.y,b.r);
-        g.addColorStop(0,'rgba(180,225,255,0.85)'); g.addColorStop(1,'rgba(20,90,150,0.12)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='rgba(180,220,255,0.55)'; ctx.stroke();
-      });
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='marquee'){
-    let x=canvas.width; const text='Windows 95 — Desktop Time Machine';
-    const draw=()=>{
-      ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.font='bold 42px Tahoma,Arial'; ctx.textBaseline='middle'; ctx.fillStyle='#d4af37';
-      ctx.fillText(text,x,canvas.height/2);
-      x-=4; const w=ctx.measureText(text).width; if(x<-w) x=canvas.width;
-      ssAnimId=requestAnimationFrame(draw);
-    };
-    draw();
-  } else if(type==='none'){
-    stop();
-  }
+  if (!window.DTMSaver) return;
+  if (!type || type === 'none') { DTMSaver.stop(); return; }
+  DTMSaver.start(type);
 }
 
 // OPEN WINDOW LOGIC
@@ -1382,14 +1257,7 @@ function tick(){const d=new Date();document.getElementById('clock').textContent=
 const clockInterval = setInterval(tick,1000);
 window.addEventListener('unload', () => {
   clearInterval(clockInterval);
-  if (ssAnimId) {
-    cancelAnimationFrame(ssAnimId);
-    ssAnimId = null;
-  }
-  if (ssOverlay) {
-    ssOverlay.remove();
-    ssOverlay = null;
-  }
+  if (window.DTMSaver) DTMSaver.stop();
 });
 window.openApp = openApp;
 
@@ -1433,11 +1301,14 @@ let lastActivity = Date.now();
   document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true });
 });
 setInterval(() => {
-  if (ssOverlay) return;
+  if (!window.DTMSaver || DTMSaver.active()) return;
   const s = ssSettings();
   if (!s.type || s.type === 'none') return;
   const wait = Number(s.wait) || 0;
-  if (wait > 0 && Date.now() - lastActivity >= wait * 60000) startScreensaver(s.type);
+  // Older builds offered screensavers this set does not have; fall back
+  // rather than silently doing nothing.
+  const type = DTMSaver.names[s.type] ? s.type : 'mystify';
+  if (wait > 0 && Date.now() - lastActivity >= wait * 60000) startScreensaver(type);
 }, 15000);
 
 // REAL WINDOWS TASKBAR MIRROR — pinned apps, running windows, tray items.

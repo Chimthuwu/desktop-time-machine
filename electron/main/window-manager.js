@@ -24,6 +24,10 @@ function createMainWindow() {
     title: 'Desktop Time Machine',
     icon: path.join(__dirname, '../../assets/desktop-time-machine.ico'),
     backgroundColor: '#008080', // Classic Win95 Teal default
+    // The skin is the window: no native title bar or menu bar above it. The
+    // window is movable/resizable through the usual edge handles, can be
+    // minimized or closed from the skin's own menus, and Alt+F4 still works.
+    frame: false,
     autoHideMenuBar: true,
     show: false,
     webPreferences: {

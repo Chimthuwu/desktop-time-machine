@@ -74,6 +74,9 @@ html, body {
   z-index: 9000;
   font-size: 12px;
 }
+/* The app window has no title bar; the menu bar background moves it. */
+#menubar, #menubar .mb-menus { -webkit-app-region: drag; }
+#menubar span, #menubar a, #menubar button, #menubar div > * { -webkit-app-region: no-drag; }
 .mb-left { display: flex; align-items: center; gap: 12px; }
 .mb-apple { width: 18px; height: 18px; display: inline-flex; cursor: default; }
 .mb-apple svg { width: 100%; height: 100%; }
