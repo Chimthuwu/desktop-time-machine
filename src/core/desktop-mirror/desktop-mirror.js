@@ -30,6 +30,8 @@
   text-shadow:1px 1px #000; user-select:none; border:1px solid transparent;
 }
 .dtm-icon.selected { background:#000080; border:1px dotted #fff; }
+.dtm-marquee { position:absolute; z-index:5; border:1px dotted #fff;
+  background:rgba(0,0,128,.18); pointer-events:none; }
 .dtm-icon-img { width:32px; height:32px; object-fit:contain; display:block;
   image-rendering:auto; filter:drop-shadow(1px 1px 0 rgba(0,0,0,0.4)); pointer-events:none; }
 .dtm-icon-glyph { font-size:30px; line-height:32px; pointer-events:none; }
@@ -830,10 +832,15 @@
       state.selection.clear();
     }
 
+    // System icons have no path; their saved positions use the same key.
+    function iconKey(icon) {
+      return icon.dataset.system ? 'system:' + icon.dataset.systemKind : icon.dataset.path;
+    }
+
     function selectIcon(icon, additive) {
       if (!additive) clearSelection();
       icon.classList.add('selected');
-      state.selection.add(icon.dataset.path);
+      state.selection.add(iconKey(icon));
     }
 
     function positionIcon(icon, path, slotOffset) {
@@ -928,6 +935,7 @@
       icon.addEventListener('dblclick', (e) => { e.stopPropagation(); systemActivate(kind); });
       icon.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showSystemMenu(e.clientX, e.clientY, kind); });
       icon.dataset.systemKind = kind;
+      makeDraggable(icon, icon, doc, (x, y) => { store.set('system:' + kind, { x, y }); });
       return icon;
     }
 
@@ -1478,9 +1486,73 @@
     const renderer = { render, watchIds: new Set(), DTM, timer: null, watchedPaths: new Set(), layer, doc, view, disposed: false };
     liveRenderers.set(skinId, renderer);
 
+    // Rubber-band selection: dragging an empty stretch of desktop selects every
+    // icon it touches, like the real shell. The box lives in the layer so the
+    // selection keeps working whichever skin is mounted.
+    const band = { el: null, startX: 0, startY: 0, base: [], moved: false, keepOnClick: false };
+    function stopBand() {
+      if (!band.el) return;
+      band.keepOnClick = band.moved;
+      band.moved = false;
+      band.el.remove();
+      band.el = null;
+    }
+    layer.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target !== layer) return;
+      const box = layer.getBoundingClientRect();
+      band.startX = e.clientX - box.left;
+      band.startY = e.clientY - box.top;
+      band.base = (e.ctrlKey || e.metaKey) ? Array.from(state.selection) : [];
+      if (!band.base.length) clearSelection();
+      band.moved = false;
+      band.el = el(doc, 'div', 'dtm-marquee');
+      band.el.style.left = band.startX + 'px';
+      band.el.style.top = band.startY + 'px';
+      layer.appendChild(band.el);
+      try { layer.setPointerCapture(e.pointerId); } catch {}
+    });
+    layer.addEventListener('pointermove', (e) => {
+      if (!band.el) return;
+      const box = layer.getBoundingClientRect();
+      const x = e.clientX - box.left;
+      const y = e.clientY - box.top;
+      const left = Math.min(x, band.startX);
+      const top = Math.min(y, band.startY);
+      const right = Math.max(x, band.startX);
+      const bottom = Math.max(y, band.startY);
+      band.el.style.left = left + 'px';
+      band.el.style.top = top + 'px';
+      band.el.style.width = Math.max(0, right - left) + 'px';
+      band.el.style.height = Math.max(0, bottom - top) + 'px';
+      band.moved = right - left > 2 || bottom - top > 2;
+      layer.querySelectorAll('.dtm-icon').forEach((icon) => {
+        const r = icon.getBoundingClientRect();
+        const ir = { left: r.left - box.left, top: r.top - box.top, right: r.right - box.left, bottom: r.bottom - box.top };
+        const touched = !(ir.right < left || ir.left > right || ir.bottom < top || ir.top > bottom);
+        const key = iconKey(icon);
+        const keep = band.base.includes(key);
+        icon.classList.toggle('selected', touched || keep);
+        if (touched) state.selection.add(key);
+        else if (!keep) state.selection.delete(key);
+      });
+    });
+    // Pointer capture can be refused, so the release is also watched on the
+    // window; either one finishes the band.
+    ['pointerup', 'pointercancel'].forEach((type) => {
+      layer.addEventListener(type, stopBand);
+      view.addEventListener(type, stopBand);
+    });
+    view.addEventListener('blur', stopBand);
+
     // Background click clears selection / closes menus; right-click offers real
     // Windows actions (new folder / text document / terminal here).
-    layer.addEventListener('click', (e) => { if (e.target === layer) { clearSelection(); closeMenus(); } });
+    layer.addEventListener('click', (e) => {
+      if (e.target !== layer) return;
+      // Finishing a rubber band must not wipe the selection it just made.
+      if (band.keepOnClick) { band.keepOnClick = false; closeMenus(); return; }
+      clearSelection();
+      closeMenus();
+    });
     layer.addEventListener('contextmenu', (e) => {
       if (e.target !== layer) return;
       e.preventDefault();

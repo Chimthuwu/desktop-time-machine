@@ -15,6 +15,7 @@ const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
 const { execFile, spawn } = require('child_process');
+const { pathToFileURL } = require('url');
 const { isSafePath, isProtectedPath } = require('../security/permissions');
 
 let _app = null;
@@ -304,6 +305,68 @@ async function resolveShortcut(shortcutPath) {
   };
 }
 
+// Chromium writes shortcuts that Electron's readShortcutLink refuses to parse,
+// so the Shell Link header is walked directly to reach the icon string.
+function readLinkIconLocation(file) {
+  let buf;
+  try { buf = fs.readFileSync(file); } catch { return null; }
+  if (buf.length < 76 || buf.readUInt32LE(0) !== 0x0000004c) return null;
+  const flags = buf.readUInt32LE(20);
+  let offset = 76;
+  if (flags & 0x1) {
+    if (offset + 2 > buf.length) return null;
+    offset += 2 + buf.readUInt16LE(offset);
+  }
+  if (flags & 0x2) {
+    if (offset + 4 > buf.length) return null;
+    const size = buf.readUInt32LE(offset);
+    if (size < 4) return null;
+    offset += size;
+  }
+  const unicode = (flags & 0x80) !== 0;
+  function readString() {
+    if (offset + 2 > buf.length) return null;
+    const count = buf.readUInt16LE(offset);
+    offset += 2;
+    const bytes = count * (unicode ? 2 : 1);
+    if (offset + bytes > buf.length) return null;
+    const value = unicode
+      ? buf.toString('utf16le', offset, offset + bytes)
+      : buf.toString('latin1', offset, offset + bytes);
+    offset += bytes;
+    return value;
+  }
+  const order = [];
+  if (flags & 0x4) order.push('name');
+  if (flags & 0x8) order.push('relativePath');
+  if (flags & 0x10) order.push('workingDir');
+  if (flags & 0x20) order.push('arguments');
+  if (flags & 0x40) order.push('iconLocation');
+  let iconLocation = null;
+  for (const field of order) {
+    const value = readString();
+    if (value == null) return null;
+    if (field === 'iconLocation') iconLocation = value;
+  }
+  return iconLocation || null;
+}
+
+// Shortcut IconLocation values look like "C:\\Icons\\ie.ico,0" and may use
+// environment variables, so tidy them up before handing them to the shell.
+function shortcutIconPath(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const cleaned = raw.trim().replace(/^"|"$/g, '').replace(/,\s*-?\d+\s*$/, '').trim();
+  if (!cleaned) return null;
+  const expanded = cleaned.replace(/%([^%]+)%/g, (match, name) => process.env[name] || match);
+  try {
+    if (!fs.existsSync(expanded)) return null;
+    if (!isSafePath(expanded)) return null;
+  } catch {
+    return null;
+  }
+  return expanded;
+}
+
 async function getFileIcon(filePath, size = 32) {
   const resolved = path.resolve(filePath);
   if (!isSafePath(resolved)) throw new Error('Access denied: icon path outside permitted boundaries');
@@ -312,13 +375,17 @@ async function getFileIcon(filePath, size = 32) {
   if (/\.lnk$/i.test(resolved)) {
     // Read the shortcut natively — resolving every link through PowerShell made
     // a full desktop of icons take tens of seconds.
-    try {
-      const sc = getShell().readShortcutLink(resolved);
-      if (sc && sc.target && isSafePath(sc.target) && fs.existsSync(sc.target)) {
-        iconPath = sc.target;
-      }
-    } catch {
+    let details = null;
+    try { details = getShell().readShortcutLink(resolved); } catch {
       // fall back to the link file itself
+    }
+    // Explorer draws a shortcut with its own IconLocation when it has one, which
+    // is how the retro "Internet Explorer" keeps its logo over Chromium's.
+    const declared = (details && details.icon) || readLinkIconLocation(resolved);
+    const custom = shortcutIconPath(declared);
+    if (custom) iconPath = custom;
+    else if (details && details.target && isSafePath(details.target) && fs.existsSync(details.target)) {
+      iconPath = details.target;
     }
   } else if (/\.url$/i.test(resolved)) {
     try {
@@ -331,6 +398,10 @@ async function getFileIcon(filePath, size = 32) {
       // fall back to the link file itself
     }
   }
+
+  // The shell API cannot decode a standalone .ico, so hand the renderer the
+  // file itself; Chromium draws ICO images in an <img> just fine.
+  if (/\.ico$/i.test(iconPath)) return pathToFileURL(iconPath).href;
 
   const app = getApp();
   const nativeImage = await app.getFileIcon(iconPath, { size });

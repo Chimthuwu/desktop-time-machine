@@ -1206,6 +1206,8 @@ let iconBand=null, bandStart=null, bandBase=[];
 function endIconBand(){if(!iconBand) return;iconBand.remove();iconBand=null;bandStart=null;bandBase=[]}
 desktop.addEventListener('pointerdown',e=>{
   if(e.button!==0) return;
+  // The real desktop mirror brings its own rubber band and selection.
+  if(document.querySelector('.dtm-desktop-layer')) return;
   if(e.target.closest('.window')||e.target.closest('.taskbar')||e.target.closest('.context')||e.target.closest('#startMenu')||e.target.closest('.desktop-icon')) return;
   bandStart={x:e.clientX,y:e.clientY};
   bandBase=e.ctrlKey?[...document.querySelectorAll('.desktop-icon.selected')]:[];
