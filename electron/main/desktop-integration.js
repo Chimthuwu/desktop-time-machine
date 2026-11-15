@@ -573,6 +573,22 @@ async function listRunningWindows() {
   }
 }
 
+// Shell flyout buttons are hosted by explorer.exe, whose icon is a plain
+// folder, so their art has to come from name matching instead.
+function shellTrayKind(name) {
+  const n = String(name || '').toLowerCase();
+  if (/network|wi-?fi|wireless|ethernet|wlan|airplane|internet access/.test(n)) return 'network';
+  if (/volume|sound|audio|speaker|mute/.test(n)) return 'volume';
+  if (/battery|power/.test(n)) return 'battery';
+  if (/security|shield|defender|virus|threat/.test(n)) return 'security';
+  if (/bluetooth/.test(n)) return 'bluetooth';
+  if (/notification|action center/.test(n)) return 'notification';
+  if (/input indicator|keyboard|language/.test(n)) return 'input';
+  return 'other';
+}
+
+const SHELL_TRAY_OWNERS = /^(explorer|ShellExperienceHost|StartMenuExperienceHost|SystemSettings|TextInputHost)$/i;
+
 async function listTrayItems() {
   try {
     const script =
@@ -607,9 +623,13 @@ async function listTrayItems() {
     const items = [];
     for (const t of list) {
       if (!t || !t.name) continue;
+      const kind = shellTrayKind(t.name);
+      const shellOwned = SHELL_TRAY_OWNERS.test(t.process || '');
       let icon = null;
-      if (t.path) { try { icon = await getFileIcon(t.path, 16); } catch { icon = null; } }
-      items.push({ name: t.name, pid: Number(t.owner) || null, processName: t.process || '', icon });
+      if (kind === 'other' && !shellOwned && t.path) {
+        try { icon = await getFileIcon(t.path, 16); } catch { icon = null; }
+      }
+      items.push({ name: t.name, pid: Number(t.owner) || null, processName: t.process || '', kind, icon });
     }
     return items;
   } catch {
@@ -753,6 +773,56 @@ function scanDrivesNode() {
   return drives;
 }
 
+// Tray buttons on Windows 11 are XAML islands: they expose no automation
+// pattern and ignore posted clicks, and the flyouts they open cannot be driven
+// from a full-screen window. The real settings page behind each area is the
+// closest thing Windows exposes programmatically, so that is what opens.
+const TRAY_SETTINGS = {
+  notification: { uri: 'ms-settings:notifications', label: 'Notifications settings' },
+  network: { uri: 'ms-settings:network-status', label: 'Network settings' },
+  volume: { uri: 'ms-settings:sound', label: 'Sound settings' },
+  battery: { uri: 'ms-settings:batterysaver', label: 'Battery settings' },
+  bluetooth: { uri: 'ms-settings:bluetooth', label: 'Bluetooth settings' },
+  input: { uri: 'ms-settings:regionlanguage', label: 'Language settings' },
+  security: { uri: 'ms-settings:windowsdefender', label: 'Security settings' },
+  other: null
+};
+
+// Clicking a mirrored tray button runs the real one, so the flyout that opens
+// is the genuine Windows panel rather than a copy of it.
+async function invokeTrayItem(name) {
+  const wanted = String(name || '').trim();
+  if (!wanted || wanted.length > 200) throw new Error('Invalid tray item');
+  const fallback = TRAY_SETTINGS[shellTrayKind(wanted)] || null;
+  const encoded = toBase64(wanted);
+  const script =
+    'Add-Type -AssemblyName UIAutomationClient\n' +
+    'Add-Type -AssemblyName UIAutomationTypes\n' +
+    '$name = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("' + encoded + '"))\n' +
+    '$root = [System.Windows.Automation.AutomationElement]::RootElement\n' +
+    '$condClass = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "TrayNotifyWnd")\n' +
+    '$tray = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $condClass)\n' +
+    'if (-not $tray) { $tray = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condClass) }\n' +
+    'if (-not $tray) { "notray"; exit }\n' +
+    '$el = $null\n' +
+    '$all = $tray.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)\n' +
+    'foreach ($b in $all) { if ($b.Current.Name -ieq $name) { $el = $b; break } }\n' +
+    'if (-not $el) { foreach ($b in $all) { if ($b.Current.Name -and $b.Current.Name -ilike ($name + "*")) { $el = $b; break } } }\n' +
+    'if ($el) {\n' +
+    '  $pat = $null\n' +
+    '  if ($el.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pat)) { $pat.Invoke(); "invoked"; exit }\n' +
+    '  if ($el.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$pat)) { $pat.Toggle(); "toggled"; exit }\n' +
+    '}\n' +
+    '"nopattern"\n';
+  const result = await withTimeout(runPowerShell(script), 8000, null);
+  if (result === null) throw new Error('The notification area did not respond');
+  if (result === 'invoked' || result === 'toggled') return { success: true, action: result, name: wanted };
+  if (result === 'notray') throw new Error('Could not reach the Windows notification area');
+  if (!fallback) throw new Error('That tray icon cannot be opened directly');
+  await getShell().openExternal(fallback.uri);
+  return { success: true, action: 'settings', settings: fallback.label, name: wanted };
+}
+
 module.exports = {
   getDesktopPaths,
   resolveShortcut,
@@ -764,6 +834,7 @@ module.exports = {
   scanDrivesNode,
   getNetworkLocations,
   getTaskbarState,
+  invokeTrayItem,
   activateWindow,
   openTerminal,
   runTerminalCommand

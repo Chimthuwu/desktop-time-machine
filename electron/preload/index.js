@@ -63,6 +63,7 @@ const dtmBridge = {
   // Real Windows taskbar mirror (pinned apps / running windows / tray items)
   getTaskbar: () => ipcRenderer.invoke('dtm:shell-taskbar'),
   activateWindow: (pid) => ipcRenderer.invoke('dtm:shell-activate-window', pid),
+  invokeTrayItem: (name) => ipcRenderer.invoke('dtm:shell-tray-invoke', name),
   openTerminal: (dirPath) => ipcRenderer.invoke('dtm:open-terminal', dirPath),
   runTerminal: (command, cwd) => ipcRenderer.invoke('dtm:terminal-run', command, cwd),
 

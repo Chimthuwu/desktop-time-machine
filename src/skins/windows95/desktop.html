@@ -38,9 +38,13 @@ button{font:inherit}
 .real-pin-fallback{font-size:12px;font-weight:bold;color:#000;background:#d0d0d0;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
 .real-task{max-width:150px;font-weight:normal}
 .real-task img{width:15px;height:15px;margin-right:3px;vertical-align:-3px}
-.real-tray{display:flex;align-items:center;gap:4px;max-width:150px;overflow:hidden}
-.real-tray img{width:15px;height:15px}
-.real-tray-glyph{display:inline-flex;align-items:center;justify-content:center;font-size:12px;cursor:default}
+.real-tray{display:flex;align-items:center;gap:2px;max-width:150px;overflow:hidden}
+.real-tray img{width:15px;height:15px;image-rendering:pixelated}
+.real-tray-glyph{display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:0;padding:1px;margin:0;border:0;background:none;cursor:pointer}
+.real-tray-glyph:hover{background:#c0c0c0}
+.real-tray-glyph:active{transform:translate(1px,1px)}
+.real-tray-glyph.busy{opacity:.5}
+.real-tray-glyph.denied{outline:1px dotted #a00000}
 .task-button{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;height:29px;font-weight:bold}
 .tray{height:29px;border:2px solid;border-color:#808080 white white #808080;display:flex;align-items:center;padding:0 9px;gap:8px;min-width:78px}
 .clock{font-variant-numeric:tabular-nums}
@@ -1440,6 +1444,22 @@ function setupRealTaskbar() {
     });
   }
 
+  // Shell flyout buttons are owned by explorer.exe, so their real icon is a
+  // folder; known ones are drawn with the classic set instead.
+  const TRAY_ART = {
+    network: '../shared/icons/win95/network.ico',
+    volume: '../shared/icons/win95/volume.ico',
+    battery: '../shared/icons/win95/battery.ico',
+    input: '../shared/icons/win95/input.ico',
+    notification: '../shared/icons/win95/notification.ico'
+  };
+
+  function trayArt(item) {
+    if (item.icon) return item.icon;
+    if (item.kind && TRAY_ART[item.kind]) return TRAY_ART[item.kind];
+    return null;
+  }
+
   function trayGlyph(name) {
     const n = String(name || '').toLowerCase();
     if (/network|internet|ethernet|wi-?fi|wlan/.test(n)) return '🌐';
@@ -1451,23 +1471,46 @@ function setupRealTaskbar() {
     return '▫';
   }
 
+  // Clicking a mirrored icon runs the real tray button, so the genuine Windows
+  // flyout opens instead of a look-alike.
+  async function openTrayItem(item, button) {
+    if (state.trayBusy) return;
+    state.trayBusy = true;
+    button.classList.add('busy');
+    try {
+      await DTM.system.invokeTrayItem(item.name);
+      setTimeout(refresh, 700);
+    } catch (e) {
+      button.classList.add('denied');
+      button.title = (item.name || 'Tray item') + ' — ' + (e && e.message ? e.message : 'could not be opened');
+      setTimeout(() => button.classList.remove('denied'), 1200);
+    } finally {
+      button.classList.remove('busy');
+      state.trayBusy = false;
+    }
+  }
+
   function renderTray(tray) {
     const list = tray || [];
-    const sig = list.map(t => t.name).join('|');
+    const sig = list.map(t => (t.name || '') + ':' + (t.kind || '') + ':' + (t.icon ? 'i' : '')).join('|');
     if (sig === state.traySig) return;
     state.traySig = sig;
     trayEl.innerHTML = '';
     list.forEach(t => {
-      const s = document.createElement('span');
+      const s = document.createElement('button');
+      s.type = 'button';
       s.className = 'real-tray-glyph';
-      s.title = t.name + (t.processName ? ' — ' + t.processName : '');
-      if (t.icon) {
+      const owner = t.processName && !/^explorer$/i.test(t.processName) ? ' (' + t.processName + ')' : '';
+      s.title = (t.name || 'Notification area icon') + owner + ' — click to open it';
+      const art = trayArt(t);
+      if (art) {
         const img = document.createElement('img');
-        img.src = t.icon; img.alt = '';
+        img.src = art; img.alt = '';
         s.appendChild(img);
       } else {
         s.textContent = trayGlyph(t.name);
       }
+      s.addEventListener('click', () => openTrayItem(t, s));
       trayEl.appendChild(s);
     });
     const vol = document.getElementById('trayVol');

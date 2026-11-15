@@ -397,6 +397,13 @@ function registerIpcHandlers() {
     return desktopIntegration.getTaskbarState();
   });
 
+  ipcMain.handle('dtm:shell-tray-invoke', async (_event, name) => {
+    if (typeof name !== 'string' || !name.trim() || name.length > 200) {
+      throw new Error('Invalid argument: name must be a tray item label');
+    }
+    return desktopIntegration.invokeTrayItem(name);
+  });
+
   ipcMain.handle('dtm:shell-activate-window', async (_event, pid) => {
     if (typeof pid !== 'number' || !Number.isFinite(pid)) {
       throw new Error('Invalid argument: pid must be a number');

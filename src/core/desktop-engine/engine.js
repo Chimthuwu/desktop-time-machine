@@ -217,6 +217,9 @@ class DesktopEngine {
       activateWindow: (pid) => this.preload.activateWindow
         ? this.preload.activateWindow(pid)
         : Promise.reject(new Error('Window activation unavailable in this host')),
+      invokeTrayItem: (name) => this.preload.invokeTrayItem
+        ? this.preload.invokeTrayItem(name)
+        : Promise.reject(new Error('Notification area is unavailable in this host')),
       toggleFullScreen: () => this.preload.toggleFullScreen(),
       minimizeWindow: () => this.preload.minimizeWindow(),
       maximizeWindow: () => this.preload.maximizeWindow(),
@@ -559,6 +562,7 @@ class DesktopEngine {
       runTerminal: async (command) => ({ stdout: `[Mock] ${command}\n`, stderr: '', code: 0 }),
       getTaskbar: async () => ({ pinned: [], windows: [], tray: [] }),
       activateWindow: async () => ({ success: true }),
+      invokeTrayItem: async () => ({ success: true }),
       toggleFullScreen: async () => {
         if (!document.fullscreenElement) {
           document.documentElement.requestFullscreen().catch(() => {});
