@@ -897,10 +897,10 @@
       const icon = el(doc, 'div', 'dtm-icon');
       icon.dataset.system = kind;
       const isMac = skinId === 'macos8' || skinId === 'macosx';
-      const glyph = { computer: isMac ? '🖥️' : '💻', recycle: '🗑️', network: '🌐' }[kind] || '📦';
+      const glyph = { computer: isMac ? '🖥️' : '💻', recycle: '🗑️', network: '🌐', mediaplayer: '🎬' }[kind] || '📦';
       const labelText = isMac
         ? ({ computer: 'Macintosh HD', recycle: 'Trash', network: 'Network' }[kind] || kind)
-        : ({ computer: 'My Computer', recycle: 'Recycle Bin', network: 'Network' }[kind] || kind);
+        : ({ computer: 'My Computer', recycle: 'Recycle Bin', network: 'Network', mediaplayer: 'Windows Media Player' }[kind] || kind);
       const img = el(doc, 'img', 'dtm-icon-img');
       img.alt = '';
       img.style.display = 'none';
@@ -911,6 +911,18 @@
       const showIcon = (u) => { if (u) { img.src = u; img.style.display = 'block'; g.remove(); } };
       if (kind === 'computer') iconFor(DTM, 'C:\\', 32).then(showIcon);
       else if (kind === 'recycle') iconFor(DTM, 'C:\\$Recycle.Bin', 32).then(showIcon);
+      else if (kind === 'mediaplayer') {
+        // Prefer the real WMP executable icon, falling back to the glyph.
+        const paths = [
+          'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
+          'C:\\Program Files (x86)\\Windows Media Player\\wmplayer.exe'
+        ];
+        const tryNext = (i) => {
+          if (i >= paths.length) return;
+          iconFor(DTM, paths[i], 32).then((u) => (u ? showIcon(u) : tryNext(i + 1)));
+        };
+        tryNext(0);
+      }
 
       icon.addEventListener('click', (e) => { e.stopPropagation(); selectIcon(icon, e.ctrlKey || e.metaKey); });
       icon.addEventListener('dblclick', (e) => { e.stopPropagation(); systemActivate(kind); });
@@ -923,6 +935,7 @@
       if (kind === 'computer') openMyComputer({ doc, DTM, skinId, desktop });
       else if (kind === 'recycle') openRecycleBin({ doc, DTM, skinId, desktop });
       else if (kind === 'network') openNetwork({ doc, DTM, skinId, desktop });
+      else if (kind === 'mediaplayer') openRetroApp(doc, 'mediaplayer');
     }
 
     async function openDesktopItem(item) {
@@ -1412,6 +1425,8 @@
         makeSystemIcon('recycle'),
         makeSystemIcon('network')
       ];
+      // The Windows skins ship Windows Media Player; the Mac skins do not.
+      if (/^windows/i.test(skinId)) systemIcons.push(makeSystemIcon('mediaplayer'));
       systemIcons.forEach((icon) => layer.appendChild(icon));
 
       arranged.items.forEach((item, idx) => {
