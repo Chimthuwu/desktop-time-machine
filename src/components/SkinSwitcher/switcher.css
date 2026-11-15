@@ -107,8 +107,19 @@
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  /* Rows follow each card's own content and the gallery scrolls instead. With
+     stretchable rows the tall cards were squeezed into equal thirds, which
+     clipped the "Transport to…" button out of every card — unclickable. */
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: 0;
   gap: 18px;
   background: #18171f;
+}
+
+/* A row can never be shorter than the card it holds. */
+.dtm-card {
+  min-height: fit-content;
 }
 
 /* Museum Era Card */

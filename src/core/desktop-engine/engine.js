@@ -109,7 +109,11 @@ class DesktopEngine {
         : Promise.resolve({ ok: false, items: [], spacing: { x: 76, y: 104 } }),
       desktopLayoutReset: () => (backend && backend.desktopLayoutReset) ? backend.desktopLayoutReset()
         : Promise.resolve(false),
-      pickMedia: () => (backend && backend.pickMedia) ? backend.pickMedia() : Promise.resolve(null)
+      pickMedia: () => (backend && backend.pickMedia) ? backend.pickMedia() : Promise.resolve(null),
+      pickIcon: () => (backend && backend.pickIcon) ? backend.pickIcon() : Promise.resolve(null),
+      setShortcutIcon: (linkPath, iconPath) => (backend && backend.setShortcutIcon)
+        ? backend.setShortcutIcon(linkPath, iconPath)
+        : Promise.reject(new Error('Changing shortcut icons is unavailable in this host'))
     };
   }
 

@@ -44,8 +44,9 @@
 .dtm-explorer-toolbar { display:flex; gap:4px; padding:4px; flex-wrap:wrap; align-items:center;
   border-bottom:1px solid #808080; background:var(--gray,#c0c0c0); }
 .dtm-explorer-addr { flex:1; min-width:120px; border:2px inset #fff; padding:2px 4px; font:11px Tahoma; }
-.dtm-explorer-grid { flex:1; overflow:auto; padding:8px; display:flex; flex-wrap:wrap; gap:10px;
+.dtm-explorer-grid { position:relative; flex:1; overflow:auto; padding:8px; display:flex; flex-wrap:wrap; gap:10px;
   align-content:flex-start; background:#fff; }
+.dtm-explorer-grid > .dtm-marquee { background:rgba(0,0,128,.18); border:1px dotted #000080; }
 .dtm-explorer-item { width:80px; display:flex; flex-direction:column; align-items:center; text-align:center;
   padding:4px; cursor:pointer; border:1px solid transparent; color:#000; }
 .dtm-explorer-item:hover, .dtm-explorer-item.selected { background:#000080; color:#fff; }
@@ -289,6 +290,22 @@
         }, 400);
       }
     });
+
+    // Icon artwork can live outside the watched desktop folders (a shortcut's
+    // IconLocation on another drive, for instance), so the host watches those
+    // files separately and asks for a fresh render when one is edited.
+    preload.on('dtm:fs-icons-changed', () => {
+      for (const entry of liveRenderers.values()) {
+        if (entry.disposed) continue;
+        invalidateArtwork(null, entry.state && entry.state.items);
+        clearTimeout(entry.timer);
+        entry.timer = setTimeout(() => {
+          Promise.resolve(entry.render()).catch((err) => {
+            console.warn('[DTM mirror] artwork refresh failed:', err);
+          });
+        }, 250);
+      }
+    });
   }
 
   function unmountDesktop(skinId) {
@@ -424,7 +441,19 @@
 
     let current = opts.path || '';
     let selected = null;
+    // Ctrl-click and the rubber band select several rows at once; `selected`
+    // stays the primary item the single-item actions (Rename) work on.
+    let selection = [];
     let visibleItems = [];
+
+    function setSelection(items) {
+      selection = (items || []).filter(Boolean);
+      selected = selection[0] || null;
+      const paths = new Set(selection.map((i) => i.path));
+      grid.querySelectorAll('.dtm-explorer-item').forEach((row) => {
+        row.classList.toggle('selected', paths.has(row.dataset.path));
+      });
+    }
 
     async function fetchIcon(item) {
       return iconFor(DTM, item.path, 28);
@@ -440,11 +469,15 @@
       const span = el(doc, 'span', null, item.name);
       row.append(img, span);
       row.title = item.path + (item.isDirectory ? '' : ('\n' + (item.size ? Math.round(item.size / 1024) + ' KB' : 'File')));
+      row._item = item;
       row.addEventListener('click', (e) => {
         e.stopPropagation();
-        grid.querySelectorAll('.dtm-explorer-item').forEach((i) => i.classList.remove('selected'));
-        row.classList.add('selected');
-        selected = item;
+        if (e.ctrlKey || e.metaKey) {
+          const already = selection.some((i) => i.path === item.path);
+          setSelection(already ? selection.filter((i) => i.path !== item.path) : selection.concat(item));
+        } else {
+          setSelection([item]);
+        }
       });
       row.addEventListener('dblclick', () => {
         if (item.isDirectory) load(item.path);
@@ -461,6 +494,7 @@
       try {
         const res = await DTM.fs.list(p);
         selected = null;
+        selection = [];
         visibleItems = res.items;
         grid.innerHTML = '';
         if (res.parentPath) addRow({ name: '.. (Up)', path: res.parentPath, isDirectory: true });
@@ -473,8 +507,8 @@
     }
 
     function getSelected() {
-      if (!selected) { alert('Select a file or folder first.'); return null; }
-      return selected;
+      if (!selection.length) { alert('Select a file or folder first.'); return null; }
+      return selection[0];
     }
 
     async function openItem(item) {
@@ -510,15 +544,99 @@
       catch (e) { alert('Could not rename: ' + e.message); }
     });
     del.addEventListener('click', async () => {
-      const item = getSelected(); if (!item) return;
-      if (!confirm(doc, 'Send "' + item.name + '" to the Recycle Bin?')) return;
-      try { await DTM.fs.recycle(item.path); load(current); }
-      catch (e) { alert('Could not delete: ' + e.message); }
+      if (!selection.length) { alert('Select a file or folder first.'); return; }
+      const targets = selection.slice();
+      const question = targets.length > 1
+        ? 'Send ' + targets.length + ' items to the Recycle Bin?'
+        : 'Send "' + targets[0].name + '" to the Recycle Bin?';
+      if (!confirm(doc, question)) return;
+      try {
+        for (const item of targets) await DTM.fs.recycle(item.path);
+        load(current);
+      } catch (e) { alert('Could not delete: ' + e.message); }
+    });
+
+    // Rubber-band selection: dragging empty space in the list selects every row
+    // it touches, the same gesture the desktop itself uses.
+    const band = { el: null, startX: 0, startY: 0, base: [], moved: false, keepOnClick: false };
+    function bandPoint(e) {
+      const box = grid.getBoundingClientRect();
+      return { x: e.clientX - box.left + grid.scrollLeft, y: e.clientY - box.top + grid.scrollTop };
+    }
+    function bandRectAt(e) {
+      const p = bandPoint(e);
+      return {
+        left: Math.min(p.x, band.startX),
+        top: Math.min(p.y, band.startY),
+        right: Math.max(p.x, band.startX),
+        bottom: Math.max(p.y, band.startY)
+      };
+    }
+    function stopBand() {
+      if (!band.el) return;
+      band.keepOnClick = band.moved;
+      band.moved = false;
+      band.el.remove();
+      band.el = null;
+    }
+    grid.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target !== grid) return;
+      const p = bandPoint(e);
+      band.startX = p.x;
+      band.startY = p.y;
+      band.base = (e.ctrlKey || e.metaKey) ? selection.slice() : [];
+      if (!band.base.length) setSelection([]);
+      band.moved = false;
+      band.el = el(doc, 'div', 'dtm-marquee');
+      band.el.style.left = p.x + 'px';
+      band.el.style.top = p.y + 'px';
+      grid.appendChild(band.el);
+      try { grid.setPointerCapture(e.pointerId); } catch {}
+    });
+    grid.addEventListener('pointermove', (e) => {
+      if (!band.el) return;
+      const rect = bandRectAt(e);
+      band.el.style.left = rect.left + 'px';
+      band.el.style.top = rect.top + 'px';
+      band.el.style.width = Math.max(0, rect.right - rect.left) + 'px';
+      band.el.style.height = Math.max(0, rect.bottom - rect.top) + 'px';
+      band.moved = rect.right - rect.left > 2 || rect.bottom - rect.top > 2;
+
+      const box = grid.getBoundingClientRect();
+      const picked = [];
+      grid.querySelectorAll('.dtm-explorer-item').forEach((row) => {
+        const r = row.getBoundingClientRect();
+        const itemRect = {
+          left: r.left - box.left + grid.scrollLeft,
+          top: r.top - box.top + grid.scrollTop,
+          right: r.right - box.left + grid.scrollLeft,
+          bottom: r.bottom - box.top + grid.scrollTop
+        };
+        const touched = !(itemRect.right < rect.left || itemRect.left > rect.right ||
+          itemRect.bottom < rect.top || itemRect.top > rect.bottom);
+        const keep = band.base.some((i) => i.path === row.dataset.path);
+        row.classList.toggle('selected', touched || keep);
+        if (touched && row._item) picked.push(row._item);
+      });
+      const seen = new Set();
+      const merged = [];
+      band.base.concat(picked).forEach((item) => {
+        if (!item || seen.has(item.path)) return;
+        seen.add(item.path);
+        merged.push(item);
+      });
+      selection = merged;
+      selected = merged[0] || null;
+    });
+    ['pointerup', 'pointercancel'].forEach((type) => {
+      grid.addEventListener(type, stopBand);
+      doc.addEventListener(type, stopBand);
     });
 
     grid.addEventListener('click', () => {
-      grid.querySelectorAll('.dtm-explorer-item').forEach((i) => i.classList.remove('selected'));
-      selected = null;
+      // Finishing a rubber band must not wipe the selection it just made.
+      if (band.keepOnClick) { band.keepOnClick = false; return; }
+      setSelection([]);
     });
 
     load(current);
@@ -1400,7 +1518,46 @@
         '<li>Location: ' + escapeHtml(item.path) + '</li>' +
         (item.size ? '<li>Size: ' + Math.round(item.size / 1024) + ' KB</li>' : '') +
         '</ul>';
-      const w = openWindow({ doc, skinId, desktop, title: 'Properties', width: 380, height: 280, content: wrap });
+      // A shortcut can carry its own artwork, so its sheet gets the same
+      // "Change Icon" row Explorer offers, without leaving the retro desktop.
+      let preview = null;
+      if (item.isShortcut && DTM.fs && typeof DTM.fs.pickIcon === 'function') {
+        const row = el(doc, 'div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-top:12px;';
+        const img = doc.createElement('img');
+        img.alt = '';
+        img.style.cssText = 'width:32px;height:32px;image-rendering:pixelated;flex:0 0 auto;';
+        preview = img;
+        iconFor(DTM, item.path, 32).then((url) => { if (url) img.src = url; }).catch(() => {});
+        const btn = el(doc, 'button', null, 'Change Icon…');
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          try {
+            const picked = await DTM.fs.pickIcon();
+            if (!picked) return;
+            await DTM.fs.setShortcutIcon(item.path, picked);
+            // The shortcut always keeps its path, so its cached art must go.
+            invalidateIcon(item.path);
+            invalidateArtwork(null, state.items);
+            const url = await iconFor(DTM, item.path, 32);
+            if (url && preview) preview.src = url;
+            render(true);
+          } catch (err) {
+            const fail = el(doc, 'div', null, err && err.message ? err.message : String(err));
+            fail.style.cssText = 'margin-top:8px;color:#a00;font-size:11px;';
+            wrap.appendChild(fail);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+        row.append(img, btn);
+        wrap.appendChild(row);
+      }
+
+      const w = openWindow({
+        doc, skinId, desktop, title: 'Properties', width: 380,
+        height: item.isShortcut ? 340 : 280, content: wrap
+      });
       // Shortcut targets are resolved lazily — never during desktop enumeration.
       if (item.isShortcut) {
         let target = item.target;

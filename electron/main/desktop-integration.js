@@ -366,9 +366,12 @@ function shortcutIconPath(raw) {
   return expanded;
 }
 
-async function getFileIcon(filePath, size = 32) {
+// The file whose artwork actually gets drawn for a desktop item: a shortcut's
+// own IconLocation when it has one, otherwise its target. Callers can watch this
+// path so artwork edited in place is noticed without touching the desktop.
+async function getIconSource(filePath) {
   const resolved = path.resolve(filePath);
-  if (!isSafePath(resolved)) throw new Error('Access denied: icon path outside permitted boundaries');
+  if (!isSafePath(resolved)) return null;
 
   let iconPath = resolved;
   if (/\.lnk$/i.test(resolved)) {
@@ -398,6 +401,15 @@ async function getFileIcon(filePath, size = 32) {
     }
   }
 
+  return iconPath;
+}
+
+async function getFileIcon(filePath, size = 32) {
+  const resolved = path.resolve(filePath);
+  if (!isSafePath(resolved)) throw new Error('Access denied: icon path outside permitted boundaries');
+
+  const iconPath = (await getIconSource(resolved)) || resolved;
+
   // The shell API cannot decode a standalone .ico, so read its bytes instead.
   // Sending the bytes (rather than a file:// URL) keeps the artwork current: a
   // re-drawn .ico is picked up on the next request with no cached copy in the
@@ -416,6 +428,39 @@ async function getFileIcon(filePath, size = 32) {
   const app = getApp();
   const nativeImage = await app.getFileIcon(iconPath, { size });
   return nativeImage.toDataURL();
+}
+
+// Explorer's Properties > Change Icon writes the shortcut's IconLocation. Do
+// the same through the shell so every other field of the link is preserved.
+async function setShortcutIcon(shortcutPath, iconPath) {
+  const link = path.resolve(shortcutPath);
+  const icon = path.resolve(iconPath);
+  if (!/\.lnk$/i.test(link)) throw new Error('Only shortcuts can carry a custom icon');
+  if (!isSafePath(link) || !isSafePath(icon)) {
+    throw new Error('Access denied: path outside permitted boundaries');
+  }
+  if (isProtectedPath(link, { destructive: true })) {
+    throw new Error('Access denied: this location is protected');
+  }
+  try { await fsp.access(link); } catch { throw new Error('Not found: ' + link); }
+  try { await fsp.access(icon); } catch { throw new Error('Icon not found: ' + icon); }
+
+  const quote = (value) => value.replace(/'/g, "''");
+  const script =
+    '$ws = New-Object -ComObject WScript.Shell\n' +
+    "$sc = $ws.CreateShortcut('" + quote(link) + "')\n" +
+    "$sc.IconLocation = '" + quote(icon) + ",0'\n" +
+    '$sc.Save()\n' +
+    "'OK'\n";
+  try {
+    await runPowerShell(script);
+  } catch (err) {
+    throw new Error('Could not change icon: ' + err.message);
+  }
+  // Any cached listing would still describe the old artwork.
+  _desktopCache = null;
+  _desktopCacheAt = 0;
+  return { success: true, link, icon };
 }
 
 async function recycleItem(targetPath) {
@@ -908,6 +953,8 @@ module.exports = {
   getDesktopPaths,
   resolveShortcut,
   getFileIcon,
+  getIconSource,
+  setShortcutIcon,
   recycleItem,
   listRecycleBin,
   emptyRecycleBin,

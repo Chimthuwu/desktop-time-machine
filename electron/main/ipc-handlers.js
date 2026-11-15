@@ -3,7 +3,7 @@
  * Secure bridge between the Electron main process and renderer preload
  */
 
-const { ipcMain, app, dialog } = require('electron');
+const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -288,8 +288,61 @@ function registerIpcHandlers() {
   ipcMain.handle('dtm:fs-icon', async (_event, targetPath, size) => {
     assertPathArg(targetPath, 'targetPath');
     const iconSize = Number(size) === 16 || Number(size) === 48 ? Number(size) : 32;
+    // Artwork can live far from the desktop (a shortcut's IconLocation), so the
+    // file that gets drawn is watched from here — see watchIconFile.
+    desktopIntegration.getIconSource(targetPath)
+      .then((source) => { if (source) watchIconFile(source); })
+      .catch(() => {});
     return desktopIntegration.getFileIcon(targetPath, iconSize);
   });
+
+  // A .ico drawn somewhere outside the watched desktop folders is watched
+  // through its own directory, so editing that art updates the desktop icons
+  // without a manual Refresh.
+  const iconDirWatches = new Map();
+  let iconsChangedTimer = null;
+
+  function broadcastIconsChanged() {
+    clearTimeout(iconsChangedTimer);
+    iconsChangedTimer = setTimeout(() => {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) win.webContents.send('dtm:fs-icons-changed');
+      });
+    }, 250);
+  }
+
+  function watchIconFile(iconPath) {
+    if (!/\.ico$/i.test(String(iconPath))) return;
+    const dir = path.dirname(iconPath);
+    const name = path.basename(iconPath).toLowerCase();
+    const key = dir.toLowerCase();
+    const existing = iconDirWatches.get(key);
+    if (existing) {
+      existing.names.add(name);
+      return;
+    }
+    const names = new Set([name]);
+    let watcher;
+    try {
+      // Watching the directory (rather than the file) survives the icon being
+      // replaced by a rename, which is how most icon editors save.
+      watcher = fs.watch(dir, { recursive: false }, (_evt, filename) => {
+        if (filename && !names.has(String(filename).toLowerCase())) return;
+        broadcastIconsChanged();
+      });
+    } catch {
+      return;
+    }
+    const entry = { watcher, names };
+    watcher.on('error', () => {
+      try { watcher.close(); } catch {}
+      iconDirWatches.delete(key);
+    });
+    iconDirWatches.set(key, entry);
+    if (process.env.DTM_DESKTOP_DEBUG === '1') {
+      console.log('[dtm:watch-icons] add', dir, 'icons=' + names.size);
+    }
+  }
 
   // Pick a local audio/video file for the retro Windows Media Player.
   ipcMain.handle('dtm:fs-pick-media', async () => {
@@ -310,6 +363,30 @@ function registerIpcHandlers() {
       // The shell document is loaded from file://, so a file URL loads directly.
       url: pathToFileURL(filePath).href
     };
+  });
+
+  // Pick replacement icon art for a shortcut (Properties > Change Icon).
+  ipcMain.handle('dtm:fs-pick-icon', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Change Icon',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Icons', extensions: ['ico'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths.length) return null;
+    return result.filePaths[0];
+  });
+
+  // Re-point a shortcut at another icon file.
+  ipcMain.handle('dtm:fs-set-shortcut-icon', async (_event, targetPath, iconPath) => {
+    assertPathArg(targetPath, 'targetPath');
+    assertPathArg(iconPath, 'iconPath');
+    const result = await desktopIntegration.setShortcutIcon(targetPath, iconPath);
+    // The new artwork may live anywhere, so start watching it right away.
+    if (result && result.icon) watchIconFile(result.icon);
+    return result;
   });
 
   // Safe recycle-bin delete (moves the real file to the Recycle Bin).

@@ -42,7 +42,9 @@ const dtmBridge = {
     network: () => ipcRenderer.invoke('dtm:fs-network'),
     desktopLayout: () => ipcRenderer.invoke('dtm:fs-desktop-layout'),
     desktopLayoutReset: () => ipcRenderer.invoke('dtm:fs-desktop-layout-reset'),
-    pickMedia: () => ipcRenderer.invoke('dtm:fs-pick-media')
+    pickMedia: () => ipcRenderer.invoke('dtm:fs-pick-media'),
+    pickIcon: () => ipcRenderer.invoke('dtm:fs-pick-icon'),
+    setShortcutIcon: (targetPath, iconPath) => ipcRenderer.invoke('dtm:fs-set-shortcut-icon', targetPath, iconPath)
   },
 
   // Retro "Internet Explorer": a docked, real Waterfox window driven over BiDi.
