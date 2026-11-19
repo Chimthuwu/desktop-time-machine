@@ -60,6 +60,18 @@ class SkinManager {
         capabilities: ['aqua', 'dock', 'apple-menu', 'filesystem', 'window-management', 'desktop-icons', 'calculator', 'cli', 'multimedia']
       },
       {
+        id: 'templeos',
+        name: 'TempleOS',
+        period: '2013–2017',
+        version: '0.1.0',
+        description: 'A TempleOS 5.03-inspired 640×480, 16-color desktop with a HolyC-style command prompt and small built-in tools.',
+        author: 'Desktop Time Machine',
+        entry: './skins/templeos/desktop.html',
+        status: 'ready',
+        icon: '✝',
+        capabilities: ['cli', 'filesystem', 'application-launcher']
+      },
+      {
         id: 'windowsXP',
         name: 'Windows XP (Luna)',
         period: '2001',

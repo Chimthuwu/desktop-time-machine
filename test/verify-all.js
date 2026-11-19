@@ -24,6 +24,7 @@ const results = {
   win98: {},
   macos8: {},
   switching: {},
+  templeos: {},
   errors: []
 };
 
@@ -415,7 +416,37 @@ app.whenReady().then(async () => {
     results.errors.push('Windows 98 test error: ' + e.message);
   }
 
-  // Test 6: Switch back to Windows 95
+  // Test 6: TempleOS-inspired skin
+  try {
+    await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('templeos');`);
+    await new Promise(r => setTimeout(r, 1000));
+
+    const templeTests = await win.webContents.executeJavaScript(`
+      (() => {
+        const frame = document.getElementById('skin-viewport');
+        const doc = frame.contentWindow.document;
+        const out = {
+          activeSkin: window.dtmSkinManager.getCurrentSkin().id,
+          fixedResolutionScreen: !!doc.querySelector('#desktop[aria-label="TempleOS 640 by 480 desktop"]'),
+          commandPrompt: !!doc.getElementById('command'),
+          helpButton: !!doc.querySelector('[data-command="help;"]')
+        };
+        const command = doc.getElementById('command');
+        command.value = 'Demo;';
+        doc.getElementById('command-row').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        out.demoOpens = !!doc.querySelector('#demo-canvas');
+        command.value = 'Help;';
+        doc.getElementById('command-row').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        out.helpOutput = doc.getElementById('console').textContent.includes('Built-in commands:');
+        return out;
+      })()
+    `);
+    results.templeos = templeTests;
+  } catch (e) {
+    results.errors.push('TempleOS test error: ' + e.message);
+  }
+
+  // Test 7: Switch back to Windows 95
   try {
     await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('windows95');`);
     await new Promise(r => setTimeout(r, 1800));

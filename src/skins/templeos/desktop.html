@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file:;">
+<title>TempleOS 5.03</title>
+<style>
+:root {
+  --black: #000;
+  --blue: #00a;
+  --green: #0a0;
+  --cyan: #0aa;
+  --red: #a00;
+  --magenta: #a0a;
+  --brown: #a50;
+  --light-gray: #aaa;
+  --dark-gray: #555;
+  --bright-blue: #55f;
+  --bright-green: #5f5;
+  --bright-cyan: #5ff;
+  --bright-red: #f55;
+  --bright-magenta: #f5f;
+  --yellow: #ff5;
+  --white: #fff;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; width: 100%; height: 100%; overflow: hidden;
+  background: var(--black); color: var(--white);
+  font: 16px/1.25 "Lucida Console", "Courier New", monospace;
+  user-select: none;
+}
+button, input, textarea { font: inherit; }
+#viewport { position: fixed; inset: 0; overflow: hidden; }
+.screen {
+  position: absolute; left: 50%; top: 50%;
+  width: 640px; height: 480px; overflow: hidden;
+  transform-origin: center;
+  background: var(--blue);
+  border: 1px solid var(--bright-cyan);
+  box-shadow: 0 0 0 1px var(--blue);
+  image-rendering: pixelated;
+}
+#topbar {
+  height: 24px; display: flex; align-items: center; gap: 0;
+  padding: 0 6px; background: var(--white); color: var(--black);
+  border-bottom: 2px solid var(--black); font-weight: bold;
+}
+#topbar strong { color: var(--blue); margin-right: 12px; }
+#topbar button {
+  height: 20px; padding: 0 7px; border: 0; background: transparent;
+  color: var(--black); cursor: pointer;
+}
+#topbar button:hover, #topbar button:focus-visible { background: var(--blue); color: var(--white); outline: 0; }
+#clock { margin-left: auto; font-size: 14px; }
+#workarea { position: absolute; inset: 24px 0 24px; padding: 8px; }
+#console {
+  position: absolute; inset: 8px; overflow: auto;
+  padding: 3px 4px 38px; white-space: pre-wrap; overflow-wrap: anywhere;
+  scrollbar-color: var(--white) var(--blue);
+}
+.line { min-height: 20px; }
+.line.dim { color: var(--bright-cyan); }
+.line.yellow { color: var(--yellow); }
+.line.green { color: var(--bright-green); }
+.line.red { color: var(--bright-red); }
+#command-row {
+  position: absolute; left: 10px; right: 10px; bottom: 7px;
+  height: 25px; display: flex; align-items: center; gap: 5px;
+  background: var(--blue);
+}
+#prompt { color: var(--yellow); white-space: nowrap; }
+#command {
+  flex: 1; min-width: 0; border: 0; outline: 0; padding: 2px 0;
+  background: transparent; color: var(--white); caret-color: var(--yellow);
+  user-select: text;
+}
+#command::placeholder { color: var(--bright-cyan); opacity: .85; }
+#bottomline {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 24px;
+  display: flex; align-items: center; padding: 0 8px;
+  background: var(--white); color: var(--black); border-top: 2px solid var(--black);
+  font-size: 13px;
+}
+#bottomline span:last-child { margin-left: auto; }
+.window {
+  position: absolute; left: 52px; top: 54px; width: 536px; height: 340px;
+  display: flex; flex-direction: column; z-index: 5;
+  color: var(--white); background: var(--blue); border: 2px solid var(--white);
+  box-shadow: 4px 4px 0 var(--black);
+}
+.window-title {
+  height: 24px; flex: none; display: flex; align-items: center;
+  padding: 0 6px; background: var(--bright-blue); color: var(--white);
+  border-bottom: 2px solid var(--white); font-weight: bold;
+}
+.window-title span { flex: 1; }
+.window-title button {
+  width: 20px; height: 20px; border: 1px solid var(--white);
+  background: var(--red); color: var(--white); cursor: pointer;
+}
+.window-content { flex: 1; min-height: 0; padding: 8px; overflow: auto; }
+.file-row { display: flex; gap: 8px; align-items: center; min-height: 24px; }
+.file-row button, .tool-button {
+  border: 1px solid var(--white); padding: 2px 6px;
+  color: var(--white); background: var(--blue); cursor: pointer;
+}
+.file-row button:hover, .tool-button:hover { color: var(--black); background: var(--yellow); }
+.window-status { padding: 3px 6px; border-top: 1px solid var(--white); color: var(--bright-cyan); }
+#editor {
+  width: 100%; height: 100%; resize: none; border: 1px solid var(--white);
+  padding: 6px; background: var(--black); color: var(--white);
+  user-select: text; outline: none;
+}
+#demo-canvas {
+  display: block; width: 100%; height: 100%;
+  border: 1px solid var(--white); background: var(--black);
+  image-rendering: pixelated;
+}
+#boot {
+  position: absolute; inset: 0; z-index: 20; display: grid;
+  place-items: center; background: var(--black); color: var(--white);
+}
+#boot pre { margin: 0; width: 540px; color: var(--light-gray); }
+#boot strong { color: var(--white); }
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <main id="desktop" class="screen" aria-label="TempleOS 640 by 480 desktop">
+    <header id="topbar">
+      <strong>TempleOS 5.03</strong>
+      <button type="button" data-command="help;">Help</button>
+      <button type="button" data-command="files;">Files</button>
+      <button type="button" data-command="edit;">Edit</button>
+      <button type="button" data-command="demo;">Demo</button>
+      <button type="button" data-command="about;">About</button>
+      <span id="clock"></span>
+    </header>
+    <section id="workarea">
+      <div id="console" role="log" aria-live="polite" tabindex="0"></div>
+      <form id="command-row" autocomplete="off">
+        <label id="prompt" for="command">C:\&gt;</label>
+        <input id="command" aria-label="HolyC-style command prompt" spellcheck="false" placeholder="Type Help; for commands">
+      </form>
+    </section>
+    <footer id="bottomline"><span>F1 Help&nbsp;&nbsp; F8 Era Switcher</span><span>640×480×16</span></footer>
+    <div id="windows"></div>
+    <div id="boot" aria-hidden="true">
+      <pre><strong>TempleOS V5.03</strong>
+Copyright (c) 2003-2017 Terry A. Davis
+
+640x480x16  64-Bit  Single-Address-Space OS
+Initializing HolyC...
+Loading Adam...
+<span id="boot-status">Starting desktop</span></pre>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  'use strict';
+  const DTM = (window.parent && window.parent.DTM) ? window.parent.DTM : window.DTM;
+  const screen = document.getElementById('desktop');
+  const consoleView = document.getElementById('console');
+  const command = document.getElementById('command');
+  const windows = document.getElementById('windows');
+  const history = [];
+  let historyIndex = 0;
+  let currentPath = '';
+  let zTop = 5;
+
+  function fitScreen() {
+    const scale = Math.min(window.innerWidth / 640, window.innerHeight / 480);
+    screen.style.transform = 'translate(-50%, -50%) scale(' + Math.max(.1, scale) + ')';
+  }
+  window.addEventListener('resize', fitScreen);
+  fitScreen();
+
+  function addLine(text, tone) {
+    const line = document.createElement('div');
+    line.className = 'line' + (tone ? ' ' + tone : '');
+    line.textContent = text;
+    consoleView.appendChild(line);
+    consoleView.scrollTop = consoleView.scrollHeight;
+  }
+
+  function openWindow(title, content, status) {
+    const win = document.createElement('section');
+    win.className = 'window';
+    win.style.zIndex = String(++zTop);
+    const bar = document.createElement('header');
+    bar.className = 'window-title';
+    const titleText = document.createElement('span');
+    titleText.textContent = title;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = '×';
+    close.title = 'Close window';
+    close.setAttribute('aria-label', 'Close window');
+    close.addEventListener('click', () => win.remove());
+    bar.append(titleText, close);
+    const body = document.createElement('div');
+    body.className = 'window-content';
+    body.appendChild(content);
+    win.append(bar, body);
+    if (status) {
+      const footer = document.createElement('div');
+      footer.className = 'window-status';
+      footer.textContent = status;
+      win.appendChild(footer);
+    }
+    win.addEventListener('pointerdown', () => { win.style.zIndex = String(++zTop); });
+    let drag = null;
+    bar.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('button')) return;
+      const scale = Math.min(window.innerWidth / 640, window.innerHeight / 480);
+      drag = {
+        x: event.clientX,
+        y: event.clientY,
+        left: parseFloat(win.style.left) || 52,
+        top: parseFloat(win.style.top) || 54
+      };
+      bar.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    bar.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      const scale = Math.min(window.innerWidth / 640, window.innerHeight / 480);
+      const maxLeft = 640 - 80;
+      const maxTop = 480 - 40;
+      win.style.left = Math.max(0, Math.min(maxLeft, drag.left + (event.clientX - drag.x) / scale)) + 'px';
+      win.style.top = Math.max(24, Math.min(maxTop, drag.top + (event.clientY - drag.y) / scale)) + 'px';
+    });
+    const stopDrag = () => { drag = null; };
+    bar.addEventListener('pointerup', stopDrag);
+    bar.addEventListener('pointercancel', stopDrag);
+    windows.appendChild(win);
+    return { win, body };
+  }
+
+  function showHelp() {
+    addLine('Built-in commands:', 'yellow');
+    addLine('  Help;       Show this command list');
+    addLine('  Dir;        List the current host folder');
+    addLine('  Files;      Browse host files');
+    addLine('  Edit;       Open a scratch editor');
+    addLine('  Demo;       Run a small graphics demo');
+    addLine('  About;      About this TempleOS-inspired skin');
+    addLine('  Clear;      Clear the console');
+    addLine('  ShutDown;   Exit Desktop Time Machine');
+    addLine('Commands are a small simulated subset; this is not the original OS.', 'dim');
+  }
+
+  async function listDirectory(path) {
+    if (!DTM || !DTM.system || !DTM.system.listDirectory) {
+      addLine('Host filesystem bridge is unavailable.', 'red');
+      return null;
+    }
+    try {
+      return await DTM.system.listDirectory(path);
+    } catch (error) {
+      addLine('File system error: ' + error.message, 'red');
+      return null;
+    }
+  }
+
+  async function showDirectory(path) {
+    const result = await listDirectory(path);
+    if (!result) return;
+    currentPath = result.currentPath || path || '';
+    addLine('Directory of ' + (currentPath || 'Home'), 'yellow');
+    result.items.forEach((item) => {
+      addLine((item.isDirectory ? '<DIR> ' : '      ') + item.name);
+    });
+    if (!result.items.length) addLine('(empty)');
+  }
+
+  async function openFiles() {
+    const content = document.createElement('div');
+    const { win, body } = openWindow('Files - ' + (currentPath || 'Home'), content, 'Select a folder or open a file');
+
+    async function render(path) {
+      const result = await listDirectory(path);
+      if (!result) {
+        content.textContent = 'Unable to read this folder.';
+        return;
+      }
+      currentPath = result.currentPath || path || '';
+      const title = win.querySelector('.window-title span');
+      if (title) title.textContent = 'Files - ' + (currentPath || 'Home');
+      content.replaceChildren();
+      if (result.parentPath) {
+        const up = document.createElement('button');
+        up.className = 'tool-button';
+        up.textContent = '.. Parent Directory';
+        up.addEventListener('click', () => render(result.parentPath));
+        content.appendChild(up);
+      }
+      result.items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        const button = document.createElement('button');
+        button.textContent = item.isDirectory ? '[DIR] ' + item.name : item.name;
+        button.title = item.path;
+        button.addEventListener('click', async () => {
+          if (item.isDirectory) render(item.path);
+          else if (DTM && DTM.system && DTM.system.openPath) {
+            try { await DTM.system.openPath(item.path); }
+            catch (error) { addLine('Could not open file: ' + error.message, 'red'); }
+          }
+        });
+        row.appendChild(button);
+        content.appendChild(row);
+      });
+      if (!result.items.length) {
+        const empty = document.createElement('p');
+        empty.textContent = '(empty folder)';
+        content.appendChild(empty);
+      }
+    }
+    render(currentPath);
+  }
+
+  function openEditor() {
+    const area = document.createElement('textarea');
+    area.id = 'editor';
+    area.setAttribute('aria-label', 'Scratch editor');
+    area.value = '// HolyC-style scratch buffer\n// This demo editor does not save files.\n';
+    openWindow('Edit - Scratch Buffer', area, 'Scratch buffer');
+    area.focus();
+  }
+
+  function openDemo() {
+    const canvas = document.createElement('canvas');
+    canvas.id = 'demo-canvas';
+    canvas.width = 480;
+    canvas.height = 250;
+    const { win, body } = openWindow('Graphics Demo', canvas, 'Click the canvas to redraw');
+    const draw = () => {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const colors = ['#55f', '#5ff', '#5f5', '#ff5', '#f5f', '#f55'];
+      ctx.lineWidth = 2;
+      for (let ring = 0; ring < 8; ring++) {
+        ctx.strokeStyle = colors[ring % colors.length];
+        ctx.beginPath();
+        for (let step = 0; step <= 360; step += 3) {
+          const angle = step * Math.PI / 180;
+          const radius = 20 + ring * 11 + 8 * Math.sin(angle * (2 + ring % 3));
+          const x = 240 + Math.cos(angle) * radius * 1.6;
+          const y = 125 + Math.sin(angle) * radius;
+          if (step === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    };
+    canvas.addEventListener('click', draw);
+    draw();
+    body.addEventListener('dblclick', () => { win.style.zIndex = String(++zTop); });
+  }
+
+  function run(raw) {
+    const source = String(raw || '').trim();
+    if (!source) return;
+    history.push(source);
+    historyIndex = history.length;
+    addLine('C:\\> ' + source, 'yellow');
+    const cmd = source.replace(/;$/, '').trim().toLowerCase();
+    if (cmd === 'help' || cmd === '?') showHelp();
+    else if (cmd === 'dir' || cmd === 'ls') showDirectory(currentPath);
+    else if (cmd === 'files' || cmd === 'file') openFiles();
+    else if (cmd === 'edit' || cmd === 'editor') openEditor();
+    else if (cmd === 'demo' || cmd === 'gfx') openDemo();
+    else if (cmd === 'about') {
+      addLine('TempleOS 5.03-inspired desktop skin.', 'green');
+      addLine('A respectful interface study; it does not run TempleOS or HolyC.');
+      addLine('Original system by Terry A. Davis. Released in 2017.');
+    } else if (cmd === 'clear' || cmd === 'cls') consoleView.replaceChildren();
+    else if (cmd === 'shutdown' || cmd === 'exit') {
+      addLine('Shutting down...', 'yellow');
+      if (DTM && DTM.system && DTM.system.exit && window.confirm('Exit Desktop Time Machine?')) DTM.system.exit();
+    } else {
+      addLine('Unknown command: ' + source + ' (type Help;)', 'red');
+    }
+  }
+
+  document.getElementById('command-row').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const value = command.value;
+    command.value = '';
+    run(value);
+  });
+  command.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowUp' && historyIndex > 0) {
+      historyIndex--;
+      command.value = history[historyIndex] || '';
+      event.preventDefault();
+    } else if (event.key === 'ArrowDown' && historyIndex < history.length) {
+      historyIndex++;
+      command.value = history[historyIndex] || '';
+      event.preventDefault();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'F1') {
+      event.preventDefault();
+      showHelp();
+    } else if (event.key === 'F8') {
+      event.preventDefault();
+      window.parent.postMessage('dtm:open-switcher', '*');
+    }
+  });
+  document.querySelectorAll('[data-command]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.command;
+      if (value === 'help;') showHelp();
+      else run(value);
+      command.focus();
+    });
+  });
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }, 15000);
+  setTimeout(() => {
+    document.getElementById('boot').classList.add('hidden');
+    addLine('TempleOS V5.03  640x480x16', 'yellow');
+    addLine('HolyC command prompt ready.', 'green');
+    addLine('Type Help; to see available commands.', 'dim');
+    command.focus();
+  }, 800);
+})();
+</script>
+</body>
+</html>

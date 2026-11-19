@@ -1,0 +1,25 @@
+{
+  "id": "templeos",
+  "name": "TempleOS",
+  "era": "2017",
+  "period": "2013–2017",
+  "version": "0.1.0",
+  "description": "A TempleOS 5.03-inspired 640×480, 16-color desktop with a HolyC-style command prompt and small built-in tools.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "✝",
+  "themeColor": "#0000aa",
+  "previewImage": null,
+  "capabilities": [
+    "cli",
+    "filesystem",
+    "application-launcher"
+  ],
+  "meta": {
+    "developer": "Terry A. Davis",
+    "releaseDate": "2017-11-20",
+    "kernelFamily": "TempleOS"
+  }
+}
