@@ -189,6 +189,8 @@
   position: relative;
   z-index: 4;
   overflow-x: auto;
+  pointer-events: auto;
+  isolation: isolate;
 }
 
 .dtmshell-tab {
@@ -244,6 +246,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .dtmshell-tab-close:hover {
@@ -267,6 +270,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .dtmshell-tab-new:hover {

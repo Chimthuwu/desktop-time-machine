@@ -417,6 +417,7 @@ function createTabElement(tabId, title, isActive, onClose) {
     tab.appendChild(titleSpan);
     
     const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
     closeBtn.className = 'dtmshell-tab-close';
     closeBtn.textContent = '×';
     closeBtn.title = 'Close tab';
@@ -436,6 +437,13 @@ function updateTabBar(entry) {
     const tabBar = entry.tabBar;
     const tabs = entry.tabs || new Map();
     const activeTabId = entry.activeTabId;
+    const signature = JSON.stringify(Array.from(tabs, ([tabId, tabInfo]) => [
+        tabId, tabInfo.title || 'New Tab', tabId === activeTabId
+    ]));
+    // State polling can run every 1.5s. Keep the controls mounted when nothing
+    // changed so a refresh cannot cancel an in-progress mouse click.
+    if (entry.tabBarSignature === signature) return;
+    entry.tabBarSignature = signature;
     
     // Clear existing tabs
     tabBar.innerHTML = '';
@@ -446,27 +454,31 @@ function updateTabBar(entry) {
             tabId, 
             tabInfo.title, 
             tabId === activeTabId,
-            (id) => closeTab(entry, id)
+            (id) => entry.waterfox ? closeTab(entry, id) : closeTabWebview(entry, id)
         );
-        // Add click handler for switching tabs - use event delegation
+        // Keep tab selection separate from the tab's close control.
         tabEl.addEventListener('click', (e) => {
             // Don't switch if clicking the close button
             if (e.target.classList.contains('dtmshell-tab-close')) {
                 return;
             }
-            switchTab(entry, tabId);
+            if (entry.waterfox) switchTab(entry, tabId);
+            else switchTabWebview(entry, tabId);
         });
         tabBar.appendChild(tabEl);
     }
     
     // Add new tab button
     const newTabBtn = document.createElement('button');
+    newTabBtn.type = 'button';
     newTabBtn.className = 'dtmshell-tab-new';
     newTabBtn.textContent = '+';
     newTabBtn.title = 'New tab';
+    newTabBtn.setAttribute('aria-label', 'New tab');
     newTabBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        newTab(entry);
+        if (entry.waterfox) newTab(entry);
+        else newTabWebview(entry);
     });
     tabBar.appendChild(newTabBtn);
 }
@@ -488,9 +500,12 @@ async function newTab(entry, url) {
             if (entry.waterfox) {
                 await window.dtmPreload.waterfox.switchTab(result.tabId);
             }
+        } else if (entry.statusLeft) {
+            entry.statusLeft.textContent = (result && result.error) || 'Could not create tab';
         }
     } catch (e) {
         console.error('Failed to create new tab:', e);
+        if (entry.statusLeft) entry.statusLeft.textContent = 'Could not create tab: ' + e.message;
     }
 }
 
@@ -507,9 +522,12 @@ async function switchTab(entry, tabId) {
             if (entry.waterfox) {
                 refreshBrowserState(entry);
             }
+        } else if (entry.statusLeft) {
+            entry.statusLeft.textContent = (result && result.error) || 'Could not switch tabs';
         }
     } catch (e) {
         console.error('Failed to switch tab:', e);
+        if (entry.statusLeft) entry.statusLeft.textContent = 'Could not switch tab: ' + e.message;
     }
 }
 
@@ -544,9 +562,12 @@ async function closeTab(entry, tabId) {
             if (entry.waterfox) {
                 refreshBrowserState(entry);
             }
+        } else if (entry.statusLeft) {
+            entry.statusLeft.textContent = (result && result.error) || 'Could not close tab';
         }
     } catch (e) {
         console.error('Failed to close tab:', e);
+        if (entry.statusLeft) entry.statusLeft.textContent = 'Could not close tab: ' + e.message;
     }
 }
 
