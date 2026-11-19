@@ -318,6 +318,119 @@
   font: bold 12px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
 }
 
+.dtmshell-win.mac .dtmshell-body {
+  margin: 3px;
+  border: 1px solid #888;
+  background: #d6d6d6;
+}
+
+.dtmshell-win.mac .dtmshell-menubar,
+.dtmshell-win.mac .dtmshell-toolbar.mac,
+.dtmshell-win.mac .dtmshell-status {
+  background: #d6d6d6;
+  border-color: #aaa;
+  font-family: "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-menubar {
+  border-bottom: 1px solid #aaa;
+}
+
+.dtmshell-win.mac .dtmshell-menu-title,
+.dtmshell-win.mac .dtmshell-menu-item {
+  font: 11px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-menu.open .dtmshell-menu-title,
+.dtmshell-win.mac .dtmshell-menu-title:hover,
+.dtmshell-win.mac .dtmshell-menu-item:hover {
+  color: #fff;
+  background: #355d91;
+}
+
+.dtmshell-win.mac .dtmshell-menu-list {
+  background: #eee;
+  border: 1px solid #888;
+  box-shadow: 2px 2px 4px rgba(0,0,0,.25);
+}
+
+.dtmshell-win.mac .dtmshell-tabbar.mac {
+  height: 26px;
+  padding: 2px 4px 0;
+  gap: 3px;
+  background: #c8c8c8;
+  border-bottom: 1px solid #888;
+}
+
+.dtmshell-win.mac .dtmshell-tab {
+  min-width: 92px;
+  max-width: 180px;
+  padding: 2px 5px;
+  margin: 0;
+  border: 1px solid #999;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(#eee, #c8c8c8);
+  font-family: "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+  bottom: -1px;
+}
+
+.dtmshell-win.mac .dtmshell-tab.active {
+  background: #f5f5f5;
+  border-color: #888;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.dtmshell-win.mac .dtmshell-tab-title {
+  font: 11px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-tab-close {
+  width: 14px;
+  height: 14px;
+  font: 12px Geneva, sans-serif;
+  color: #444;
+}
+
+.dtmshell-win.mac .dtmshell-tab-close:hover {
+  color: #fff;
+  background: #a33;
+}
+
+.dtmshell-win.mac .dtmshell-toolbar.mac {
+  gap: 5px;
+  padding: 4px;
+  border-bottom: 1px solid #999;
+}
+
+.dtmshell-win.mac .dtmshell-toolbar.mac .dtmshell-btn {
+  min-width: 28px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid #888;
+  border-radius: 3px;
+  background: linear-gradient(#fafafa, #c9c9c9);
+  font: 12px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-toolbar.mac .dtmshell-btn:active {
+  background: #bbb;
+  border-color: #666;
+}
+
+.dtmshell-win.mac .dtmshell-addr {
+  min-height: 20px;
+  border: 1px solid #888;
+  border-radius: 2px;
+  padding: 3px 6px;
+  font: 11px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-status {
+  border-top: 1px solid #999;
+  font: 10px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
 .dtmshell-win.mac .dtmshell-buttons.mac {
   display: flex;
   gap: 4px;

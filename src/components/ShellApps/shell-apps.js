@@ -382,11 +382,11 @@
     
       // Tab bar - add it before toolbar
       const tabBar = document.createElement('div');
-      tabBar.className = 'dtmshell-tabbar';
+      tabBar.className = 'dtmshell-tabbar' + (isMac ? ' mac' : '');
       body.appendChild(tabBar);
     
       const toolbar = document.createElement('div');
-      toolbar.className = 'dtmshell-toolbar';
+      toolbar.className = 'dtmshell-toolbar' + (isMac ? ' mac' : '');
       body.appendChild(toolbar);
 
       const status = document.createElement('div');
@@ -519,8 +519,10 @@ async function closeTab(entry, tabId) {
     const tabs = entry.tabs;
     if (!tabs || !tabs.has(tabId)) return;
     
-    // Don't allow closing the last tab
-    if (tabs.size <= 1) return;
+    if (tabs.size <= 1) {
+        closeWindow('browser');
+        return;
+    }
     
     try {
         const result = await window.dtmPreload.waterfox.closeTab(tabId);
@@ -769,14 +771,6 @@ async function syncTabsFromBridge(entry) {
       browserButton('Go', 'Go', () => navigateBrowser(entry, address.value), frame.isMac)
     );
     
-    // Add new tab button to toolbar
-    const newTabBtn = document.createElement('button');
-    newTabBtn.className = 'dtmshell-btn dtmshell-new-tab-btn';
-    newTabBtn.textContent = frame.isMac ? '+' : '+';
-    newTabBtn.title = 'New tab';
-    newTabBtn.addEventListener('click', () => newTab(entry));
-    frame.toolbar.append(newTabBtn);
-    
     frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
     frame.body.append(pane, frame.status);
 
@@ -876,24 +870,10 @@ async function syncTabsFromBridge(entry) {
         browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} }, frame.isMac)
       );
     
-      // Add new tab button to toolbar
-      const newTabBtn = document.createElement('button');
-      newTabBtn.className = 'dtmshell-btn dtmshell-new-tab-btn';
-      newTabBtn.textContent = '+';
-      newTabBtn.title = 'New tab';
-      newTabBtn.addEventListener('click', () => newTabWebview(entry));
-      frame.toolbar.append(newTabBtn);
-    
       frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
       frame.body.append(webview, frame.status);
 
-      windows.set('browser', {
-        win: frame.win,
-        webview,
-        titleText: frame.titleText,
-        statusLeft: frame.statusLeft,
-        maximized: false
-      });
+      windows.set('browser', entry);
       focusWindow('browser');
 
       webview.addEventListener('did-navigate', (e) => {
@@ -955,7 +935,10 @@ async function syncTabsFromBridge(entry) {
 
   function closeTabWebview(entry, tabId) {
       if (!entry.tabs.has(tabId)) return;
-      if (entry.tabs.size <= 1) return; // Don't close last tab
+      if (entry.tabs.size <= 1) {
+        closeWindow('browser');
+        return;
+      }
     
       entry.tabs.delete(tabId);
     

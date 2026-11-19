@@ -122,13 +122,14 @@ function httpJson(port, pathname) {
   });
 }
 
-async function findPageTarget(port, wantedUrl) {
+async function findPageTarget(port, wantedUrl, wantedId) {
   const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
     try {
       const list = await httpJson(port, '/json/list');
       const pages = (Array.isArray(list) ? list : []).filter((t) => t.type === 'page' && t.webSocketDebuggerUrl);
-      const match = pages.find((t) => t.url === wantedUrl) ||
+      const match = pages.find((t) => wantedId && t.id === wantedId) ||
+        pages.find((t) => t.url === wantedUrl) ||
         pages.find((t) => /^(https?|file):/i.test(t.url)) ||
         pages[0];
       if (match) return match;
@@ -291,7 +292,7 @@ async function newTab(rawUrl) {
     const tabId = nextTabId++;
     
     // Connect to the new target
-    const target = await findPageTarget(instance.port, url);
+    const target = await findPageTarget(instance.port, url, targetId);
     if (!target) throw new Error('Failed to find new page target');
     
     const ws = await connectWs(target.webSocketDebuggerUrl, 12000);
@@ -312,9 +313,15 @@ async function newTab(rawUrl) {
 
 async function switchTab(tabId) {
   if (!isRunning()) return { ok: false };
-  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
-  instance.activeTabId = tabId;
-  return { ok: true };
+  const tab = instance.tabs.get(tabId);
+  if (!tab) return { ok: false, error: 'Tab not found' };
+  try {
+    await (tab.send || instance.send)('Page.bringToFront');
+    instance.activeTabId = tabId;
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 async function closeTab(tabId) {
@@ -334,7 +341,7 @@ async function closeTab(tabId) {
   if (instance.activeTabId === tabId) {
     const remainingTabs = Array.from(instance.tabs.keys());
     if (remainingTabs.length > 0) {
-      instance.activeTabId = remainingTabs[0];
+      await switchTab(remainingTabs[0]);
     } else {
       // No tabs left, close the browser
       await close();

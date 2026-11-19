@@ -279,9 +279,15 @@ async function newTab(rawUrl) {
 
 async function switchTab(tabId) {
   if (!isRunning()) return { ok: false };
-  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
-  instance.activeTabId = tabId;
-  return { ok: true };
+  const tab = instance.tabs.get(tabId);
+  if (!tab) return { ok: false, error: 'Tab not found' };
+  try {
+    await instance.send('browsingContext.activate', { context: tab.contextId });
+    instance.activeTabId = tabId;
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 async function closeTab(tabId) {
@@ -300,7 +306,7 @@ async function closeTab(tabId) {
   if (instance.activeTabId === tabId) {
     const remainingTabs = Array.from(instance.tabs.keys());
     if (remainingTabs.length > 0) {
-      instance.activeTabId = remainingTabs[0];
+      await switchTab(remainingTabs[0]);
     } else {
       // No tabs left, close the browser
       await close();
