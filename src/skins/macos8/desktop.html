@@ -402,9 +402,10 @@ function shutDown() {
 
 // DESKTOP ICON INIT
 const desktopIconsData = [
-  { id: 'hd', app: 'finder', icon: '🖥️', label: 'Macintosh HD', x: 20, y: 20 },
-  { id: 'timemachine', app: 'timemachine', icon: '⏳', label: 'Time Machine', x: 20, y: 100 },
-  { id: 'readme', app: 'simpletext', icon: '📄', label: 'Read Me', x: 20, y: 180 }
+  { id: 'hd', app: 'finder', icon: '🖥️', label: 'Macintosh HD', right: 20, y: 20 },
+  { id: 'timemachine', app: 'timemachine', icon: '⏳', label: 'Time Machine', right: 20, y: 100 },
+  { id: 'readme', app: 'simpletext', icon: '📄', label: 'Read Me', right: 20, y: 180 },
+  { id: 'netscape', app: 'netscape', icon: '🌐', label: 'Netscape Navigator', right: 20, y: 260 }
 ];
 
 function renderDesktopIcons() {
@@ -415,7 +416,12 @@ function renderDesktopIcons() {
     el.className = 'desktop-icon';
     el.dataset.app = data.app;
     el.dataset.id = data.id;
-    el.style.left = data.x + 'px';
+    // Mac OS: icons on the right side
+    if (data.right !== undefined) {
+      el.style.right = data.right + 'px';
+    } else {
+      el.style.left = data.x + 'px';
+    }
     el.style.top = data.y + 'px';
     el.innerHTML = `
       <div class="icon-img">${data.icon}</div>
@@ -636,6 +642,17 @@ Press F8 at any time to travel between operating system eras!</textarea>
         <button onclick="if(window.parent)window.parent.postMessage('dtm:open-switcher','*');" style="background:#ddd;border:2px solid;border-color:#fff #444 #444 #fff;padding:4px 14px;cursor:pointer;">⏳ Switch Era (F8)</button>
       </div>
     `
+  },
+  netscape: {
+    title: 'Netscape Navigator',
+    width: 780, height: 540,
+    body: () => `
+      <div class="mac-browser-placeholder">
+        <div class="big-logo">🌐</div>
+        <b>Netscape Navigator launches in a real browser window.</b>
+        <p>Close this window and choose Netscape Navigator again.</p>
+      </div>
+    `
   }
 };
 
@@ -762,6 +779,13 @@ function setupFinder(w) {
 function openApp(key) {
   document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.context-menu').forEach(m => m.remove());
+  
+  // Handle browser apps that launch in the shell
+  if (key === 'netscape') {
+    if (window.parent) window.parent.postMessage({ type: 'dtm:launch-webapp', app: 'browser', url: 'https://home.netscape.com/' }, '*');
+    return;
+  }
+  
   const app = apps[key]; if (!app) return;
 
   const existing = document.querySelector(`.window[data-app="${key}"]`);

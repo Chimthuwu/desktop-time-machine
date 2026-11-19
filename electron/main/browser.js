@@ -23,6 +23,10 @@ module.exports = {
   // Installs Ungoogled Chromium when this machine has no real engine yet.
   ensure: (options) => browserSetup.ensure(options),
   open: (url) => backend().open(url),
+  newTab: (url) => backend().newTab(url),
+  switchTab: (tabId) => backend().switchTab(tabId),
+  closeTab: (tabId) => backend().closeTab(tabId),
+  getTabs: () => backend().getTabs(),
   navigate: (url) => backend().navigate(url),
   reload: () => backend().reload(),
   history: (delta) => backend().history(delta),

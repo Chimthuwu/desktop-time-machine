@@ -32,6 +32,11 @@ button{font:inherit}
 .task-buttons{display:flex;gap:4px;flex:1;min-width:0;overflow:hidden}
 .real-pinned{display:flex;align-items:center;gap:2px;padding:0 4px;border-left:1px solid #808080;border-right:1px solid #fff;height:29px;max-width:240px;overflow:hidden;flex:none}
 .real-pinned:empty{display:none}
+.quick-launch{display:flex;align-items:center;gap:1px;padding:0 2px;border-left:1px solid #fff;border-right:1px solid #808080;height:29px;flex:none}
+.quick-launch-btn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;padding:1px;cursor:pointer}
+.quick-launch-btn:hover{border-color:#fff #404040 #404040 #fff;background:#e0e0e0}
+.quick-launch-btn:active{border-color:#404040 #fff #fff #404040}
+.quick-launch-btn img{width:18px;height:18px;object-fit:contain}
 .real-pin-btn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;padding:1px;cursor:pointer}
 .real-pin-btn:hover{border-color:#fff #404040 #404040 #fff}
 .real-pin-btn img{width:18px;height:18px;object-fit:contain}
@@ -199,6 +204,14 @@ button{font:inherit}
 </div>
 <div class="taskbar">
   <button class="win95-button start-button" id="startBtn"><span class="start-logo" aria-hidden="true"><svg viewBox="0 0 20 18" width="20" height="18"><path d="M1 3.4 L9.3 2.1 V8.7 H1 Z" fill="#ff0000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 2 L19 0.7 V8.7 H10.2 Z" fill="#00a000" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M1 9.7 H9.3 V16.3 L1 15 Z" fill="#0000c0" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/><path d="M10.2 9.7 H19 V17.7 L10.2 16.4 Z" fill="#ffd700" stroke="#000" stroke-width="0.9" stroke-linejoin="round"/></svg></span> Start</button>
+  <div class="quick-launch" id="quickLaunch">
+    <button class="quick-launch-btn" data-app="explorer" title="Windows Explorer">
+      <img class="tb-icon" src="../shared/icons/win95/folder.ico" alt="">
+    </button>
+    <button class="quick-launch-btn" data-app="internet" title="Internet Explorer">
+      <img class="tb-icon" src="../shared/icons/win95/internet-explorer.ico" alt="">
+    </button>
+  </div>
   <div class="real-pinned" id="realPinned" title="Apps pinned to your real Windows taskbar"></div>
   <div class="task-buttons" id="taskButtons"></div>
   <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
@@ -220,7 +233,12 @@ let z=20, active=null, winCount=0;
 
 // FORWARD HOTKEYS TO PARENT SHELL
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
+  // Windows key - toggle Start menu (prevent host OS Start menu)
+  if (e.key === 'Meta' || e.code === 'MetaLeft' || e.code === 'MetaRight') {
+    e.preventDefault();
+    const menu = document.getElementById('startMenu');
+    if (menu) menu.classList.toggle('open');
+  } else if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
     e.preventDefault();
     if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
   } else if (e.ctrlKey && e.key === 'F5') {
@@ -1195,6 +1213,14 @@ function drag(w){const bar=w.querySelector('.titlebar');let ox=0,oy=0,moving=fal
 function setupPaint(canvas,w){const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);let down=false;function pos(e){const r=canvas.getBoundingClientRect();return [(e.clientX-r.left)*canvas.width/r.width,(e.clientY-r.top)*canvas.height/r.height]}canvas.addEventListener('pointerdown',e=>{down=true;canvas.setPointerCapture(e.pointerId);const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)});canvas.addEventListener('pointermove',e=>{if(!down)return;const [x,y]=pos(e);ctx.strokeStyle=w.dataset.color||'#000';ctx.lineWidth=5;ctx.lineCap='round';ctx.lineTo(x,y);ctx.stroke()});canvas.addEventListener('pointerup',()=>down=false);canvas.addEventListener('pointercancel',()=>down=false)}
 
 document.getElementById('startBtn').addEventListener('click',()=>menu.classList.toggle('open'));
+
+// Quick Launch buttons
+document.querySelectorAll('.quick-launch-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const app = btn.dataset.app;
+    if (app) openApp(app);
+  });
+});
 
 // DESKTOP ICONS — single click selects, Ctrl+click adds, dragging an empty
 // stretch of desktop draws a selection box like Windows 95 does.

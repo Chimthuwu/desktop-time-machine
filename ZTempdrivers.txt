@@ -1,0 +1,1060 @@
+Microsoft PnP Utility
+
+Published Name:     oem92.inf
+Original Name:      amdafd.inf
+Provider Name:      AMD
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/14/2022 22.20.0.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem102.inf
+Original Name:      amdafd.inf
+Provider Name:      AMD
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/07/2024 24.10.0.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem99.inf
+Original Name:      amdfendr.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     07/25/2024 24.20.0.4
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem81.inf
+Original Name:      amdgpio2.inf
+Provider Name:      Advanced Micro Devices, Inc
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     04/05/2024 2.2.0.133
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem57.inf
+Original Name:      amdgpio2.inf
+Provider Name:      Advanced Micro Devices, Inc
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/20/2024 2.2.0.134
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem59.inf
+Original Name:      amdgpio3.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/08/2024 3.0.3.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem32.inf
+Original Name:      amdgpio3.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     07/05/2024 3.0.2.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem95.inf
+Original Name:      amdpcibridgeextension.inf
+Provider Name:      AMD
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {122e82d5-85d9-4053-8eaa-e3c2051f3276}
+Driver Version:     06/28/2021 21.30.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem101.inf
+Original Name:      amdpcibridgeextension.inf
+Provider Name:      AMD
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {122e82d5-85d9-4053-8eaa-e3c2051f3276}
+Driver Version:     04/04/2024 24.20.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem82.inf
+Original Name:      amdpcidev.inf
+Provider Name:      Advanced Micro Devices
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/26/2024 1.0.0.90
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem31.inf
+Original Name:      amdpsp.inf
+Provider Name:      Advanced Micro Devices Inc.
+Class Name:         Security devices
+Class GUID:         {d94ee5d8-d189-4994-83d2-f68d7d41b0e6}
+Driver Version:     07/16/2024 5.32.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem108.inf
+Original Name:      amdsdwsext.inf
+Provider Name:      AMD
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {f5203360-8dff-4e70-bbd4-2db4d72f3f25}
+Driver Version:     03/28/2024 1.0.2.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem91.inf
+Original Name:      amdxe.inf
+Provider Name:      AMD
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/21/2024 24.20.0.10
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem84.inf
+Original Name:      appleusb.inf
+Provider Name:      Apple, Inc.
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     10/02/2020 486.0.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem131.inf
+Original Name:      asussci2.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/14/2026 3.1.72.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem105.inf
+Original Name:      asussci2.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/16/2026 3.1.67.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem97.inf
+Original Name:      asussci2.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     02/05/2025 3.1.41.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem106.inf
+Original Name:      asussci2.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     02/19/2025 3.1.43.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem36.inf
+Original Name:      athdfu.inf
+Provider Name:      Atheros
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     05/28/2012 1.0.3.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem123.inf
+Original Name:      bt_function_(interface_0).inf
+Provider Name:      libwdi
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     06/02/2012 6.1.7600.16385
+Signer Name:        USB\VID_13D3&PID_3563&MI_00 (libwdi autogenerated)
+
+Published Name:     oem112.inf
+Original Name:      bt_function_(interface_0).inf
+Provider Name:      libwdi
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     06/02/2012 6.1.7600.16385
+Signer Name:        USB\VID_13D3&PID_3563&MI_00 (libwdi autogenerated)
+
+Published Name:     oem120.inf
+Original Name:      bt_function_(interface_0).inf
+Provider Name:      libwdi
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     06/02/2012 6.1.7600.16385
+Signer Name:        USB\VID_13D3&PID_3563&MI_00 (libwdi autogenerated)
+
+Published Name:     oem122.inf
+Original Name:      cdc-acm.inf
+Provider Name:      MediaTek Inc.
+Class Name:         Ports (COM & LPT)
+Class GUID:         {4d36e978-e325-11ce-bfc1-08002be10318}
+Driver Version:     07/22/2022 3.0.1511.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem65.inf
+Original Name:      ch341ser.inf
+Provider Name:      wch.cn
+Class Name:         Ports (COM & LPT)
+Class GUID:         {4d36e978-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/08/2014 3.4.2014.8
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem15.inf
+Original Name:      corsairsiusbxp.inf
+Provider Name:      Corsair Components, Inc.
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     07/14/2017 3.3.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem60.inf
+Original Name:      cougarpointsystem.inf
+Provider Name:      INTEL
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/03/2016 10.1.1.38
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem3.inf
+Original Name:      cougarpointsystem.inf
+Provider Name:      INTEL
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/28/2015 10.1.1.13
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem11.inf
+Original Name:      cougarpointusb.inf
+Provider Name:      INTEL
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     10/28/2015 10.1.1.13
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem61.inf
+Original Name:      cougarpointusb.inf
+Provider Name:      INTEL
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     10/03/2016 10.1.1.38
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem119.inf
+Original Name:      dxp_metadata_universal_driver_x64_extension.inf
+Provider Name:      HP Inc.
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {1c453bf3-3cbf-45ca-9a06-a255b4290af9}
+Driver Version:     09/04/2024 1.0.0.5
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem48.inf
+Original Name:      hdx_asusext_rtk.inf
+Provider Name:      Realtek Semiconductor Corp.
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {c3a63edd-2d27-4b66-b155-5e94b43d926a}
+Driver Version:     06/25/2024 6.0.9700.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem5.inf
+Original Name:      heci.inf
+Provider Name:      Intel
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/28/2016 11.0.5.1189
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem26.inf
+Original Name:      logi_joy_bus_enum.inf
+Provider Name:      Logitech
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/02/2022 2022.3.0.2
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem25.inf
+Original Name:      logi_joy_hid.inf
+Provider Name:      Logitech
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     09/02/2022 2022.3.0.2
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem24.inf
+Original Name:      logi_joy_vir_hid.inf
+Provider Name:      Logitech
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     09/02/2022 2022.3.0.2
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem46.inf
+Original Name:      lpro564c.inf
+Provider Name:      Logitech
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     10/22/2012 13.80.853.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem27.inf
+Original Name:      lwcusb.inf
+Provider Name:      Logitech
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     09/09/2016 1.0.1.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem74.inf
+Original Name:      move_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1958&MI_00 (libwdi autogenerated)
+
+Published Name:     oem66.inf
+Original Name:      nrfconnect_cdc_acm.inf
+Provider Name:      Nordic Semiconductor ASA
+Class Name:         Ports (COM & LPT)
+Class GUID:         {4d36e978-e325-11ce-bfc1-08002be10318}
+Driver Version:     05/11/2018 1.0.1.0
+Signer Name:        Nordic Semiconductor ASA (nrfconnect_cdc_acm.inf) [Self]
+
+Published Name:     oem33.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem17.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem30.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem28.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem2.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem23.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem78.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem52.inf
+Original Name:      push2_display.inf
+Provider Name:      libusbx.org
+Class Name:         Universal Serial Bus devices
+Class GUID:         {88bae032-5a81-49f0-bc3d-a4ff138216d6}
+Driver Version:     07/14/2009 6.1.7600.16385
+Signer Name:        USB\VID_2982&PID_1967&MI_00 (libwdi autogenerated)
+
+Published Name:     oem129.inf
+Original Name:      rogscreensaver.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         Extensions
+Class GUID:         {e2f84ce7-8efa-411c-aa69-97454ca4cb57}
+Extension ID:       {fa4e5a62-bf62-43e4-9fb4-551ad4417ebe}
+Driver Version:     01/26/2026 1.1.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem80.inf
+Original Name:      rz025ddev.inf
+Provider Name:      Razer Inc
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     01/02/2017 6.2.9200.16545
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem85.inf
+Original Name:      rz025ddev.inf
+Provider Name:      Razer Inc
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     01/02/2017 6.2.9200.16547
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem29.inf
+Original Name:      rz02a2dev.inf
+Provider Name:      Razer Inc
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     01/02/2017 6.2.9200.16547
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem70.inf
+Original Name:      rzdevu_025d_dkm.inf
+Provider Name:      Razer Inc
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     08/18/2020 10.0.15063.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem76.inf
+Original Name:      rzdevu_025d_kbd.inf
+Provider Name:      Razer Inc
+Class Name:         Keyboards
+Class GUID:         {4d36e96b-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/18/2020 10.0.15063.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem77.inf
+Original Name:      rzdevu_025d_mou.inf
+Provider Name:      Razer Inc
+Class Name:         Mice and other pointing devices
+Class GUID:         {4d36e96f-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/18/2020 10.0.15063.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem75.inf
+Original Name:      rzdevu_025d_vcon.inf
+Provider Name:      Razer Inc
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     08/18/2020 10.0.15063.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem58.inf
+Original Name:      sandybridgesystem.inf
+Provider Name:      INTEL
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/03/2016 10.1.1.38
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem10.inf
+Original Name:      sandybridgesystem.inf
+Provider Name:      INTEL
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/28/2015 10.1.1.13
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem98.inf
+Original Name:      smbusamd.inf
+Provider Name:      Advanced Micro Devices, Inc
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/26/2024 5.12.0.44
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem114.inf
+Original Name:      ssudbus.inf
+Provider Name:      SAMSUNG Electronics Co., Ltd. 
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     09/26/2022 2.19.1.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem6.inf
+Original Name:      ss_conn_usb_driver2.inf
+Provider Name:      SAMSUNG Electronics Co., Ltd.
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     09/26/2022 2.19.1.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem110.inf
+Original Name:      unifhid.inf
+Provider Name:      Logitech
+Class Name:         Human Interface Devices
+Class GUID:         {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Driver Version:     08/24/2021 1.10.80.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem121.inf
+Original Name:      vboxsup.inf
+Provider Name:      Oracle Corporation
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/13/2026 7.2.16.24877
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem125.inf
+Original Name:      vboxusb.inf
+Provider Name:      Oracle Corporation
+Class Name:         Universal Serial Bus controllers
+Class GUID:         {36fc9e60-c465-11cf-8056-444553540000}
+Driver Version:     08/13/2026 7.2.16.24877
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem126.inf
+Original Name:      vboxusbmon.inf
+Provider Name:      Oracle Corporation
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/13/2026 7.2.16.24877
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem113.inf
+Original Name:      vigembus.inf
+Provider Name:      Nefarius Software Solutions e.U.
+Class Name:         System devices
+Class GUID:         {4d36e97d-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/30/2022 1.21.442.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem0.inf
+Original Name:      xvdd.inf
+Provider Name:      Xbox
+Class Name:         Storage controllers
+Class GUID:         {4d36e97b-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/14/2024 10.0.22016.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem116.inf
+Original Name:      abletonpush.inf
+Provider Name:      Ableton
+Class Name:         Ableton USB Audio Devices
+Class GUID:         {4a29e362-fd9c-4121-a0bd-18f00d5c229b}
+Driver Version:     02/13/2024 5.68.0.29398
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem115.inf
+Original Name:      abletonpushks.inf
+Provider Name:      Ableton
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     02/13/2024 5.68.0.29398
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem62.inf
+Original Name:      amdocl.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     11/20/2024 32.0.11027.2001
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem107.inf
+Original Name:      amdocl.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     11/27/2024 32.0.12033.1030
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem117.inf
+Original Name:      amdocl.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     09/25/2025 32.0.21030.2001
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem94.inf
+Original Name:      amdwin-u0409974.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     11/20/2024 32.0.11027.2001
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem109.inf
+Original Name:      amdwin-u0413716.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     11/27/2024 32.0.12033.1030
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem118.inf
+Original Name:      amdwin-u0420529.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     09/25/2025 32.0.21030.2001
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem41.inf
+Original Name:      asusswc.inf
+Provider Name:      ASUSTeK COMPUTER INC.
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     11/22/2022 1.0.2.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem93.inf
+Original Name:      athw10x.inf
+Provider Name:      Qualcomm Atheros Communications Inc.
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/19/2017 10.0.0.352
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem96.inf
+Original Name:      atihdwt6.inf
+Provider Name:      Advanced Micro Devices
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     04/26/2024 10.0.1.38
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem13.inf
+Original Name:      bcbtums-win8x64-brcm.inf
+Provider Name:      Broadcom Corporation
+Class Name:         Bluetooth
+Class GUID:         {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
+Driver Version:     07/14/2015 12.0.1.659
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem111.inf
+Original Name:      camodriver.inf
+Provider Name:      Reincubate
+Class Name:         Cameras
+Class GUID:         {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Driver Version:     08/08/2023 13.17.28.365
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem37.inf
+Original Name:      fxvad.inf
+Provider Name:      FxSound
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/17/2021 14.1.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem7.inf
+Original Name:      gameflt.inf
+Provider Name:      Xbox
+Class Name:         FS HSM filters
+Class GUID:         {d546500a-2aeb-45f6-9482-f4b1799c3177}
+Driver Version:     03/18/2024 10.0.22017.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem90.inf
+Original Name:      hamdrv.inf
+Provider Name:      LogMeIn Inc.
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     03/30/2015 15.28.40.464
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem49.inf
+Original Name:      hdxasus.inf
+Provider Name:      Realtek Semiconductor Corp.
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/25/2024 6.0.9700.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem89.inf
+Original Name:      helloface.inf
+Provider Name:      Windows Hello Face
+Class Name:         Biometric devices
+Class GUID:         {53d29ef7-377c-4d14-864b-eb3a85769359}
+Driver Version:     06/01/2018 10.0.19041.3570
+Signer Name:        Microsoft Windows
+
+Published Name:     oem19.inf
+Original Name:      hpygid35_v4.inf
+Provider Name:      HP
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Class Version:      4.0
+Driver Version:     01/27/2021 35.1.2004.8649
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem40.inf
+Original Name:      ilokdrvr64.inf
+Provider Name:      PACE Anti-Piracy, Inc.
+Class Name:         Dongles
+Class GUID:         {57e68e91-05a7-11d4-ade7-005004769436}
+Driver Version:     05/16/2022 6.1.3.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem87.inf
+Original Name:      iriunaud.inf
+Provider Name:      Iriun
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/18/2020 1.1.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem88.inf
+Original Name:      iriunvid.inf
+Provider Name:      Iriun
+Class Name:         Cameras
+Class GUID:         {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Driver Version:     08/11/2022 1.6.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem1.inf
+Original Name:      korgum64.inf
+Provider Name:      KORG Inc.
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     07/15/2025 1.15.60.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem18.inf
+Original Name:      korgum64.inf
+Provider Name:      KORG Inc.
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     12/20/2022 1.15.51.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem103.inf
+Original Name:      logue_audio.inf
+Provider Name:      Logitech
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     01/18/2024 2024.4.6.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem12.inf
+Original Name:      lpro564v.inf
+Provider Name:      Logitech
+Class Name:         Imaging devices
+Class GUID:         {6bdd1fc6-810f-11d0-bec7-08002be2092f}
+Class Version:      0.2
+Driver Version:     10/22/2012 13.80.853.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem73.inf
+Original Name:      lwcusb.inf
+Provider Name:      Logitech
+Class Name:         Imaging devices
+Class GUID:         {6bdd1fc6-810f-11d0-bec7-08002be2092f}
+Driver Version:     04/27/2021 1.4.40.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem16.inf
+Original Name:      mbtun.inf
+Provider Name:      Malwarebytes
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/03/2020 1.0.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem100.inf
+Original Name:      meetupwinusbx64.inf
+Provider Name:      Logitech
+Class Name:         USB devices
+Class GUID:         {42cf9535-c69f-410f-9779-d6906dad9400}
+Driver Version:     06/05/2018 6.1.7600.16385
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem47.inf
+Original Name:      mtkbtfilter.inf
+Provider Name:      Mediatek Inc.
+Class Name:         Bluetooth
+Class GUID:         {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
+Driver Version:     05/08/2024 1.1037.0.429
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem8.inf
+Original Name:      mtkwl6ex.inf
+Provider Name:      MediaTek, Inc.
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     05/10/2024 3.3.0.1030
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem72.inf
+Original Name:      nrfconnect_dfu_trigger.inf
+Provider Name:      Nordic Semiconductor ASA
+Class Name:         Nordic Semiconductor DFU
+Class GUID:         {ecfb0cfd-74c4-4f52-bbf7-343461cd72ac}
+Driver Version:     11/17/2017 1.0.0.0
+Signer Name:        Nordic Semiconductor ASA (nrfconnect_dfu_trigger.inf) [Self]
+
+Published Name:     oem68.inf
+Original Name:      ntprint.inf
+Provider Name:      Microsoft
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/21/2006 10.0.19041.630
+Signer Name:        Microsoft Windows
+
+Published Name:     oem22.inf
+Original Name:      ntprint.inf
+Provider Name:      Microsoft
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/21/2006 10.0.18362.752
+Signer Name:        Microsoft Windows
+
+Published Name:     oem67.inf
+Original Name:      ntprint.inf
+Provider Name:      Microsoft
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/21/2006 10.0.19041.630
+Signer Name:        Microsoft Windows
+
+Published Name:     oem51.inf
+Original Name:      prnms001.inf
+Provider Name:      Microsoft
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Class Version:      4.0
+Driver Version:     06/21/2006 10.0.19041.1
+Signer Name:        Microsoft Windows
+
+Published Name:     oem50.inf
+Original Name:      prnms009.inf
+Provider Name:      Microsoft
+Class Name:         Printers
+Class GUID:         {4d36e979-e325-11ce-bfc1-08002be10318}
+Class Version:      4.0
+Driver Version:     06/21/2006 10.0.19041.1
+Signer Name:        Microsoft Windows
+
+Published Name:     oem14.inf
+Original Name:      psycamera.inf
+Provider Name:      Personify Inc.
+Class Name:         Cameras
+Class GUID:         {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Driver Version:     12/24/2019 1.0.0.2
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem38.inf
+Original Name:      qca_btusb.inf
+Provider Name:      Qualcomm Atheros Communications
+Class Name:         Bluetooth
+Class GUID:         {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
+Driver Version:     05/18/2016 10.0.1.7
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem54.inf
+Original Name:      realtekapo.inf
+Provider Name:      Realtek
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     01/23/2024 12.0.6000.1167
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem64.inf
+Original Name:      realtekasio.inf
+Provider Name:      Realtek
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     05/16/2024 1.0.12.1
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem63.inf
+Original Name:      realtekhsa.inf
+Provider Name:      Realtek
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     06/11/2024 11.0.6000.334
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem55.inf
+Original Name:      realtekservice.inf
+Provider Name:      Realtek
+Class Name:         Software components
+Class GUID:         {5c4c3332-344d-483c-8739-259e934c9cc8}
+Driver Version:     06/25/2024 1.0.770.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem56.inf
+Original Name:      rt640x64.inf
+Provider Name:      Realtek
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     07/14/2016 10.10.714.2016
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem39.inf
+Original Name:      rt640x64.inf
+Provider Name:      Realtek
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     04/10/2015 9.1.410.2015
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem45.inf
+Original Name:      rtkfilter.inf
+Provider Name:      Realtek Semiconductor Corp.
+Class Name:         Bluetooth
+Class GUID:         {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
+Driver Version:     06/10/2022 1.9.1051.3002
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem53.inf
+Original Name:      rzcommonu.inf
+Provider Name:      Razer Inc
+Class Name:         Razer Device
+Class GUID:         {1750f915-5639-497c-966c-3a65acecfcb6}
+Driver Version:     07/07/2020 10.0.15063.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem128.inf
+Original Name:      snapcameravirtualdevice.inf
+Provider Name:      Snap Inc.
+Class Name:         Cameras
+Class GUID:         {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Driver Version:     03/25/2019 17.2.55.532
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem83.inf
+Original Name:      ssudmdm.inf
+Provider Name:      SAMSUNG Electronics Co., Ltd. 
+Class Name:         Modems
+Class GUID:         {4d36e96d-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/23/2024 2.21.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem43.inf
+Original Name:      ssudmtp.inf
+Provider Name:      SAMSUNG Electronics Co., Ltd. 
+Class Name:         Portable Devices
+Class GUID:         {eec5ad98-8080-425f-922a-dabf3de3f69a}
+Driver Version:     02/16/2012 2.9.317.215
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem34.inf
+Original Name:      ssudrnds.inf
+Provider Name:      SAMSUNG Electronics Co., Ltd. 
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     11/06/2020 2.17.6.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem44.inf
+Original Name:      tevirtualmidi64.inf
+Provider Name:      Tobias Erichsen
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     12/08/2019 1.3.0.43
+Signer Name:        Tobias Erichsen
+
+Published Name:     oem71.inf
+Original Name:      u0420529.inf
+Provider Name:      Advanced Micro Devices, Inc.
+Class Name:         Display adapters
+Class GUID:         {4d36e968-e325-11ce-bfc1-08002be10318}
+Driver Version:     09/25/2025 32.0.21030.2001
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem35.inf
+Original Name:      vbhfvaio64_win7.inf
+Provider Name:      VB-Audio Software
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     02/12/2014 1.0.3.5
+Signer Name:        Vincent Burel
+
+Published Name:     oem127.inf
+Original Name:      vboxnetadp6.inf
+Provider Name:      Oracle Corporation
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/13/2026 7.2.16.24877
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem124.inf
+Original Name:      vboxnetlwf.inf
+Provider Name:      Oracle Corporation
+Class Name:         Network Service
+Class GUID:         {4d36e974-e325-11ce-bfc1-08002be10318}
+Driver Version:     08/13/2026 7.2.16.24877
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem104.inf
+Original Name:      vbvmvaio64_win10.inf
+Provider Name:      VB-Audio Software
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     01/11/2019 2.1.5.2
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem20.inf
+Original Name:      vbvoicemeetervaio64_win10.inf
+Provider Name:      VB-Audio Software
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     11/27/2025 3.4.1.7
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem21.inf
+Original Name:      vbvoicemeetervaio64_win10.inf
+Provider Name:      VB-Audio Software
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     02/12/2024 15.24.8.620
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem69.inf
+Original Name:      vbvoicemeetervaio64_win10.inf
+Provider Name:      VB-Audio Software
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/28/2024 3.3.1.9
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem4.inf
+Original Name:      wdma_emu.inf
+Provider Name:      Creative
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     04/17/2019 6.0.230.12
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem42.inf
+Original Name:      wintun.inf
+Provider Name:      WireGuard LLC
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/13/2021 0.14.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem79.inf
+Original Name:      wireguard.inf
+Provider Name:      WireGuard LLC
+Class Name:         Network adapters
+Class GUID:         {4d36e972-e325-11ce-bfc1-08002be10318}
+Driver Version:     10/12/2021 0.10.0.0
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+
+Published Name:     oem9.inf
+Original Name:      xspltspk.inf
+Provider Name:      SplitmediaLabs
+Class Name:         Sound, video and game controllers
+Class GUID:         {4d36e96c-e325-11ce-bfc1-08002be10318}
+Driver Version:     06/26/2014 2.0.1406.2601
+Signer Name:        Splitmedialabs Limited
+
+Published Name:     oem86.inf
+Original Name:      xspltvid.inf
+Provider Name:      SplitmediaLabs
+Class Name:         Imaging devices
+Class GUID:         {6bdd1fc6-810f-11d0-bec7-08002be2092f}
+Driver Version:     04/19/2023 1.0.2304.1902
+Signer Name:        Microsoft Windows Hardware Compatibility Publisher
+

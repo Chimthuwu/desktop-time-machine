@@ -20,9 +20,10 @@ const { createDock } = require('./window-dock');
 const PROFILE_MARKER = 'chromium-ie';
 const PROCESS_NAME = 'chrome.exe';
 
-let instance = null; // { proc, port, ws, send, url, title }
+let instance = null; // { proc, port, ws, send, tabs: Map<tabId, {targetId, url, title}>, activeTabId }
 let openPromise = null;
 let dockHelper = null;
+let nextTabId = 1;
 
 // ---------------------------------------------------------------------------
 // Discovery & profile
@@ -218,9 +219,10 @@ async function open(rawUrl) {
     const exe = resolveChromiumPath();
     if (!exe) return { ok: false, error: 'Chromium is not installed.' };
     if (isRunning()) {
-      try { await instance.send('Page.navigate', { url }); } catch (e) {}
+      // Create a new tab instead of navigating the current one
+      const newTab = await newTab(url);
       show();
-      return { ok: true, reused: true };
+      return { ok: true, reused: true, tabId: newTab.tabId };
     }
 
     const profile = ensureProfile();
@@ -256,7 +258,13 @@ async function open(rawUrl) {
       ws = await connectWs(target.webSocketDebuggerUrl, 12000);
       const send = cdpClient(ws);
       await send('Page.enable');
-      instance = { proc, port, ws, send, url, title: 'Internet Explorer' };
+      
+      // Initialize tabs map with the first tab
+      const firstTabId = nextTabId++;
+      const tabs = new Map();
+      tabs.set(firstTabId, { targetId: target.id, url: url, title: 'Internet Explorer' });
+      
+      instance = { proc, port, ws, send, tabs, activeTabId: firstTabId };
     } catch (e) {
       try { proc.kill(); } catch (err) {}
       try { if (ws) ws.close(); } catch (err) {}
@@ -267,51 +275,132 @@ async function open(rawUrl) {
     await d.ensure();
     await d.find();
     d.send('hide');
-    return { ok: true };
+    return { ok: true, tabId: firstTabId };
   })().finally(() => { openPromise = null; });
   return openPromise;
+}
+
+// Tab management functions
+async function newTab(rawUrl) {
+  if (!isRunning()) return { ok: false, error: 'Browser not running' };
+  const url = safeUrl(rawUrl) || 'https://www.google.com/';
+  try {
+    // Create a new target (tab) via Target.createTarget
+    const result = await instance.send('Target.createTarget', { url });
+    const targetId = result.targetId;
+    const tabId = nextTabId++;
+    
+    // Connect to the new target
+    const target = await findPageTarget(instance.port, url);
+    if (!target) throw new Error('Failed to find new page target');
+    
+    const ws = await connectWs(target.webSocketDebuggerUrl, 12000);
+    const send = cdpClient(ws);
+    await send('Page.enable');
+    
+    // Store tab info
+    instance.tabs.set(tabId, { targetId, ws, send, url, title: 'New Tab' });
+    
+    // Switch to the new tab
+    instance.activeTabId = tabId;
+    
+    return { ok: true, tabId };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+async function switchTab(tabId) {
+  if (!isRunning()) return { ok: false };
+  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
+  instance.activeTabId = tabId;
+  return { ok: true };
+}
+
+async function closeTab(tabId) {
+  if (!isRunning()) return { ok: false };
+  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
+  
+  const tab = instance.tabs.get(tabId);
+  try {
+    if (tab.ws) tab.ws.close();
+    await instance.send('Target.closeTarget', { targetId: tab.targetId });
+  } catch (e) {
+    // Ignore errors
+  }
+  instance.tabs.delete(tabId);
+  
+  // If we closed the active tab, switch to another one
+  if (instance.activeTabId === tabId) {
+    const remainingTabs = Array.from(instance.tabs.keys());
+    if (remainingTabs.length > 0) {
+      instance.activeTabId = remainingTabs[0];
+    } else {
+      // No tabs left, close the browser
+      await close();
+    }
+  }
+  return { ok: true };
+}
+
+function getTabs() {
+  if (!isRunning()) return { ok: false };
+  const tabs = [];
+  for (const [tabId, tab] of instance.tabs) {
+    tabs.push({ tabId, url: tab.url, title: tab.title, active: tabId === instance.activeTabId });
+  }
+  return { ok: true, tabs, activeTabId: instance.activeTabId };
 }
 
 async function navigate(rawUrl) {
   const url = safeUrl(rawUrl);
   if (!url || !isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
-    await instance.send('Page.navigate', { url });
+    await activeTab.send('Page.navigate', { url });
+    activeTab.url = url;
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function reload() {
   if (!isRunning()) return { ok: false };
-  try { await instance.send('Page.reload'); return { ok: true }; }
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
+  try { await activeTab.send('Page.reload'); return { ok: true }; }
   catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function history(delta) {
   if (!isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
-    const nav = await instance.send('Page.getNavigationHistory');
+    const nav = await activeTab.send('Page.getNavigationHistory');
     const entries = (nav && nav.entries) || [];
     const index = (nav.currentIndex || 0) + (delta < 0 ? -1 : 1);
     if (index < 0 || index >= entries.length) return { ok: false };
-    await instance.send('Page.navigateToHistoryEntry', { entryId: entries[index].id });
+    await activeTab.send('Page.navigateToHistoryEntry', { entryId: entries[index].id });
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function state() {
   if (!isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
-    const res = await instance.send('Runtime.evaluate', {
+    const res = await activeTab.send('Runtime.evaluate', {
       expression: 'JSON.stringify({ url: location.href, title: document.title })',
       returnByValue: true
     });
     const value = res && res.result && res.result.value;
     if (typeof value === 'string') {
       const parsed = JSON.parse(value);
-      instance.url = parsed.url || instance.url;
-      instance.title = parsed.title || instance.title;
-      return { ok: true, url: instance.url, title: instance.title };
+      activeTab.url = parsed.url || activeTab.url;
+      activeTab.title = parsed.title || activeTab.title;
+      return { ok: true, url: activeTab.url, title: activeTab.title };
     }
   } catch (e) { /* navigation may destroy the context mid-flight */ }
   return { ok: false };
@@ -365,6 +454,7 @@ function dispose() {
 
 module.exports = {
   status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose,
+  newTab, switchTab, closeTab, getTabs,
   // Used by browser-setup to tell "not installed" apart from "installed elsewhere".
   executablePath: resolveChromiumPath
 };

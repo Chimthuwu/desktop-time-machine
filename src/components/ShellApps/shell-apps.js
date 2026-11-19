@@ -4,8 +4,9 @@
  * The browser and Discord need a real browser engine, and Electron's
  * <webview> is only available in the top-level shell document — not inside a
  * skin's iframe. These windows are therefore drawn in the shell, styled as
- * Windows 95 windows, and positioned over the skin's desktop area. The skin
- * drives them with postMessage and mirrors their taskbar buttons.
+ * Windows 95 windows (or Mac OS 8 windows when on that skin), and positioned
+ * over the skin's desktop area. The skin drives them with postMessage and
+ * mirrors their taskbar buttons.
  */
 (function () {
   'use strict';
@@ -19,6 +20,16 @@
     discord: { title: 'Discord', icon: '💬', url: 'https://discord.com/app' },
     mediaplayer: { title: 'Windows Media Player', icon: '🎬' }
   };
+
+  // Track active skin for styling
+  let activeSkinId = 'windows95';
+
+  // Listen for skin changes
+  if (window.dtmEngine) {
+    window.dtmEngine.on('dtm:skin-changed', (skin) => {
+      activeSkinId = skin.id;
+    });
+  }
 
   // One live window per app, keyed by app id.
   const windows = new Map();
@@ -101,22 +112,44 @@
     focusWindow(app);
   }
 
-  function makeButtons(app) {
+  function makeButtons(app, isMac) {
     const wrap = document.createElement('div');
-    wrap.className = 'dtmshell-buttons';
-    const min = document.createElement('button');
-    min.textContent = '_';
-    min.title = 'Minimize';
-    const max = document.createElement('button');
-    max.textContent = '□';
-    max.title = 'Maximize';
-    const close = document.createElement('button');
-    close.textContent = '×';
-    close.title = 'Close';
-    min.addEventListener('click', (e) => { e.stopPropagation(); minimizeWindow(app); });
-    max.addEventListener('click', (e) => { e.stopPropagation(); toggleMaximize(app); });
-    close.addEventListener('click', (e) => { e.stopPropagation(); closeWindow(app); });
-    wrap.append(min, max, close);
+    if (isMac) {
+      wrap.className = 'dtmshell-buttons mac';
+      // Mac traffic-light buttons: close (red), minimize (yellow), zoom (green)
+      const close = document.createElement('button');
+      close.className = 'mac-btn close';
+      close.title = 'Close';
+      close.setAttribute('aria-label', 'Close');
+      const minimize = document.createElement('button');
+      minimize.className = 'mac-btn minimize';
+      minimize.title = 'Minimize';
+      minimize.setAttribute('aria-label', 'Minimize');
+      const zoom = document.createElement('button');
+      zoom.className = 'mac-btn zoom';
+      zoom.title = 'Zoom';
+      zoom.setAttribute('aria-label', 'Zoom');
+      close.addEventListener('click', (e) => { e.stopPropagation(); closeWindow(app); });
+      minimize.addEventListener('click', (e) => { e.stopPropagation(); minimizeWindow(app); });
+      zoom.addEventListener('click', (e) => { e.stopPropagation(); toggleMaximize(app); });
+      // Mac order: close, minimize, zoom (left to right)
+      wrap.append(close, minimize, zoom);
+    } else {
+      wrap.className = 'dtmshell-buttons';
+      const min = document.createElement('button');
+      min.textContent = '_';
+      min.title = 'Minimize';
+      const max = document.createElement('button');
+      max.textContent = '□';
+      max.title = 'Maximize';
+      const close = document.createElement('button');
+      close.textContent = '×';
+      close.title = 'Close';
+      min.addEventListener('click', (e) => { e.stopPropagation(); minimizeWindow(app); });
+      max.addEventListener('click', (e) => { e.stopPropagation(); toggleMaximize(app); });
+      close.addEventListener('click', (e) => { e.stopPropagation(); closeWindow(app); });
+      wrap.append(min, max, close);
+    }
     return wrap;
   }
 
@@ -323,50 +356,219 @@
   }
 
   function browserChrome(startUrl) {
-    const config = APP_CONFIG.browser;
-    const win = document.createElement('div');
-    win.className = 'dtmshell-win active';
-    const offset = windows.size * 26;
-    win.style.left = (56 + offset) + 'px';
-    win.style.top = (36 + offset) + 'px';
-    win.style.width = '780px';
-    win.style.height = '540px';
-    win.style.zIndex = String(++zTop);
+      const isMac = activeSkinId === 'macos8' || activeSkinId === 'macosx';
+      const config = APP_CONFIG.browser;
+      const win = document.createElement('div');
+      win.className = 'dtmshell-win active' + (isMac ? ' mac' : '');
+      const offset = windows.size * 26;
+      win.style.left = (56 + offset) + 'px';
+      win.style.top = (36 + offset) + 'px';
+      win.style.width = '780px';
+      win.style.height = '540px';
+      win.style.zIndex = String(++zTop);
 
-    const titlebar = document.createElement('div');
-    titlebar.className = 'dtmshell-title';
-    const icon = document.createElement('span');
-    icon.className = 'dtmshell-title-icon';
-    icon.textContent = config.icon;
-    const titleText = document.createElement('span');
-    titleText.className = 'dtmshell-title-text';
-    titleText.textContent = config.title;
-    titlebar.append(icon, titleText, makeButtons('browser'));
+      const titlebar = document.createElement('div');
+      titlebar.className = isMac ? 'dtmshell-title mac' : 'dtmshell-title';
+      const icon = document.createElement('span');
+      icon.className = 'dtmshell-title-icon';
+      icon.textContent = config.icon;
+      const titleText = document.createElement('span');
+      titleText.className = 'dtmshell-title-text';
+      titleText.textContent = isMac ? 'Netscape Navigator' : config.title;
+      titlebar.append(icon, titleText, makeButtons('browser', isMac));
 
-    const body = document.createElement('div');
-    body.className = 'dtmshell-body';
-    const toolbar = document.createElement('div');
-    toolbar.className = 'dtmshell-toolbar';
-    body.appendChild(toolbar);
+      const body = document.createElement('div');
+      body.className = 'dtmshell-body';
+    
+      // Tab bar - add it before toolbar
+      const tabBar = document.createElement('div');
+      tabBar.className = 'dtmshell-tabbar';
+      body.appendChild(tabBar);
+    
+      const toolbar = document.createElement('div');
+      toolbar.className = 'dtmshell-toolbar';
+      body.appendChild(toolbar);
 
-    const status = document.createElement('div');
-    status.className = 'dtmshell-status';
-    const statusLeft = document.createElement('span');
-    statusLeft.textContent = 'Ready';
-    const statusRight = document.createElement('span');
-    statusRight.textContent = 'Microsoft Internet Explorer 4.0';
-    status.append(statusLeft, statusRight);
+      const status = document.createElement('div');
+      status.className = 'dtmshell-status';
+      const statusLeft = document.createElement('span');
+      statusLeft.textContent = 'Ready';
+      const statusRight = document.createElement('span');
+      statusRight.textContent = isMac ? 'Netscape Navigator 4.0' : 'Microsoft Internet Explorer 4.0';
+      status.append(statusLeft, statusRight);
 
-    win.append(titlebar, body);
-    layer.appendChild(win);
-    makeDraggable(win, titlebar, 'browser');
-    win.addEventListener('pointerdown', () => focusWindow('browser'));
+      win.append(titlebar, body);
+      layer.appendChild(win);
+      makeDraggable(win, titlebar, 'browser');
+      win.addEventListener('pointerdown', () => focusWindow('browser'));
 
-    return { win, body, toolbar, status, statusLeft, titleText, startUrl };
+      return { win, body, tabBar, toolbar, status, statusLeft, titleText, startUrl, isMac };
   }
 
-  // -------------------------------------------------------------------------
-  // 1998-style menu bar (File / View)
+// Tab management functions
+function createTabElement(tabId, title, isActive, onClose) {
+    const tab = document.createElement('div');
+    tab.className = 'dtmshell-tab' + (isActive ? ' active' : '');
+    tab.dataset.tabId = tabId;
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'dtmshell-tab-title';
+    titleSpan.textContent = title || 'New Tab';
+    tab.appendChild(titleSpan);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'dtmshell-tab-close';
+    closeBtn.textContent = '×';
+    closeBtn.title = 'Close tab';
+    closeBtn.dataset.tabId = tabId; // Add tabId to close button for easier handling
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onClose(tabId);
+    });
+    tab.appendChild(closeBtn);
+    
+    return tab;
+}
+
+function updateTabBar(entry) {
+    if (!entry.tabBar) return;
+    
+    const tabBar = entry.tabBar;
+    const tabs = entry.tabs || new Map();
+    const activeTabId = entry.activeTabId;
+    
+    // Clear existing tabs
+    tabBar.innerHTML = '';
+    
+    // Add tab elements
+    for (const [tabId, tabInfo] of tabs) {
+        const tabEl = createTabElement(
+            tabId, 
+            tabInfo.title, 
+            tabId === activeTabId,
+            (id) => closeTab(entry, id)
+        );
+        // Add click handler for switching tabs - use event delegation
+        tabEl.addEventListener('click', (e) => {
+            // Don't switch if clicking the close button
+            if (e.target.classList.contains('dtmshell-tab-close')) {
+                return;
+            }
+            switchTab(entry, tabId);
+        });
+        tabBar.appendChild(tabEl);
+    }
+    
+    // Add new tab button
+    const newTabBtn = document.createElement('button');
+    newTabBtn.className = 'dtmshell-tab-new';
+    newTabBtn.textContent = '+';
+    newTabBtn.title = 'New tab';
+    newTabBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        newTab(entry);
+    });
+    tabBar.appendChild(newTabBtn);
+}
+
+async function newTab(entry, url) {
+    if (!url) url = entry.isMac ? 'https://home.netscape.com/' : 'https://www.google.com/';
+    if (!window.dtmPreload || !window.dtmPreload.waterfox) return;
+    
+    try {
+        const result = await window.dtmPreload.waterfox.newTab(url);
+        if (result && result.ok && result.tabId) {
+            // Initialize tabs map if not exists
+            if (!entry.tabs) entry.tabs = new Map();
+            entry.tabs.set(result.tabId, { url, title: 'New Tab' });
+            entry.activeTabId = result.tabId;
+            updateTabBar(entry);
+            
+            // Switch the browser view to the new tab
+            if (entry.waterfox) {
+                await window.dtmPreload.waterfox.switchTab(result.tabId);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to create new tab:', e);
+    }
+}
+
+async function switchTab(entry, tabId) {
+    if (!window.dtmPreload || !window.dtmPreload.waterfox) return;
+    
+    try {
+        const result = await window.dtmPreload.waterfox.switchTab(tabId);
+        if (result && result.ok) {
+            entry.activeTabId = tabId;
+            updateTabBar(entry);
+            
+            // Refresh browser state for the new active tab
+            if (entry.waterfox) {
+                refreshBrowserState(entry);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to switch tab:', e);
+    }
+}
+
+async function closeTab(entry, tabId) {
+    if (!window.dtmPreload || !window.dtmPreload.waterfox) return;
+    
+    const tabs = entry.tabs;
+    if (!tabs || !tabs.has(tabId)) return;
+    
+    // Don't allow closing the last tab
+    if (tabs.size <= 1) return;
+    
+    try {
+        const result = await window.dtmPreload.waterfox.closeTab(tabId);
+        if (result && result.ok) {
+            tabs.delete(tabId);
+            
+            // If we closed the active tab, switch to the first available tab
+            if (entry.activeTabId === tabId) {
+                const firstTabId = tabs.keys().next().value;
+                entry.activeTabId = firstTabId;
+                if (entry.waterfox) {
+                    await window.dtmPreload.waterfox.switchTab(firstTabId);
+                }
+            }
+            
+            updateTabBar(entry);
+            
+            // Refresh browser state
+            if (entry.waterfox) {
+                refreshBrowserState(entry);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to close tab:', e);
+    }
+}
+
+async function syncTabsFromBridge(entry) {
+    if (!window.dtmPreload || !window.dtmPreload.waterfox || !entry.waterfox) return;
+    
+    try {
+        const result = await window.dtmPreload.waterfox.getTabs();
+        if (result && result.ok && result.tabs) {
+            if (!entry.tabs) entry.tabs = new Map();
+            entry.tabs.clear();
+            for (const tab of result.tabs) {
+                entry.tabs.set(tab.tabId, { url: tab.url, title: tab.title });
+            }
+            entry.activeTabId = result.activeTabId;
+            updateTabBar(entry);
+        }
+    } catch (e) {
+        console.error('Failed to sync tabs:', e);
+    }
+}
+
+// -------------------------------------------------------------------------
+// 1998-style menu bar (File / View)
   //
   // The docked Waterfox window is a separate Windows window sitting above this
   // one, so a dropdown opened over the page area would be hidden behind it.
@@ -449,6 +651,9 @@
   function browserMenuDefinitions(cmd) {
     return [
       { label: 'File', items: [
+        { label: 'New Tab', action: cmd.newTab },
+        { label: 'Close Tab', action: () => { if (cmd.closeTab) cmd.closeTab(windows.get('browser')?.activeTabId); } },
+        '-',
         { label: 'Open Location…', action: cmd.openLocation },
         '-',
         { label: 'Back', action: cmd.back },
@@ -466,10 +671,23 @@
     ];
   }
 
-  function browserButton(label, title, fn) {
+  function browserButton(label, title, fn, isMac) {
     const b = document.createElement('button');
     b.className = 'dtmshell-btn';
-    b.textContent = label;
+    if (isMac) {
+      // Mac-style toolbar icons
+      const macIcons = {
+        '⬅ Back': '◀',
+        '➡ Forward': '▶',
+        'Refresh': '⟳',
+        'Home': '⌂',
+        'Stop': '■',
+        'Go': '→'
+      };
+      b.textContent = macIcons[label] || label;
+    } else {
+      b.textContent = label;
+    }
     b.title = title;
     b.addEventListener('click', fn);
     return b;
@@ -506,19 +724,26 @@
       wfReady: false,
       pane,
       paneMsg,
-      statusLeft: frame.statusLeft
+      statusLeft: frame.statusLeft,
+      tabBar: frame.tabBar,
+      tabs: new Map(),
+      activeTabId: null,
+      isMac: frame.isMac
     };
 
     const address = browserAddress(frame, (value) => navigateBrowser(entry, value));
     entry.addressInput = address;
 
+    const homeUrl = frame.isMac ? 'https://home.netscape.com/' : APP_CONFIG.browser.url;
     const cmd = {
       back: () => { wfBridge.history(-1).then(() => refreshBrowserState(entry)); },
       forward: () => { wfBridge.history(1).then(() => refreshBrowserState(entry)); },
       refresh: () => { wfBridge.reload().then(() => refreshBrowserState(entry)); },
-      home: () => navigateBrowser(entry, APP_CONFIG.browser.url),
+      home: () => navigateBrowser(entry, homeUrl),
       openLocation: () => { address.focus(); address.select(); },
-      close: () => closeWindow('browser')
+      close: () => closeWindow('browser'),
+      newTab: () => newTab(entry),
+      closeTab: (tabId) => closeTab(entry, tabId)
     };
 
     // Park the page while a dropdown is open so it cannot cover the menu.
@@ -536,13 +761,22 @@
     };
 
     frame.toolbar.append(
-      browserButton('⬅ Back', 'Back', cmd.back),
-      browserButton('➡ Forward', 'Forward', cmd.forward),
-      browserButton('Refresh', 'Refresh', cmd.refresh),
-      browserButton('Home', 'Home', cmd.home),
+      browserButton('⬅ Back', 'Back', cmd.back, frame.isMac),
+      browserButton('➡ Forward', 'Forward', cmd.forward, frame.isMac),
+      browserButton('Refresh', 'Refresh', cmd.refresh, frame.isMac),
+      browserButton('Home', 'Home', cmd.home, frame.isMac),
       address,
-      browserButton('Go', 'Go', () => navigateBrowser(entry, address.value))
+      browserButton('Go', 'Go', () => navigateBrowser(entry, address.value), frame.isMac)
     );
+    
+    // Add new tab button to toolbar
+    const newTabBtn = document.createElement('button');
+    newTabBtn.className = 'dtmshell-btn dtmshell-new-tab-btn';
+    newTabBtn.textContent = frame.isMac ? '+' : '+';
+    newTabBtn.title = 'New tab';
+    newTabBtn.addEventListener('click', () => newTab(entry));
+    frame.toolbar.append(newTabBtn);
+    
     frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
     frame.body.append(pane, frame.status);
 
@@ -570,6 +804,10 @@
         lastDockShown = null;
         syncBrowserDock();
         startStatePolling();
+        
+        // Initialize tabs from bridge immediately
+        syncTabsFromBridge(entry);
+        
         refreshBrowserState(entry);
       }).catch((e) => {
         entry.paneMsg.textContent = 'Could not start ' + engineName() + ': ' + e.message;
@@ -581,70 +819,156 @@
   }
 
   function buildWebviewBrowser(startUrl) {
-    const frame = browserChrome(startUrl);
-    const webview = document.createElement('webview');
-    webview.className = 'dtmshell-web';
-    webview.setAttribute('partition', PARTITION);
-    webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    webview.setAttribute('src', startUrl);
+      const frame = browserChrome(startUrl);
+      const webview = document.createElement('webview');
+      webview.className = 'dtmshell-web';
+      webview.setAttribute('partition', PARTITION);
+      webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      webview.setAttribute('src', startUrl);
 
-    const address = browserAddress(frame, (value) => {
-      try { webview.loadURL(normalizeUrl(value)); } catch (e) {}
-    });
+      // For webview, we simulate tabs by keeping a list of URLs
+      const entry = {
+        win: frame.win,
+        webview,
+        titleText: frame.titleText,
+        statusLeft: frame.statusLeft,
+        maximized: false,
+        tabBar: frame.tabBar,
+        tabs: new Map(),
+        activeTabId: 1,
+        isMac: frame.isMac
+      };
+      // Initialize with first tab
+      entry.tabs.set(1, { url: startUrl, title: 'New Tab' });
+      updateTabBar(entry);
 
-    const cmd = {
-      back: () => { try { webview.goBack(); } catch (e) {} },
-      forward: () => { try { webview.goForward(); } catch (e) {} },
-      refresh: () => { try { webview.reload(); } catch (e) {} },
-      home: () => { try { webview.loadURL(APP_CONFIG.browser.url); } catch (e) {} },
-      openLocation: () => { address.focus(); address.select(); },
-      close: () => closeWindow('browser')
-    };
+      const address = browserAddress(frame, (value) => {
+        try { webview.loadURL(normalizeUrl(value)); } catch (e) {}
+      });
 
-    // Chromium can draw the dropdown over the webview, but hiding the page
-    // while the menu is open keeps the list readable in every case.
-    const holdPage = () => {
-      webview.style.visibility = 'hidden';
-      return () => { if (webview.isConnected) webview.style.visibility = ''; };
-    };
+      const homeUrl = frame.isMac ? 'https://home.netscape.com/' : APP_CONFIG.browser.url;
+      const cmd = {
+        back: () => { try { webview.goBack(); } catch (e) {} },
+        forward: () => { try { webview.goForward(); } catch (e) {} },
+        refresh: () => { try { webview.reload(); } catch (e) {} },
+        home: () => { try { webview.loadURL(homeUrl); } catch (e) {} },
+        openLocation: () => { address.focus(); address.select(); },
+        close: () => closeWindow('browser'),
+        newTab: () => newTabWebview(entry),
+        closeTab: (tabId) => closeTabWebview(entry, tabId),
+        switchTab: (tabId) => switchTabWebview(entry, tabId)
+      };
 
-    frame.toolbar.append(
-      browserButton('⬅ Back', 'Back', cmd.back),
-      browserButton('➡ Forward', 'Forward', cmd.forward),
-      browserButton('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} }),
-      browserButton('Refresh', 'Refresh', cmd.refresh),
-      browserButton('Home', 'Home', cmd.home),
-      address,
-      browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} })
-    );
-    frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
-    frame.body.append(webview, frame.status);
+      // Chromium can draw the dropdown over the webview, but hiding the page
+      // while the menu is open keeps the list readable in every case.
+      const holdPage = () => {
+        webview.style.visibility = 'hidden';
+        return () => { if (webview.isConnected) webview.style.visibility = ''; };
+      };
 
-    windows.set('browser', {
-      win: frame.win,
-      webview,
-      titleText: frame.titleText,
-      statusLeft: frame.statusLeft,
-      maximized: false
-    });
-    focusWindow('browser');
+      frame.toolbar.append(
+        browserButton('⬅ Back', 'Back', cmd.back, frame.isMac),
+        browserButton('➡ Forward', 'Forward', cmd.forward, frame.isMac),
+        browserButton('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} }, frame.isMac),
+        browserButton('Refresh', 'Refresh', cmd.refresh, frame.isMac),
+        browserButton('Home', 'Home', cmd.home, frame.isMac),
+        address,
+        browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} }, frame.isMac)
+      );
+    
+      // Add new tab button to toolbar
+      const newTabBtn = document.createElement('button');
+      newTabBtn.className = 'dtmshell-btn dtmshell-new-tab-btn';
+      newTabBtn.textContent = '+';
+      newTabBtn.title = 'New tab';
+      newTabBtn.addEventListener('click', () => newTabWebview(entry));
+      frame.toolbar.append(newTabBtn);
+    
+      frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
+      frame.body.append(webview, frame.status);
 
-    webview.addEventListener('did-navigate', (e) => {
-      address.value = e.url;
-      frame.statusLeft.textContent = e.url;
-    });
-    webview.addEventListener('did-navigate-in-page', (e) => { address.value = e.url; });
-    webview.addEventListener('did-start-loading', () => { frame.statusLeft.textContent = 'Opening page…'; });
-    webview.addEventListener('did-stop-loading', () => { frame.statusLeft.textContent = 'Done'; });
-    webview.addEventListener('did-fail-load', (e) => {
-      if (e.errorCode === -3) return;
-      frame.statusLeft.textContent = 'Could not load page (' + (e.errorDescription || e.errorCode) + ')';
-    });
-    webview.addEventListener('page-title-updated', (e) => {
-      if (!e.title) return;
-      frame.titleText.textContent = e.title + ' - Internet Explorer';
-      document.title = e.title;
-    });
+      windows.set('browser', {
+        win: frame.win,
+        webview,
+        titleText: frame.titleText,
+        statusLeft: frame.statusLeft,
+        maximized: false
+      });
+      focusWindow('browser');
+
+      webview.addEventListener('did-navigate', (e) => {
+        address.value = e.url;
+        frame.statusLeft.textContent = e.url;
+        // Update current tab URL
+        if (entry.tabs.has(entry.activeTabId)) {
+          entry.tabs.get(entry.activeTabId).url = e.url;
+        }
+      });
+      webview.addEventListener('did-navigate-in-page', (e) => { 
+        address.value = e.url;
+        if (entry.tabs.has(entry.activeTabId)) {
+          entry.tabs.get(entry.activeTabId).url = e.url;
+        }
+      });
+      webview.addEventListener('did-start-loading', () => { frame.statusLeft.textContent = 'Opening page…'; });
+      webview.addEventListener('did-stop-loading', () => { frame.statusLeft.textContent = 'Done'; });
+      webview.addEventListener('did-fail-load', (e) => {
+        if (e.errorCode === -3) return;
+        frame.statusLeft.textContent = 'Could not load page (' + (e.errorDescription || e.errorCode) + ')';
+      });
+      webview.addEventListener('page-title-updated', (e) => {
+        if (!e.title) return;
+        frame.titleText.textContent = e.title + ' - Internet Explorer';
+        document.title = e.title;
+        // Update current tab title
+        if (entry.tabs.has(entry.activeTabId)) {
+          entry.tabs.get(entry.activeTabId).title = e.title;
+          updateTabBar(entry);
+        }
+      });
+    }
+
+  function newTabWebview(entry, url) {
+        if (!url) url = entry.isMac ? 'https://home.netscape.com/' : 'https://www.google.com/';
+        const newTabId = Math.max(...entry.tabs.keys(), 0) + 1;
+        entry.tabs.set(newTabId, { url: normalizeUrl(url), title: 'New Tab' });
+        entry.activeTabId = newTabId;
+        updateTabBar(entry);
+  
+        // Load the URL in webview
+        if (entry.webview) {
+          try { entry.webview.loadURL(normalizeUrl(url)); } catch (e) {}
+        }
+    }
+
+  function switchTabWebview(entry, tabId) {
+      if (!entry.tabs.has(tabId)) return;
+      entry.activeTabId = tabId;
+      const tabInfo = entry.tabs.get(tabId);
+    
+      // Load the tab's URL in webview
+      if (entry.webview && tabInfo.url) {
+        try { entry.webview.loadURL(tabInfo.url); } catch (e) {}
+      }
+      updateTabBar(entry);
+  }
+
+  function closeTabWebview(entry, tabId) {
+      if (!entry.tabs.has(tabId)) return;
+      if (entry.tabs.size <= 1) return; // Don't close last tab
+    
+      entry.tabs.delete(tabId);
+    
+      if (entry.activeTabId === tabId) {
+        // Switch to first available tab
+        const firstTabId = entry.tabs.keys().next().value;
+        entry.activeTabId = firstTabId;
+        const tabInfo = entry.tabs.get(firstTabId);
+        if (entry.webview && tabInfo.url) {
+          try { entry.webview.loadURL(tabInfo.url); } catch (e) {}
+        }
+      }
+      updateTabBar(entry);
   }
 
   function navigateBrowser(entry, value) {
@@ -657,6 +981,12 @@
     if (entry.waterfox && entry.wfReady && wfBridge) {
       entry.statusLeft.textContent = 'Opening page…';
       wfBridge.navigate(url).then(() => { setTimeout(() => refreshBrowserState(entry), 700); });
+      
+      // Update current tab URL immediately
+      if (entry.tabs && entry.activeTabId && entry.tabs.has(entry.activeTabId)) {
+        entry.tabs.get(entry.activeTabId).url = url;
+        updateTabBar(entry);
+      }
     }
   }
 
@@ -678,8 +1008,16 @@
       }
       entry.stateFails = 0;
       if (document.activeElement !== entry.addressInput) entry.addressInput.value = st.url;
-      entry.titleText.textContent = (st.title ? st.title + ' - ' : '') + 'Internet Explorer';
+      entry.titleText.textContent = (st.title ? st.title + ' - ' : '') + (entry.isMac ? 'Netscape Navigator' : 'Internet Explorer');
       entry.statusLeft.textContent = st.url;
+      
+      // Update current tab info
+      if (entry.tabs && entry.activeTabId && entry.tabs.has(entry.activeTabId)) {
+        const tabInfo = entry.tabs.get(entry.activeTabId);
+        tabInfo.url = st.url;
+        if (st.title) tabInfo.title = st.title;
+        updateTabBar(entry);
+      }
     }).catch(() => {});
   }
 
@@ -690,6 +1028,8 @@
       if (!entry || !entry.waterfox || !entry.wfReady) return;
       if (!entry.win.classList.contains('active') || entry.win.style.display === 'none') return;
       refreshBrowserState(entry);
+      // Don't sync tabs on every poll - only when user actions change them
+      // syncTabsFromBridge(entry);
     }, 1500);
   }
 
@@ -772,6 +1112,46 @@
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && openMenu) closeMenus();
+    
+    // Windows key (Meta) - toggle Start menu in Windows skins
+    if (event.key === 'Meta' || event.code === 'MetaLeft' || event.code === 'MetaRight') {
+      event.preventDefault();
+      const frame = skinFrame();
+      const doc = frame && frame.contentDocument;
+      if (doc) {
+        const startBtn = doc.getElementById('startBtn');
+        const startMenu = doc.getElementById('startMenu');
+        if (startBtn && startMenu) {
+          startMenu.classList.toggle('open');
+        }
+      }
+    }
+    
+    // Tab keyboard shortcuts
+    if (event.ctrlKey) {
+      const entry = windows.get('browser');
+      if (entry && (entry.waterfox || entry.webview)) {
+        if (event.key === 't' || event.key === 'T') {
+          event.preventDefault();
+          if (entry.waterfox) newTab(entry);
+          else newTabWebview(entry);
+        } else if (event.key === 'w' || event.key === 'W') {
+          event.preventDefault();
+          if (entry.waterfox && entry.activeTabId) closeTab(entry, entry.activeTabId);
+          else if (entry.webview && entry.activeTabId) closeTabWebview(entry, entry.activeTabId);
+        } else if (event.key === 'Tab') {
+          event.preventDefault();
+          const tabs = Array.from(entry.tabs.keys());
+          if (tabs.length > 1) {
+            const currentIndex = tabs.indexOf(entry.activeTabId);
+            const nextIndex = (currentIndex + 1) % tabs.length;
+            const nextTabId = tabs[nextIndex];
+            if (entry.waterfox) switchTab(entry, nextTabId);
+            else switchTabWebview(entry, nextTabId);
+          }
+        }
+      }
+    }
   }, true);
 
   // The skin's desktop and Start menu live in the skin iframe, whose clicks

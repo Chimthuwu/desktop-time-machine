@@ -176,3 +176,239 @@
 }
 .dtmwmp-btn { min-width: 30px; padding: 0 6px; font: bold 11px Tahoma; }
 .dtmwmp-volume { width: 90px; height: 16px; accent-color: #000080; }
+
+/* ---- Tab bar for Internet Explorer / Netscape ---- */
+.dtmshell-tabbar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 24px;
+  padding: 0 2px;
+  background: #c0c0c0;
+  border-bottom: 1px solid #808080;
+  position: relative;
+  z-index: 4;
+  overflow-x: auto;
+}
+
+.dtmshell-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 100px;
+  max-width: 180px;
+  padding: 2px 8px 2px 6px;
+  margin-right: 2px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  position: relative;
+  bottom: -1px;
+  user-select: none;
+}
+
+.dtmshell-tab:hover:not(.active) {
+  background: #ddd;
+}
+
+.dtmshell-tab.active {
+  background: #fff;
+  border-color: #fff #404040 #fff #fff;
+  border-bottom: 1px solid #fff;
+  z-index: 5;
+  font-weight: bold;
+}
+
+.dtmshell-tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11px Tahoma;
+  color: #000;
+}
+
+.dtmshell-tab-close {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  line-height: 14px;
+  font: bold 12px Tahoma;
+  color: #000;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtmshell-tab-close:hover {
+  background: #f00;
+  color: #fff;
+  border-radius: 2px;
+}
+
+.dtmshell-tab-new {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: 2px;
+  font: bold 14px Tahoma;
+  color: #000;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtmshell-tab-new:hover {
+  background: #ddd;
+  border-color: #fff #404040 #404040 #fff;
+}
+
+.dtmshell-new-tab-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: 4px;
+  font: bold 14px Tahoma;
+  color: #000;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #404040 #404040 #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtmshell-new-tab-btn:hover {
+  background: #ddd;
+  border-color: #fff #404040 #404040 #fff;
+}
+
+/* ---- Mac OS 8 style browser window ---- */
+.dtmshell-win.mac {
+  background: #ddd;
+  border: 2px solid;
+  border-color: #fff #888 #888 #fff;
+}
+
+.dtmshell-win.mac .dtmshell-title.mac {
+  background: #ddd;
+  border-bottom: 1px solid #888;
+  color: #000;
+  height: 24px;
+  padding: 0 6px;
+}
+
+.dtmshell-win.mac .dtmshell-title.mac .dtmshell-title-icon {
+  font-size: 14px;
+}
+
+.dtmshell-win.mac .dtmshell-title.mac .dtmshell-title-text {
+  font: bold 12px "Geneva", "Charcoal", "Lucida Grande", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-buttons.mac {
+  display: flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+
+.dtmshell-win.mac .mac-btn {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: background 0.1s;
+}
+
+.dtmshell-win.mac .mac-btn.close {
+  background: #ff5f56;
+  border-color: #e04030;
+}
+
+.dtmshell-win.mac .mac-btn.close:hover {
+  background: #ff3b30;
+}
+
+.dtmshell-win.mac .mac-btn.minimize {
+  background: #ffbd2e;
+  border-color: #e0a010;
+}
+
+.dtmshell-win.mac .mac-btn.minimize:hover {
+  background: #f0a000;
+}
+
+.dtmshell-win.mac .mac-btn.zoom {
+  background: #27c93f;
+  border-color: #1ca020;
+}
+
+.dtmshell-win.mac .mac-btn.zoom:hover {
+  background: #1db020;
+}
+
+.dtmshell-win.mac .dtmshell-toolbar {
+  background: #e0e0e0;
+  border-bottom: 1px solid #aaa;
+  padding: 3px 4px;
+}
+
+.dtmshell-win.mac .dtmshell-btn {
+  background: #e0e0e0;
+  border: 1px solid;
+  border-color: #fff #888 #888 #fff;
+  font: 11px "Geneva", "Charcoal", sans-serif;
+  min-height: 20px;
+  padding: 1px 6px;
+}
+
+.dtmshell-win.mac .dtmshell-btn:active {
+  border-color: #888 #fff #fff #888;
+}
+
+.dtmshell-win.mac .dtmshell-addr {
+  border: 1px solid;
+  border-color: #888 #fff #fff #888;
+  font: 11px "Geneva", "Charcoal", sans-serif;
+  background: #fff;
+  padding: 2px 4px;
+}
+
+.dtmshell-win.mac .dtmshell-status {
+  background: #e0e0e0;
+  border-top: 1px solid #aaa;
+  font: 10px "Geneva", "Charcoal", sans-serif;
+  color: #333;
+}
+
+.dtmshell-win.mac .dtmshell-pane {
+  background: #fff;
+  color: #666;
+  font: 11px "Geneva", "Charcoal", sans-serif;
+}
+
+.dtmshell-win.mac .dtmshell-menubar {
+  background: #e0e0e0;
+  border-bottom: 1px solid #aaa;
+}
+
+.dtmshell-win.mac .dtmshell-menu-title {
+  font: 11px "Geneva", "Charcoal", sans-serif;
+}

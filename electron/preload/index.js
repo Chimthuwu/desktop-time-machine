@@ -53,6 +53,10 @@ const dtmBridge = {
     // Installs Ungoogled Chromium if this machine has none, then brands it.
     ensure: () => ipcRenderer.invoke('dtm:browser-ensure'),
     open: (url) => ipcRenderer.invoke('dtm:waterfox-open', url),
+    newTab: (url) => ipcRenderer.invoke('dtm:waterfox-new-tab', url),
+    switchTab: (tabId) => ipcRenderer.invoke('dtm:waterfox-switch-tab', tabId),
+    closeTab: (tabId) => ipcRenderer.invoke('dtm:waterfox-close-tab', tabId),
+    getTabs: () => ipcRenderer.invoke('dtm:waterfox-get-tabs'),
     navigate: (url) => ipcRenderer.invoke('dtm:waterfox-navigate', url),
     reload: () => ipcRenderer.invoke('dtm:waterfox-reload'),
     history: (delta) => ipcRenderer.invoke('dtm:waterfox-history', delta),

@@ -631,6 +631,10 @@ function registerIpcHandlers() {
   ipcMain.handle('dtm:waterfox-status', async () => browser.status());
   ipcMain.handle('dtm:browser-ensure', async () => browser.ensure());
   ipcMain.handle('dtm:waterfox-open', async (_event, url) => browser.open(url));
+  ipcMain.handle('dtm:waterfox-new-tab', async (_event, url) => browser.newTab(url));
+  ipcMain.handle('dtm:waterfox-switch-tab', async (_event, tabId) => browser.switchTab(tabId));
+  ipcMain.handle('dtm:waterfox-close-tab', async (_event, tabId) => browser.closeTab(tabId));
+  ipcMain.handle('dtm:waterfox-get-tabs', async () => browser.getTabs());
   ipcMain.handle('dtm:waterfox-navigate', async (_event, url) => browser.navigate(url));
   ipcMain.handle('dtm:waterfox-reload', async () => browser.reload());
   ipcMain.handle('dtm:waterfox-history', async (_event, delta) => browser.history(Number(delta)));

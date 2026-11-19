@@ -355,7 +355,12 @@ let channelBarOpen = false;
 
 // FORWARD HOTKEYS TO PARENT SHELL
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
+  // Windows key - toggle Start menu (prevent host OS Start menu)
+  if (e.key === 'Meta' || e.code === 'MetaLeft' || e.code === 'MetaRight') {
+    e.preventDefault();
+    const menu = document.getElementById('startMenu');
+    if (menu) menu.classList.toggle('open');
+  } else if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
     e.preventDefault();
     if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
   } else if (e.ctrlKey && e.key === 'F5') {

@@ -24,9 +24,10 @@ const WINDOW_CLASS_HINT = 'waterfox';
 const MIN_PORT = 9300;
 const PORT_RANGE = 90;
 
-let instance = null; // { proc, port, ws, context, sessionId, url, title }
+let instance = null; // { proc, port, ws, send, tabs: Map<tabId, {contextId, url, title}>, activeTabId }
 let openPromise = null;
 let dockHelper = null;
+let nextTabId = 1;
 
 function dockApi() {
   if (!dockHelper) dockHelper = createDock({ dir: profileDir(), marker: PROFILE_MARKER, processName: 'waterfox.exe' });
@@ -199,9 +200,10 @@ async function open(rawUrl) {
     const url = safeUrl(rawUrl) || 'https://www.google.com/';
     if (!status().available) return { ok: false, error: 'Waterfox is not installed.' };
     if (isRunning()) {
-      try { await instance.send('browsingContext.navigate', { context: instance.context, url, wait: 'none' }); } catch (e) {}
+      // Create a new tab instead of navigating the current one
+      const newTab = await newTab(url);
       show();
-      return { ok: true, reused: true };
+      return { ok: true, reused: true, tabId: newTab.tabId };
     }
 
     const exe = resolveWaterfoxPath();
@@ -228,7 +230,13 @@ async function open(rawUrl) {
       const contexts = (tree && tree.contexts) || [];
       const top = contexts.find((c) => !c.parent) || contexts[0];
       if (!top) throw new Error('Waterfox opened no browsing context');
-      instance = { proc, port, ws, send, context: top.context, url, title: 'Internet Explorer' };
+      
+      // Initialize tabs map with the first tab
+      const firstTabId = nextTabId++;
+      const tabs = new Map();
+      tabs.set(firstTabId, { contextId: top.context, url, title: 'Internet Explorer' });
+      
+      instance = { proc, port, ws, send, tabs, activeTabId: firstTabId };
     } catch (e) {
       try { proc.kill(); } catch (err) {}
       try { if (ws) ws.close(); } catch (err) {}
@@ -239,48 +247,123 @@ async function open(rawUrl) {
     await d.ensure();
     await d.find();
     d.send('hide');
-    return { ok: true };
+    return { ok: true, tabId: firstTabId };
   })().finally(() => { openPromise = null; });
   return openPromise;
+}
+
+// Tab management functions
+async function newTab(rawUrl) {
+  if (!isRunning()) return { ok: false, error: 'Browser not running' };
+  const url = safeUrl(rawUrl) || 'https://www.google.com/';
+  try {
+    // Create a new browsing context (tab) via browsingContext.create
+    const result = await instance.send('browsingContext.create', { type: 'tab' });
+    const contextId = result.context;
+    const tabId = nextTabId++;
+    
+    // Navigate the new context to the URL
+    await instance.send('browsingContext.navigate', { context: contextId, url, wait: 'none' });
+    
+    // Store tab info
+    instance.tabs.set(tabId, { contextId, url, title: 'New Tab' });
+    
+    // Switch to the new tab
+    instance.activeTabId = tabId;
+    
+    return { ok: true, tabId };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+async function switchTab(tabId) {
+  if (!isRunning()) return { ok: false };
+  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
+  instance.activeTabId = tabId;
+  return { ok: true };
+}
+
+async function closeTab(tabId) {
+  if (!isRunning()) return { ok: false };
+  if (!instance.tabs.has(tabId)) return { ok: false, error: 'Tab not found' };
+  
+  const tab = instance.tabs.get(tabId);
+  try {
+    await instance.send('browsingContext.close', { context: tab.contextId });
+  } catch (e) {
+    // Ignore errors
+  }
+  instance.tabs.delete(tabId);
+  
+  // If we closed the active tab, switch to another one
+  if (instance.activeTabId === tabId) {
+    const remainingTabs = Array.from(instance.tabs.keys());
+    if (remainingTabs.length > 0) {
+      instance.activeTabId = remainingTabs[0];
+    } else {
+      // No tabs left, close the browser
+      await close();
+    }
+  }
+  return { ok: true };
+}
+
+function getTabs() {
+  if (!isRunning()) return { ok: false };
+  const tabs = [];
+  for (const [tabId, tab] of instance.tabs) {
+    tabs.push({ tabId, url: tab.url, title: tab.title, active: tabId === instance.activeTabId });
+  }
+  return { ok: true, tabs, activeTabId: instance.activeTabId };
 }
 
 async function navigate(rawUrl) {
   const url = safeUrl(rawUrl);
   if (!url || !isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
-    await instance.send('browsingContext.navigate', { context: instance.context, url, wait: 'none' });
+    await instance.send('browsingContext.navigate', { context: activeTab.contextId, url, wait: 'none' });
+    activeTab.url = url;
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function reload() {
   if (!isRunning()) return { ok: false };
-  try { await instance.send('browsingContext.reload', { context: instance.context }); return { ok: true }; }
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
+  try { await instance.send('browsingContext.reload', { context: activeTab.contextId }); return { ok: true }; }
   catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function history(delta) {
   if (!isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
-    await instance.send('browsingContext.traverseHistory', { context: instance.context, delta: delta < 0 ? -1 : 1 });
+    await instance.send('browsingContext.traverseHistory', { context: activeTab.contextId, delta: delta < 0 ? -1 : 1 });
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
 async function state() {
   if (!isRunning()) return { ok: false };
+  const activeTab = instance.tabs.get(instance.activeTabId);
+  if (!activeTab) return { ok: false };
   try {
     const res = await instance.send('script.evaluate', {
       expression: 'JSON.stringify({ url: location.href, title: document.title })',
-      target: { context: instance.context },
+      target: { context: activeTab.contextId },
       awaitPromise: false
     });
     const value = res && res.result && res.result.value;
     if (typeof value === 'string') {
       const parsed = JSON.parse(value);
-      instance.url = parsed.url || instance.url;
-      instance.title = parsed.title || instance.title;
-      return { ok: true, url: instance.url, title: instance.title };
+      activeTab.url = parsed.url || activeTab.url;
+      activeTab.title = parsed.title || activeTab.title;
+      return { ok: true, url: activeTab.url, title: activeTab.title };
     }
   } catch (e) { /* navigation may destroy the realm mid-flight */ }
   return { ok: false };
@@ -338,4 +421,4 @@ function dispose() {
   if (dockHelper) { dockHelper.dispose(); dockHelper = null; }
 }
 
-module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose };
+module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose, newTab, switchTab, closeTab, getTabs };
