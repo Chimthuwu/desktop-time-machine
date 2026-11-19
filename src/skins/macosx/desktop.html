@@ -19,6 +19,10 @@
     </div>
     <div class="boot-spinner"></div>
   </div>
+  <button id="boot-recovery" type="button"
+    style="display:none;position:fixed;right:16px;bottom:16px;z-index:1000000;padding:10px 14px;border:1px solid #777;border-radius:8px;background:linear-gradient(#fff,#ddd);color:#222;font:13px 'Lucida Grande',Arial,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;">
+    Startup stalled — switch era (F8)
+  </button>
 
   <!-- Global menu bar -->
   <div id="menubar">
@@ -47,5 +51,27 @@
   <script src="./desktop.js"></script>
   <script src="./finder.js"></script>
   <script src="./apps.js"></script>
+  <script>
+    (() => {
+      const boot = document.getElementById('boot-screen');
+      const recovery = document.getElementById('boot-recovery');
+      const openSwitcher = () => window.parent.postMessage('dtm:open-switcher', '*');
+      recovery.addEventListener('click', openSwitcher);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'F8' || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 't')) {
+          event.preventDefault();
+          openSwitcher();
+        }
+      });
+      // Missing or stalled skin scripts must not trap users behind the boot screen.
+      window.setTimeout(() => {
+        if (boot && !boot.classList.contains('done')) {
+          boot.classList.add('done');
+          boot.setAttribute('aria-hidden', 'true');
+          recovery.style.display = 'block';
+        }
+      }, 5000);
+    })();
+  </script>
 </body>
 </html>
