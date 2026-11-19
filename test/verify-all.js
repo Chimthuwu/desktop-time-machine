@@ -25,6 +25,9 @@ const results = {
   macos8: {},
   switching: {},
   templeos: {},
+  windowsXP: {},
+  amigaWorkbench: {},
+  beos: {},
   errors: []
 };
 
@@ -446,7 +449,97 @@ app.whenReady().then(async () => {
     results.errors.push('TempleOS test error: ' + e.message);
   }
 
-  // Test 7: Switch back to Windows 95
+  // Test 7: Windows XP Luna
+  try {
+    await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('windowsXP');`);
+    await new Promise(r => setTimeout(r, 400));
+    results.windowsXP = await win.webContents.executeJavaScript(`
+      (async () => {
+        const doc = document.getElementById('skin-viewport').contentWindow.document;
+        const out = {
+          activeSkin: window.dtmSkinManager.getCurrentSkin().id,
+          desktop: !!doc.getElementById('desktop'),
+          startMenu: !!doc.querySelector('#start-menu .start-cols'),
+          taskbar: !!doc.getElementById('taskbar'),
+          icons: doc.querySelectorAll('.desktop-icon').length
+        };
+        doc.getElementById('start').click();
+        out.startOpens = doc.getElementById('start-menu').classList.contains('open');
+        doc.querySelector('#start-menu [data-app="calculator"]').click();
+        const calc = doc.querySelector('.calc');
+        ['7','+','5','='].forEach(key => Array.from(calc.querySelectorAll('button')).find(b => b.textContent === key).click());
+        out.calculator = calc.querySelector('.calc-display').textContent === '12';
+        doc.querySelector('.desktop-icon[data-app="computer"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 250));
+        out.fileBrowser = !!doc.querySelector('.win .file-path');
+        return out;
+      })()
+    `);
+  } catch (e) {
+    results.errors.push('Windows XP test error: ' + e.message);
+  }
+
+  // Test 8: Amiga Workbench 3.1
+  try {
+    await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('amiga-workbench');`);
+    await new Promise(r => setTimeout(r, 400));
+    results.amigaWorkbench = await win.webContents.executeJavaScript(`
+      (async () => {
+        const doc = document.getElementById('skin-viewport').contentWindow.document;
+        const out = {
+          activeSkin: window.dtmSkinManager.getCurrentSkin().id,
+          screenBar: !!doc.getElementById('screenbar'),
+          diskIcons: doc.querySelectorAll('.wb-icon').length,
+          menuBar: !!doc.querySelector('[data-menu="Workbench"]')
+        };
+        doc.querySelector('.wb-icon[data-app="shell"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        const input = doc.querySelector('.amiga-terminal input');
+        input.value = 'help';
+        doc.querySelector('.amiga-terminal form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        out.shell = doc.querySelector('.amiga-terminal .cli-output').textContent.includes('VERSION');
+        out.windowControls = !!doc.querySelector('.wb-window .gadget');
+        doc.querySelector('.wb-icon[data-app="sys"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 250));
+        out.fileBrowser = !!doc.querySelector('.wb-window .drawer-item');
+        return out;
+      })()
+    `);
+  } catch (e) {
+    results.errors.push('Amiga Workbench test error: ' + e.message);
+  }
+
+  // Test 9: BeOS R5
+  try {
+    await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('beos');`);
+    await new Promise(r => setTimeout(r, 400));
+    results.beos = await win.webContents.executeJavaScript(`
+      (async () => {
+        const doc = document.getElementById('skin-viewport').contentWindow.document;
+        const out = {
+          activeSkin: window.dtmSkinManager.getCurrentSkin().id,
+          deskbar: !!doc.getElementById('deskbar'),
+          workspaces: doc.querySelectorAll('.workspace').length,
+          desktopIcons: doc.querySelectorAll('.be-icon').length
+        };
+        doc.getElementById('deskbar-head').click();
+        doc.querySelector('#deskbar [data-app="terminal"]').click();
+        const win = doc.querySelector('.be-window');
+        out.tabbedWindow = !!win && !!win.querySelector('.be-tab');
+        doc.querySelector('.workspace[data-workspace="1"]').click();
+        out.workspaceHidesWindow = win.style.display === 'none';
+        doc.querySelector('.workspace[data-workspace="0"]').click();
+        out.workspaceRestoresWindow = win.style.display === 'flex';
+        doc.querySelector('.be-icon[data-app="tracker"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 250));
+        out.tracker = !!doc.querySelector('.be-window .be-file');
+        return out;
+      })()
+    `);
+  } catch (e) {
+    results.errors.push('BeOS test error: ' + e.message);
+  }
+
+  // Test 10: Switch back to Windows 95
   try {
     await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('windows95');`);
     await new Promise(r => setTimeout(r, 1800));

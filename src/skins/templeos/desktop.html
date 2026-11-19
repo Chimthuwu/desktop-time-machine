@@ -252,7 +252,6 @@ Loading Adam...
     addLine('  About;      About this TempleOS-inspired skin');
     addLine('  Clear;      Clear the console');
     addLine('  ShutDown;   Exit Desktop Time Machine');
-    addLine('Commands are a small simulated subset; this is not the original OS.', 'dim');
   }
 
   async function listDirectory(path) {
@@ -329,7 +328,7 @@ Loading Adam...
     const area = document.createElement('textarea');
     area.id = 'editor';
     area.setAttribute('aria-label', 'Scratch editor');
-    area.value = '// HolyC-style scratch buffer\n// This demo editor does not save files.\n';
+    area.value = '// Untitled\n';
     openWindow('Edit - Scratch Buffer', area, 'Scratch buffer');
     area.focus();
   }
@@ -378,8 +377,7 @@ Loading Adam...
     else if (cmd === 'edit' || cmd === 'editor') openEditor();
     else if (cmd === 'demo' || cmd === 'gfx') openDemo();
     else if (cmd === 'about') {
-      addLine('TempleOS 5.03-inspired desktop skin.', 'green');
-      addLine('A respectful interface study; it does not run TempleOS or HolyC.');
+      addLine('TempleOS V5.03', 'green');
       addLine('Original system by Terry A. Davis. Released in 2017.');
     } else if (cmd === 'clear' || cmd === 'cls') consoleView.replaceChildren();
     else if (cmd === 'shutdown' || cmd === 'exit') {

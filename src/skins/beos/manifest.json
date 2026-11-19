@@ -1,0 +1,32 @@
+{
+  "id": "beos",
+  "name": "BeOS R5",
+  "era": "2000",
+  "period": "2000",
+  "version": "1.0.0",
+  "description": "The BeOS R5 desktop with tabbed windows, Tracker-style file browsing, a Deskbar, and four workspaces.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "⚡",
+  "themeColor": "#4c5860",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "filesystem",
+    "application-launcher",
+    "desktop-icons",
+    "tabbed-windows",
+    "deskbar",
+    "workspaces",
+    "cli",
+    "multimedia"
+  ],
+  "meta": {
+    "developer": "Be Inc.",
+    "releaseDate": "2000-05-26",
+    "successor": "Haiku",
+    "kernelFamily": "BeOS"
+  }
+}

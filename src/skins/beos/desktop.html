@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file:;">
+<title>BeOS R5</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font:12px "Lucida Grande",Tahoma,Arial,sans-serif;color:#17191b;user-select:none}
+button,input,textarea{font:inherit}
+#desktop{position:fixed;inset:0;overflow:hidden;background:
+ radial-gradient(ellipse at 70% 0%,rgba(255,255,255,.26),transparent 42%),
+ linear-gradient(145deg,#66747b,#444f55 60%,#323b40)}
+#icons{position:absolute;inset:0;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;gap:8px;padding:16px}
+.be-icon{width:84px;height:83px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px;color:#fff;text-align:center;text-shadow:1px 1px 2px #111;cursor:default}
+.be-icon .glyph{font-size:34px;line-height:38px;filter:drop-shadow(1px 2px 1px #222)}
+.be-icon.selected{border-radius:4px;background:rgba(102,162,197,.4);outline:1px solid rgba(255,255,255,.55)}
+#deskbar{position:absolute;right:8px;top:8px;z-index:9000;min-width:205px;background:linear-gradient(#f2f2f2,#d3d3d3);border:1px solid #555;border-radius:3px;box-shadow:2px 3px 8px #222}
+#deskbar-head{height:28px;display:flex;align-items:center;gap:8px;padding:0 8px;background:linear-gradient(#fff,#d0d0d0);border-bottom:1px solid #999;cursor:pointer}
+#leaf{width:16px;height:16px;display:grid;place-items:center;color:#fff;font-size:12px;background:#668c2e;border:1px solid #405b1d;transform:rotate(45deg)}
+#leaf span{transform:rotate(-45deg)}
+#deskbar-menu{display:none;padding:4px}
+#deskbar.open #deskbar-menu{display:block}
+.desk-item{display:block;width:100%;padding:5px 7px;text-align:left;border:1px solid transparent;background:transparent;cursor:pointer}
+.desk-item:hover{background:#bdd8e7;border-color:#7fa8bf}
+#desk-clock{text-align:right;padding:4px 8px;border-top:1px solid #aaa;color:#333}
+#workspace-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:4px}
+.workspace{height:30px;display:grid;place-items:center;border:1px solid #777;background:#e8e8e8;cursor:pointer;font-size:11px}
+.workspace.active{background:#aec6d3;box-shadow:inset 0 0 0 2px #5e8298}
+#window-layer{position:absolute;inset:0;pointer-events:none}
+.be-window{position:absolute;left:145px;top:80px;width:560px;height:370px;min-width:280px;min-height:180px;display:flex;flex-direction:column;background:#eee;border:1px solid #222;box-shadow:3px 4px 10px rgba(0,0,0,.45);pointer-events:auto}
+.be-window.max{left:0!important;top:0!important;width:100%!important;height:100%!important}
+.be-tabbar{height:26px;flex:none;position:relative;display:flex;align-items:flex-start;padding-left:5px;background:linear-gradient(#e7e7e7,#c8c8c8);border-bottom:1px solid #888}
+.be-tab{height:24px;min-width:170px;max-width:calc(100% - 42px);display:flex;align-items:center;gap:6px;padding:2px 7px 2px 4px;background:linear-gradient(#ffe38a,#e5ad37);border:1px solid #66501e;border-bottom:0;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 100%,0 100%);font-weight:bold;cursor:move}
+.be-tab-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.be-close{width:16px;height:16px;flex:none;padding:0;line-height:12px;background:linear-gradient(#fff,#ccc);border:1px solid #555;cursor:pointer}
+.be-close:active{background:#bbb}
+.be-tab-fill{position:absolute;left:180px;right:0;top:0;height:24px;background:linear-gradient(#f8d774,#d29a2e);border-bottom:1px solid #80601e}
+.be-tabbar .be-tab{z-index:1}
+.be-body{flex:1;min-height:0;overflow:auto;background:#f5f5f5}
+.be-toolbar{height:29px;display:flex;align-items:center;gap:6px;padding:3px 7px;background:linear-gradient(#f7f7f7,#ddd);border-bottom:1px solid #999}
+.be-button{padding:3px 9px;border:1px solid #777;border-radius:2px;background:linear-gradient(#fff,#d4d4d4);cursor:pointer}
+.be-button:hover{background:linear-gradient(#fff,#c8deea)}
+.be-content{padding:10px}
+.be-filelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
+.be-file{min-height:75px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:5px;text-align:center;cursor:pointer}
+.be-file:hover{background:#d9e7ed;outline:1px solid #8baab8}
+.be-file span:first-child{font-size:30px}
+.be-terminal{height:100%;min-height:220px;display:flex;flex-direction:column;background:#161819;color:#c6e8b8;font:13px "Courier New",monospace}
+.term-out{flex:1;overflow:auto;padding:7px;white-space:pre-wrap}
+.term-input{display:flex;gap:5px;padding:6px;border-top:1px solid #7a847d}.term-input input{flex:1;min-width:0;border:0;outline:0;background:#161819;color:#fff;font:inherit;user-select:text}
+.text-editor{width:100%;height:100%;min-height:240px;resize:none;padding:8px;border:1px solid #999;background:#fff;font:13px "Courier New",monospace;user-select:text;outline:0}
+.be-calc{width:250px;margin:14px auto;padding:9px;background:#d6d6d6;border:1px solid #888}
+.be-calc-display{height:34px;margin-bottom:7px;padding:5px;text-align:right;background:#fff;border:1px solid #888;font:bold 19px Tahoma}
+.be-calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.be-calc-grid button{height:32px;border:1px solid #777;background:linear-gradient(#fff,#d1d1d1);cursor:pointer}
+.be-status{height:20px;flex:none;padding:3px 6px;background:#ddd;border-top:1px solid #aaa;color:#444;font-size:11px}
+.be-about{text-align:center;padding:20px;line-height:1.7}.be-about .logo{font-size:50px}
+.media-demo{height:100%;min-height:200px;display:grid;place-items:center;background:#151719;color:#8fd5ec}
+.spectrum{height:105px;display:flex;align-items:flex-end;gap:5px}.spectrum i{display:block;width:13px;background:linear-gradient(#f4d45b,#e88745,#6297d3);animation:wave .7s ease-in-out infinite alternate}
+.spectrum i:nth-child(3n){animation-delay:.2s}.spectrum i:nth-child(2n){animation-delay:.4s}
+@keyframes wave{to{height:18px}}
+.shade{position:absolute;inset:0;z-index:9500;display:grid;place-items:center;background:rgba(0,0,0,.32)}
+.dialog{width:320px;padding:14px;background:#ececec;border:1px solid #555;box-shadow:3px 3px 10px #222}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.prompt-input{width:100%;padding:5px;border:1px solid #888;background:#fff;user-select:text}
+</style>
+</head>
+<body>
+<main id="desktop">
+  <div id="icons">
+    <div class="be-icon" data-app="tracker"><span class="glyph">📁</span><span>Home</span></div>
+    <div class="be-icon" data-app="terminal"><span class="glyph">⌨️</span><span>Terminal</span></div>
+    <div class="be-icon" data-app="editor"><span class="glyph">📝</span><span>StyledEdit</span></div>
+    <div class="be-icon" data-app="media"><span class="glyph">🎞️</span><span>MediaPlayer</span></div>
+  </div>
+  <section id="window-layer"></section>
+  <aside id="deskbar">
+    <header id="deskbar-head"><span id="leaf"><span>◈</span></span><b>Deskbar</b><span style="margin-left:auto">▾</span></header>
+    <div id="deskbar-menu">
+      <button class="desk-item" data-app="tracker">Tracker</button>
+      <button class="desk-item" data-app="terminal">Terminal</button>
+      <button class="desk-item" data-app="editor">StyledEdit</button>
+      <button class="desk-item" data-app="calculator">Calculator</button>
+      <button class="desk-item" data-app="media">MediaPlayer</button>
+      <button class="desk-item" data-app="about">About BeOS</button>
+      <div id="workspace-grid">
+        <button class="workspace active" data-workspace="0">1</button>
+        <button class="workspace" data-workspace="1">2</button>
+        <button class="workspace" data-workspace="2">3</button>
+        <button class="workspace" data-workspace="3">4</button>
+      </div>
+      <button class="desk-item" data-app="shutdown">Shut down…</button>
+    </div>
+    <div id="desk-clock"></div>
+  </aside>
+  <div id="desktop-menu" class="shade" style="display:none"></div>
+</main>
+<script>
+(() => {
+  'use strict';
+  const DTM=(window.parent&&window.parent.DTM)?window.parent.DTM:window.DTM;
+  const root=document.getElementById('desktop'),layer=document.getElementById('window-layer'),deskbar=document.getElementById('deskbar');
+  let z=10,nextWindow=0,currentWorkspace=0,calcValue='0',calcFirst=null,calcOp='';
+  const windows=new Map();
+  function switchEra(){window.parent.postMessage('dtm:open-switcher','*');}
+  function updateClock(){document.getElementById('desk-clock').textContent=new Date().toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+  updateClock();setInterval(updateClock,15000);
+  function createWindow(title,content,width=560,height=360){
+    const id=++nextWindow,win=document.createElement('section');win.className='be-window';win.dataset.workspace=String(currentWorkspace);
+    win.style.left=Math.min(145+id*22,Math.max(15,innerWidth-width-20))+'px';win.style.top=Math.min(80+id*18,Math.max(35,innerHeight-height-20))+'px';
+    win.style.width=width+'px';win.style.height=height+'px';win.style.zIndex=String(++z);
+    const tabs=document.createElement('header');tabs.className='be-tabbar';
+    const fill=document.createElement('div');fill.className='be-tab-fill';
+    const tab=document.createElement('div');tab.className='be-tab';
+    const close=document.createElement('button');close.className='be-close';close.textContent='×';close.title='Close';
+    const label=document.createElement('span');label.className='be-tab-title';label.textContent=title;
+    tab.append(close,label);tabs.append(fill,tab);
+    const body=document.createElement('div');body.className='be-body';body.appendChild(content);
+    const status=document.createElement('footer');status.className='be-status';status.textContent='BeOS R5';
+    win.append(tabs,body,status);layer.appendChild(win);
+    const entry={id,win,title,workspace:currentWorkspace,status,maximized:false,restore:null};windows.set(id,entry);
+    close.onclick=()=>{win.remove();windows.delete(id);};
+    win.addEventListener('pointerdown',()=>win.style.zIndex=String(++z));
+    let drag=null;
+    tab.addEventListener('dblclick',(e)=>{
+      if(e.target.closest('button'))return;
+      if(!entry.maximized){entry.restore={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};win.classList.add('max');}
+      else{win.classList.remove('max');Object.assign(win.style,entry.restore||{});}
+      entry.maximized=!entry.maximized;
+    });
+    tab.addEventListener('pointerdown',(e)=>{if(e.target.closest('button'))return;drag={x:e.clientX,y:e.clientY,left:win.offsetLeft,top:win.offsetTop};tab.setPointerCapture(e.pointerId);win.style.zIndex=String(++z);});
+    tab.addEventListener('pointermove',(e)=>{if(!drag)return;win.style.left=Math.max(-win.offsetWidth+80,Math.min(innerWidth-80,drag.left+e.clientX-drag.x))+'px';win.style.top=Math.max(0,Math.min(innerHeight-45,drag.top+e.clientY-drag.y))+'px';});
+    tab.addEventListener('pointerup',()=>drag=null);tab.addEventListener('pointercancel',()=>drag=null);
+    return entry;
+  }
+  function changeWorkspace(index){
+    currentWorkspace=index;
+    windows.forEach(entry=>{entry.win.style.display=entry.workspace===index?'flex':'none';});
+    document.querySelectorAll('.workspace').forEach(button=>button.classList.toggle('active',Number(button.dataset.workspace)===index));
+    deskbar.classList.remove('open');
+  }
+  document.querySelectorAll('.workspace').forEach(button=>button.addEventListener('click',()=>changeWorkspace(Number(button.dataset.workspace))));
+  async function fileWindow(start=''){
+    const wrap=document.createElement('div');wrap.style.height='100%';
+    const tools=document.createElement('div');tools.className='be-toolbar';
+    const parent=document.createElement('button');parent.className='be-button';parent.textContent='Parent';
+    const address=document.createElement('span');address.textContent=start||'Home';
+    tools.append(parent,address);
+    const list=document.createElement('div');list.className='be-content be-filelist';
+    const {status}=createWindow('Tracker',wrap,600,380);wrap.append(tools,list);
+    async function load(path){
+      list.replaceChildren();status.textContent='Reading folder…';
+      try{
+        const result=await DTM.system.listDirectory(path);address.textContent=result.currentPath||path||'Home';
+        parent.disabled=!result.parentPath;parent.onclick=()=>result.parentPath&&load(result.parentPath);
+        result.items.forEach(item=>{
+          const node=document.createElement('div');node.className='be-file';
+          const glyph=document.createElement('span');glyph.textContent=item.isDirectory?'📁':'📄';
+          const label=document.createElement('span');label.textContent=item.name;node.append(glyph,label);
+          node.addEventListener('dblclick',async()=>{if(item.isDirectory)load(item.path);else try{await DTM.system.openPath(item.path);}catch(e){status.textContent=e.message;}});
+          list.appendChild(node);
+        });
+        status.textContent=result.items.length+' items';
+      }catch(e){status.textContent=e.message;}
+    }
+    await load(start);
+  }
+  function terminal(){
+    const pane=document.createElement('div');pane.className='be-terminal';
+    const output=document.createElement('div');output.className='term-out';output.textContent='BeOS R5 Terminal\\nType help for commands.\\n\\n';
+    const form=document.createElement('form');form.className='term-input';const prompt=document.createElement('span');prompt.textContent='~ $';
+    const input=document.createElement('input');input.setAttribute('aria-label','BeOS Terminal command');form.append(prompt,input);pane.append(output,form);
+    form.onsubmit=(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='~ $ '+cmd+'\\n';
+      if(/^help$/i.test(cmd))output.textContent+='help  ls  date  clear  about\\n';
+      else if(/^ls$/i.test(cmd))output.textContent+='Desktop/  Home/  system/  apps/\\n';
+      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\\n';
+      else if(/^about$/i.test(cmd))output.textContent+='BeOS R5 — Release 5.0.3\\n';
+      else if(/^clear$/i.test(cmd))output.textContent='';
+      else if(cmd)output.textContent+='command not found\\n';
+      output.scrollTop=output.scrollHeight;
+    };
+    createWindow('Terminal',pane,570,340);input.focus();
+  }
+  function editor(){
+    const wrap=document.createElement('div');wrap.style.height='100%';
+    const tools=document.createElement('div');tools.className='be-toolbar';
+    const save=document.createElement('button');save.className='be-button';save.textContent='Save As…';
+    const area=document.createElement('textarea');area.className='text-editor';area.value='';
+    tools.append(save);wrap.append(tools,area);
+    save.onclick=()=>saveText(area.value);
+    createWindow('StyledEdit',wrap,560,370);
+  }
+  function saveText(text){
+    const shade=document.createElement('div');shade.className='shade';
+    const dialog=document.createElement('div');dialog.className='dialog';
+    dialog.innerHTML='<b>Save StyledEdit file</b><p>Enter a full file path:</p>';
+    const input=document.createElement('input');input.className='prompt-input';input.value='New Document.txt';
+    const actions=document.createElement('div');actions.className='dialog-actions';
+    const cancel=document.createElement('button');cancel.className='be-button';cancel.textContent='Cancel';cancel.onclick=()=>shade.remove();
+    const save=document.createElement('button');save.className='be-button';save.textContent='Save';
+    save.onclick=async()=>{try{await DTM.fs.write(input.value,text);shade.remove();}catch(e){dialog.querySelector('p').textContent=e.message;}};
+    actions.append(cancel,save);dialog.append(input,actions);shade.append(dialog);root.append(shade);input.focus();input.select();
+  }
+  function calculator(){
+    const calc=document.createElement('div');calc.className='be-calc';
+    const display=document.createElement('div');display.className='be-calc-display';display.textContent='0';
+    const grid=document.createElement('div');grid.className='be-calc-grid';
+    ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+','C'].forEach(key=>{
+      const b=document.createElement('button');b.textContent=key;b.onclick=()=>{
+        if(key==='C'){calcValue='0';calcFirst=null;calcOp='';}
+        else if('+-*/'.includes(key)){calcFirst=Number(calcValue);calcOp=key;calcValue='0';}
+        else if(key==='='){const a=calcFirst||0,n=Number(calcValue);calcValue=String(calcOp==='+'?a+n:calcOp==='-'?a-n:calcOp==='*'?a*n:calcOp==='/'?a/n:n);calcFirst=null;calcOp='';}
+        else calcValue=calcValue==='0'?key:calcValue+key;
+        display.textContent=calcValue;
+      };grid.appendChild(b);
+    });
+    calc.append(display,grid);createWindow('Calculator',calc,300,330);
+  }
+  function media(){
+    const pane=document.createElement('div');pane.className='media-demo';
+    pane.innerHTML='<div><div class="spectrum">'+Array.from({length:16},(_,i)=>'<i style="height:'+(20+(i*17)%78)+'px"></i>').join('')+'</div><p>BeOS MediaPlayer · Audio mixer</p><button class="be-button">▶ Play</button> <button class="be-button">■ Stop</button></div>';
+    const buttons=pane.querySelectorAll('button');buttons[0].onclick=()=>pane.querySelector('p').textContent='Playing Audio CD…';buttons[1].onclick=()=>pane.querySelector('p').textContent='Stopped';
+    createWindow('MediaPlayer',pane,480,310);
+  }
+  function about(){
+    const panel=document.createElement('div');panel.className='be-about';panel.innerHTML='<div class="logo">◈</div><h2>BeOS R5</h2><p>Release 5.0.3 · Be Incorporated</p><p>Designed for digital media and multiprocessing.</p>';
+    createWindow('About BeOS',panel,390,280);
+  }
+  function shutdown(){
+    const shade=document.createElement('div');shade.className='shade';
+    const box=document.createElement('div');box.className='dialog';box.innerHTML='<b>Shut down BeOS?</b><p>Unsaved documents may be lost.</p>';
+    const actions=document.createElement('div');actions.className='dialog-actions';
+    const cancel=document.createElement('button');cancel.className='be-button';cancel.textContent='Cancel';cancel.onclick=()=>shade.remove();
+    const off=document.createElement('button');off.className='be-button';off.textContent='Shut Down';off.onclick=()=>DTM&&DTM.system&&DTM.system.exit&&DTM.system.exit();
+    actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
+  }
+  const apps={tracker:()=>fileWindow(''),terminal,editor,calculator,media,about,shutdown};
+  document.querySelectorAll('.be-icon').forEach(icon=>{
+    icon.addEventListener('click',()=>document.querySelectorAll('.be-icon').forEach(other=>other.classList.toggle('selected',other===icon)));
+    icon.addEventListener('dblclick',()=>apps[icon.dataset.app]&&apps[icon.dataset.app]());
+  });
+  document.querySelectorAll('#deskbar [data-app]').forEach(button=>button.addEventListener('click',()=>{
+    const fn=apps[button.dataset.app];if(fn){deskbar.classList.remove('open');fn();}
+  }));
+  document.getElementById('deskbar-head').addEventListener('click',()=>deskbar.classList.toggle('open'));
+  document.addEventListener('pointerdown',(e)=>{if(!deskbar.contains(e.target))deskbar.classList.remove('open');});
+  document.addEventListener('keydown',(e)=>{if(e.key==='F8'){e.preventDefault();switchEra();}if(e.key==='Escape')deskbar.classList.remove('open');});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "id": "windowsXP",
+  "name": "Windows XP",
+  "era": "2001",
+  "period": "2001–2006",
+  "version": "1.0.0",
+  "description": "The Luna desktop with a two-column Start menu, taskbar, grouped windows, and Explorer-style file browsing.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "🪟",
+  "themeColor": "#245edb",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "filesystem",
+    "application-launcher",
+    "desktop-icons",
+    "start-menu",
+    "taskbar",
+    "luna-theme",
+    "two-column-start",
+    "visual-styles"
+  ],
+  "meta": {
+    "developer": "Microsoft",
+    "releaseDate": "2001-10-25",
+    "successor": "Windows Vista",
+    "kernelFamily": "Windows NT"
+  }
+}

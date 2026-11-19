@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file:;">
+<title>Windows XP</title>
+<style>
+:root{--blue:#245edb;--blue-dark:#0b3f9c;--blue-light:#3c8cf4;--green:#4d9b28;--text:#111}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font:12px Tahoma,Arial,sans-serif;color:var(--text);user-select:none}
+button,input,textarea{font:inherit}
+#desktop{position:fixed;inset:0 0 38px;overflow:hidden;background:
+ radial-gradient(ellipse at 77% 10%,rgba(255,255,255,.7),transparent 18%),
+ linear-gradient(180deg,#1681d8 0%,#72bce7 56%,#b9dbed 57%,#84b03b 59%,#4c8a22 71%,#215c13 100%)}
+#clouds{position:absolute;inset:0;opacity:.4;background:radial-gradient(ellipse 130px 24px at 76% 14%,#fff 0 55%,transparent 58%),radial-gradient(ellipse 90px 17px at 68% 16%,#fff 0 55%,transparent 58%)}
+#desktop:before{content:"";position:absolute;left:-8%;right:-8%;bottom:-120px;height:300px;border-radius:50% 50% 0 0;background:linear-gradient(170deg,#83b739,#38751b 70%);transform:rotate(-7deg)}
+#desktop:after{content:"";position:absolute;left:35%;right:-12%;bottom:-180px;height:350px;border-radius:50% 50% 0 0;background:linear-gradient(15deg,#236619,#73a42b);transform:rotate(5deg)}
+#icons{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;gap:10px;padding:12px;width:190px}
+.desktop-icon{width:82px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:4px;color:#fff;text-align:center;text-shadow:1px 1px 2px #123;cursor:default;border:1px solid transparent;border-radius:3px}
+.desktop-icon:hover,.desktop-icon.selected{background:rgba(30,96,190,.42);border-color:rgba(255,255,255,.5)}
+.desktop-icon .glyph{font-size:34px;line-height:40px;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.4))}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:38px;z-index:9000;display:flex;align-items:center;padding:3px 5px;background:linear-gradient(#3289ee 0%,#1860c4 42%,#1247a3 43%,#286fcb 100%);border-top:1px solid #87baff;box-shadow:0 -1px 4px rgba(0,0,0,.3)}
+#start{height:32px;min-width:112px;border:1px solid #68ad43;border-radius:0 15px 15px 0;margin-left:-5px;padding:0 16px 0 12px;color:#fff;font-weight:bold;font-style:italic;text-shadow:1px 2px 2px #244;background:linear-gradient(#83d64e,#43a41f 48%,#297811);box-shadow:inset 1px 1px 2px #b2ed81;cursor:pointer}
+#start:hover{filter:brightness(1.08)}
+#tasks{display:flex;align-items:center;gap:4px;flex:1;min-width:0;padding:0 8px}
+.task{max-width:170px;height:27px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:3px 10px;color:white;border:1px solid #4986d0;border-radius:3px;background:linear-gradient(#3988db,#1555a5);box-shadow:inset 1px 1px rgba(255,255,255,.35);cursor:pointer}
+.task.active{background:linear-gradient(#134c99,#317aca);box-shadow:inset 1px 1px 4px #0e3b7d}
+#tray{height:30px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#fff;border-left:1px solid #104895;box-shadow:-1px 0 #478ade}
+#clock{text-align:center;min-width:66px;line-height:15px}
+#start-menu{position:fixed;bottom:38px;left:0;width:390px;z-index:9100;display:none;border:1px solid #103b87;border-radius:8px 8px 0 0;overflow:hidden;background:#e9f1fb;box-shadow:3px 3px 12px #18304d}
+#start-menu.open{display:block}
+.start-head{height:48px;display:flex;align-items:center;gap:10px;padding:5px 12px;color:#fff;font-weight:bold;background:linear-gradient(#4c9ae9,#1766c4)}
+.avatar{width:34px;height:34px;border:2px solid #fff;border-radius:4px;background:linear-gradient(135deg,#f6e7b1,#5e9bcf);display:grid;place-items:center;font-size:22px}
+.start-cols{display:grid;grid-template-columns:1fr 1fr;min-height:280px}
+.start-left{padding:7px;background:#fff}
+.start-right{padding:8px;color:#fff;background:linear-gradient(#d7e6f7,#a9c5e7)}
+.start-item{display:flex;align-items:center;gap:9px;min-height:36px;padding:4px 7px;border-radius:3px;cursor:pointer}
+.start-item:hover{color:#fff;background:linear-gradient(#5ea4ee,#2469c4)}
+.start-item b{font-size:20px;width:25px;text-align:center}
+.start-right .start-item{font-weight:bold;color:#123d72}
+.start-right .start-item:hover{color:#fff}
+.start-foot{display:flex;justify-content:flex-end;padding:6px 10px;background:linear-gradient(#4e91db,#1b5eb4)}
+.start-foot button{padding:4px 10px;color:#fff;background:linear-gradient(#f7bb63,#d67916);border:1px solid #984c00;border-radius:3px;cursor:pointer}
+.win{position:absolute;z-index:10;left:140px;top:65px;width:560px;height:390px;min-width:320px;min-height:200px;display:flex;flex-direction:column;border:1px solid #124b96;border-radius:7px 7px 4px 4px;background:#edf4fc;box-shadow:3px 5px 14px rgba(0,0,0,.45);overflow:hidden}
+.win.max{left:0!important;top:0!important;width:100%!important;height:calc(100% + 38px)!important}
+.titlebar{height:30px;flex:none;display:flex;align-items:center;gap:7px;padding:0 5px 0 9px;color:#fff;font-weight:bold;background:linear-gradient(#5ea7f3 0%,#2876d0 45%,#165bb3 46%,#4a94e3 100%);text-shadow:1px 1px #164479;cursor:move}
+.titlebar .title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.controls{display:flex;gap:2px}
+.controls button{width:22px;height:21px;padding:0;border:1px solid #e9f5ff;border-radius:4px;color:#fff;font:bold 13px Tahoma;background:linear-gradient(#74b8f5,#2873c9);box-shadow:inset 1px 1px rgba(255,255,255,.55);cursor:pointer}
+.controls .close{background:linear-gradient(#f28b73,#d83621);border-color:#ffd8ca}
+.win-body{flex:1;min-height:0;overflow:auto;background:#f6f8fb;border-top:1px solid #b6c9df}
+.win-menubar{height:25px;display:flex;align-items:center;gap:17px;padding:0 10px;background:linear-gradient(#fff,#e7edf5);border-bottom:1px solid #c5d4e5}
+.toolbar{display:flex;align-items:center;gap:7px;padding:7px 9px;background:#eef4fa;border-bottom:1px solid #ccd8e4}
+.toolbar button,.xp-button{padding:4px 10px;border:1px solid #9fb4cb;border-radius:3px;background:linear-gradient(#fff,#dce8f5);cursor:pointer}
+.toolbar button:hover,.xp-button:hover{border-color:#4b92db;background:#e4f2ff}
+.xp-content{padding:14px}
+.file-path{display:flex;align-items:center;gap:5px;padding:5px 8px;background:#fff;border:1px solid #aabbd0;margin-bottom:10px}
+.file-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}
+.file-item{min-height:62px;display:flex;align-items:center;gap:7px;padding:7px;border:1px solid transparent;border-radius:3px;cursor:pointer}
+.file-item:hover{background:#dcecff;border-color:#9bc5ee}
+.file-item .glyph{font-size:26px}
+.notepad{width:100%;height:100%;min-height:250px;resize:none;border:1px solid #9aaabd;padding:8px;background:#fff;font:13px "Lucida Console",monospace;user-select:text}
+.calc{width:265px;margin:14px auto;padding:10px;border:1px solid #a8bfd8;border-radius:6px;background:linear-gradient(#f7fbff,#d6e4f3);box-shadow:inset 1px 1px #fff}
+.calc-display{height:36px;margin-bottom:8px;padding:6px;text-align:right;font:bold 20px Tahoma;background:#fff;border:1px solid #95a9bd}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.calc-grid button{height:34px;border:1px solid #9db1c6;border-radius:4px;background:linear-gradient(#fff,#dce9f7);cursor:pointer}
+.calc-grid button:hover{background:#eaf5ff}
+.terminal{height:100%;min-height:220px;display:flex;flex-direction:column;background:#111;color:#b7ed8a;font:13px "Lucida Console",monospace}
+.term-output{flex:1;overflow:auto;padding:8px;white-space:pre-wrap}
+.term-row{display:flex;padding:6px;gap:4px}.term-row input{flex:1;min-width:0;border:0;outline:0;background:#111;color:#fff;font:inherit;user-select:text}
+.context{position:fixed;z-index:9500;display:none;min-width:180px;padding:4px;background:#f4f7fb;border:1px solid #7b95b4;box-shadow:2px 2px 5px #234}
+.context.open{display:block}.context button{display:block;width:100%;padding:6px 12px;text-align:left;border:0;background:none;cursor:pointer}.context button:hover{background:#387fd0;color:#fff}
+.dialog-shade{position:absolute;inset:0;z-index:1000;display:grid;place-items:center;background:rgba(8,37,79,.35)}
+.dialog{width:310px;padding:14px;background:#f5f8fc;border:1px solid #315d90;border-radius:7px;box-shadow:0 8px 24px #1e3c5d}
+.dialog h3{margin:0 0 10px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.prompt-input{padding:5px;border:1px solid #8ba3bc;background:#fff;user-select:text}
+</style>
+</head>
+<body>
+<main id="desktop">
+  <div id="clouds"></div>
+  <div id="icons">
+    <div class="desktop-icon" data-app="computer"><span class="glyph">🖥️</span><span>My Computer</span></div>
+    <div class="desktop-icon" data-app="documents"><span class="glyph">📁</span><span>My Documents</span></div>
+    <div class="desktop-icon" data-app="browser"><span class="glyph">🌐</span><span>Internet</span></div>
+    <div class="desktop-icon" data-app="recycle"><span class="glyph">🗑️</span><span>Recycle Bin</span></div>
+  </div>
+  <div id="windows"></div>
+  <div class="context" id="context-menu">
+    <button data-action="refresh">Refresh</button><button data-action="explorer">New Folder Window</button>
+    <button data-action="calculator">Calculator</button><button data-action="switch">Switch Era…</button>
+  </div>
+  <div id="start-menu">
+    <div class="start-head"><span class="avatar">👤</span><span>Windows XP</span></div>
+    <div class="start-cols">
+      <div class="start-left">
+        <div class="start-item" data-app="browser"><b>🌐</b>Internet</div>
+        <div class="start-item" data-app="editor"><b>📝</b>Notepad</div>
+        <div class="start-item" data-app="calculator"><b>🧮</b>Calculator</div>
+        <div class="start-item" data-app="terminal"><b>⌨️</b>Command Prompt</div>
+        <div class="start-item" data-app="all-programs"><b>📁</b>All Programs</div>
+      </div>
+      <div class="start-right">
+        <div class="start-item" data-app="documents"><b>📂</b>My Documents</div>
+        <div class="start-item" data-app="computer"><b>🖥️</b>My Computer</div>
+        <div class="start-item" data-app="control"><b>⚙️</b>Control Panel</div>
+        <div class="start-item" data-app="about"><b>❔</b>Help and Support</div>
+      </div>
+    </div>
+    <div class="start-foot"><button id="shutdown">Turn Off Computer</button></div>
+  </div>
+</main>
+<footer id="taskbar">
+  <button id="start">◉ start</button><div id="tasks"></div>
+  <div id="tray"><span>🔊</span><span>🛡️</span><span id="clock"></span></div>
+</footer>
+<script>
+(() => {
+  'use strict';
+  const DTM = (window.parent && window.parent.DTM) ? window.parent.DTM : window.DTM;
+  const root = document.getElementById('desktop');
+  const layer = document.getElementById('windows');
+  const taskList = document.getElementById('tasks');
+  const startMenu = document.getElementById('start-menu');
+  const wins = new Map();
+  let z = 10, count = 0, calcValue = '0', calcPending = '', calcFirst = null;
+
+  function updateClock() {
+    document.getElementById('clock').innerHTML = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) + '<br>' + new Date().toLocaleDateString([], {month:'numeric',day:'numeric',year:'2-digit'});
+  }
+  updateClock(); setInterval(updateClock, 15000);
+  function switchEra() { window.parent.postMessage('dtm:open-switcher', '*'); }
+  function renderTasks() {
+    taskList.replaceChildren();
+    for (const [id, entry] of wins) {
+      const btn = document.createElement('button');
+      btn.className = 'task' + (entry.win.style.display !== 'none' && entry.win.classList.contains('active') ? ' active' : '');
+      btn.textContent = entry.title;
+      btn.title = entry.title;
+      btn.addEventListener('click', () => {
+        if (entry.win.style.display === 'none') entry.win.style.display = 'flex';
+        else if (entry.win.classList.contains('active')) entry.win.style.display = 'none';
+        focus(entry);
+      });
+      taskList.appendChild(btn);
+    }
+  }
+  function focus(entry) {
+    wins.forEach((other) => other.win.classList.toggle('active', other === entry));
+    entry.win.style.zIndex = String(++z);
+    renderTasks();
+  }
+  function createWindow(title, content, options = {}) {
+    const id = 'xp-' + (++count);
+    const win = document.createElement('section');
+    win.className = 'win active';
+    win.style.left = (Math.min(150 + count * 24, Math.max(20, innerWidth - 590))) + 'px';
+    win.style.top = (Math.min(65 + count * 20, Math.max(30, innerHeight - 450))) + 'px';
+    win.style.width = (options.width || 560) + 'px';
+    win.style.height = (options.height || 390) + 'px';
+    win.style.zIndex = String(++z);
+    const bar = document.createElement('header');
+    bar.className = 'titlebar';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'title';
+    titleEl.textContent = title;
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+    const min = document.createElement('button'); min.textContent = '—'; min.title = 'Minimize';
+    const max = document.createElement('button'); max.textContent = '□'; max.title = 'Maximize';
+    const close = document.createElement('button'); close.className = 'close'; close.textContent = '×'; close.title = 'Close';
+    controls.append(min, max, close); bar.append('🪟', titleEl, controls);
+    const body = document.createElement('div'); body.className = 'win-body';
+    body.appendChild(content);
+    win.append(bar, body); layer.appendChild(win);
+    const entry = {id, win, title, body, maximized:false};
+    wins.set(id, entry);
+    min.addEventListener('click', () => { win.style.display='none'; renderTasks(); });
+    max.addEventListener('click', () => { entry.maximized = !entry.maximized; win.classList.toggle('max', entry.maximized); focus(entry); });
+    close.addEventListener('click', () => { win.remove(); wins.delete(id); renderTasks(); });
+    let drag = null;
+    bar.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('button') || entry.maximized) return;
+      drag = {x:event.clientX,y:event.clientY,left:win.offsetLeft,top:win.offsetTop};
+      bar.setPointerCapture(event.pointerId); focus(entry);
+    });
+    bar.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      win.style.left = Math.max(-win.offsetWidth + 80, Math.min(innerWidth - 80, drag.left + event.clientX - drag.x)) + 'px';
+      win.style.top = Math.max(0, Math.min(innerHeight - 70, drag.top + event.clientY - drag.y)) + 'px';
+    });
+    bar.addEventListener('pointerup', () => { drag = null; });
+    bar.addEventListener('pointercancel', () => { drag = null; });
+    bar.addEventListener('dblclick', (event) => {
+      if (event.target.closest('button')) return;
+      entry.maximized = !entry.maximized; win.classList.toggle('max', entry.maximized);
+    });
+    win.addEventListener('pointerdown', () => focus(entry));
+    renderTasks();
+    return {win, body};
+  }
+  function openBrowser() {
+    window.parent.postMessage({type:'dtm:launch-webapp',app:'browser',url:'https://www.google.com/'}, '*');
+  }
+  function openAbout() {
+    const box = document.createElement('div'); box.className='xp-content';
+    box.innerHTML='<h2>Windows XP</h2><p>Home Edition · Version 5.1</p><p>The Luna desktop is ready.</p><p>Desktop Time Machine</p>';
+    createWindow('System Properties', box, {width:430,height:280});
+  }
+  function openEditor() {
+    const wrap=document.createElement('div'); wrap.className='xp-content'; wrap.style.height='100%';
+    const menu=document.createElement('div'); menu.className='toolbar';
+    const save=document.createElement('button'); save.textContent='Save';
+    const text=document.createElement('textarea'); text.className='notepad'; text.value='';
+    save.addEventListener('click',()=>saveNote(text.value));
+    menu.appendChild(save); wrap.append(menu,text); createWindow('Untitled - Notepad',wrap,{width:530,height:360});
+  }
+  function saveNote(value) {
+    const shade=document.createElement('div');shade.className='dialog-shade';
+    const dialog=document.createElement('div');dialog.className='dialog';
+    dialog.innerHTML='<h3>Save Notepad file</h3><p>Enter a full file path:</p>';
+    const input=document.createElement('input');input.type='text';input.className='prompt-input';input.style.width='100%';input.value='New Text Document.txt';
+    const actions=document.createElement('div');actions.className='dialog-actions';
+    const cancel=document.createElement('button');cancel.className='xp-button';cancel.textContent='Cancel';cancel.onclick=()=>shade.remove();
+    const save=document.createElement('button');save.className='xp-button';save.textContent='Save';
+    save.onclick=async()=>{try{await DTM.fs.write(input.value,value);shade.remove();}catch(e){dialog.querySelector('p').textContent=e.message;}};
+    actions.append(cancel,save);dialog.append(input,actions);shade.append(dialog);root.append(shade);input.focus();input.select();
+  }
+  function openCalculator() {
+    const calc=document.createElement('div'); calc.className='calc';
+    const display=document.createElement('div'); display.className='calc-display'; display.textContent='0';
+    const grid=document.createElement('div'); grid.className='calc-grid';
+    ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+','C'].forEach((key)=>{
+      const b=document.createElement('button'); b.textContent=key;
+      b.addEventListener('click',()=>{
+        if(key==='C'){calcValue='0';calcPending='';calcFirst=null;}
+        else if('+-*/'.includes(key)){calcFirst=Number(calcValue);calcPending=key;calcValue='0';}
+        else if(key==='='){const a=calcFirst??0,bv=Number(calcValue);calcValue=String(calcPending==='+'?a+bv:calcPending==='-'?a-bv:calcPending==='*'?a*bv:calcPending==='/'?a/bv:bv);calcPending='';calcFirst=null;}
+        else calcValue=calcValue==='0'?key:calcValue+key;
+        display.textContent=calcValue;
+      }); grid.appendChild(b);
+    });
+    calc.append(display,grid); createWindow('Calculator',calc,{width:330,height:340});
+  }
+  function openTerminal() {
+    const terminal=document.createElement('div'); terminal.className='terminal';
+    const out=document.createElement('div'); out.className='term-output'; out.textContent='Microsoft Windows XP [Version 5.1.2600]\\nType HELP for available commands.\\n\\n';
+    const row=document.createElement('form'); row.className='term-row';
+    const prompt=document.createElement('span'); prompt.textContent='C:\\\\>';
+    const input=document.createElement('input'); input.setAttribute('aria-label','Command Prompt'); row.append(prompt,input); terminal.append(out,row);
+    row.addEventListener('submit',(e)=>{e.preventDefault(); const cmd=input.value.trim(); input.value=''; out.textContent+='C:\\\\>'+cmd+'\\n'; if(/^help$/i.test(cmd)) out.textContent+='DIR  CLS  DATE  VER  EXIT\\n'; else if(/^dir$/i.test(cmd)) out.textContent+=' Volume in drive C has no label.\\n Directory of C:\\\\Documents and Settings\\n\\n'; else if(/^cls$/i.test(cmd)) out.textContent=''; else if(/^date$/i.test(cmd)) out.textContent+=new Date().toLocaleString()+'\\n'; else if(/^ver$/i.test(cmd)) out.textContent+='Microsoft Windows XP [Version 5.1.2600]\\n'; else if(cmd && !/^exit$/i.test(cmd)) out.textContent+='Command not found. Type HELP.\\n'; out.scrollTop=out.scrollHeight;});
+    createWindow('Command Prompt',terminal,{width:560,height:330}); input.focus();
+  }
+  async function openExplorer(startPath='') {
+    const content=document.createElement('div'); content.style.height='100%';
+    const head=document.createElement('div'); head.className='win-menubar'; head.textContent='File   Edit   View   Favorites   Tools   Help';
+    const tools=document.createElement('div'); tools.className='toolbar';
+    const back=document.createElement('button'); back.textContent='← Back';
+    const address=document.createElement('div'); address.className='file-path'; address.style.flex='1';
+    tools.append(back,address);
+    const list=document.createElement('div'); list.className='xp-content file-list';
+    const pane=document.createElement('div'); pane.style.height='calc(100% - 55px)'; pane.style.overflow='auto'; pane.appendChild(list);
+    content.append(head,tools,pane);
+    const {win}=createWindow('My Computer',content);
+    let current=startPath;
+    async function load(path){
+      list.replaceChildren();
+      if(!DTM||!DTM.system){list.textContent='File system unavailable';return;}
+      try{
+        const data=await DTM.system.listDirectory(path); current=data.currentPath||path; address.textContent=current||'My Documents';
+        back.disabled=!data.parentPath; back.onclick=()=>data.parentPath&&load(data.parentPath);
+        data.items.forEach((item)=>{
+          const row=document.createElement('div'); row.className='file-item'; row.innerHTML='<span class="glyph"></span><span></span>';
+          row.querySelector('.glyph').textContent=item.isDirectory?'📁':'📄'; row.querySelectorAll('span')[1].textContent=item.name;
+          row.title=item.path; row.addEventListener('dblclick',()=>item.isDirectory?load(item.path):DTM.system.openPath(item.path));
+          list.appendChild(row);
+        });
+        if(!data.items.length) list.textContent='This folder is empty.';
+      }catch(e){list.textContent=e.message;}
+    }
+    await load(current);
+    win.querySelector('.title').textContent='My Computer';
+  }
+  function openRecycle(){const c=document.createElement('div');c.className='xp-content';c.innerHTML='<h3>Recycle Bin</h3><p>The Recycle Bin is empty.</p>';createWindow('Recycle Bin',c,{width:420,height:260});}
+  function openAllPrograms() {
+    const list=document.createElement('div');list.className='xp-content';
+    [['🌐 Internet','browser'],['📝 Notepad','editor'],['🧮 Calculator','calculator'],['⌨️ Command Prompt','terminal'],['📁 Windows Explorer','computer']].forEach(([label,key])=>{
+      const button=document.createElement('button');button.className='xp-button';button.style.display='block';button.style.width='100%';button.style.textAlign='left';button.style.margin='4px 0';button.textContent=label;
+      button.onclick=()=>{const fn=launch[key];if(fn)fn();};list.appendChild(button);
+    });
+    createWindow('All Programs',list,{width:340,height:300});
+  }
+  function openControlPanel() {
+    const panel=document.createElement('div');panel.className='xp-content';
+    panel.innerHTML='<h2>Pick a category</h2><p>Appearance and Themes</p><p>Performance and Maintenance</p><p>Printers and Other Hardware</p><p>User Accounts</p>';
+    const appearance=document.createElement('button');appearance.className='xp-button';appearance.textContent='Display';
+    const system=document.createElement('button');system.className='xp-button';system.style.marginLeft='8px';system.textContent='System';
+    appearance.onclick=()=>{
+      const dialog=document.createElement('div');dialog.className='dialog';dialog.innerHTML='<h3>Display Properties</h3><p>Choose a Luna desktop color:</p>';
+      [['Default blue','#245edb'],['Olive green','#678b2f'],['Silver','#8b929a']].forEach(([label,color])=>{
+        const button=document.createElement('button');button.className='xp-button';button.style.margin='4px';button.textContent=label;
+        button.onclick=()=>{document.documentElement.style.setProperty('--blue',color);dialog.remove();};dialog.appendChild(button);
+      });
+      panel.appendChild(dialog);
+    };
+    system.onclick=openAbout;panel.append(appearance,system);
+    createWindow('Control Panel',panel,{width:470,height:330});
+  }
+  const launch={
+    browser:openBrowser, internet:openBrowser, editor:openEditor, notepad:openEditor,
+    calculator:openCalculator, terminal:openTerminal, computer:()=>openExplorer(''),
+    documents:()=>openExplorer(''), files:()=>openExplorer(''), recycle:openRecycle,
+    control:openControlPanel, about:openAbout, 'all-programs':openAllPrograms
+  };
+  document.querySelectorAll('[data-app]').forEach((item)=>{
+    if(item.classList.contains('desktop-icon')){
+      item.addEventListener('click',()=>document.querySelectorAll('.desktop-icon').forEach(icon=>icon.classList.toggle('selected',icon===item)));
+      item.addEventListener('dblclick',()=>{const fn=launch[item.dataset.app];if(fn)fn();});
+    } else {
+      item.addEventListener('click',()=>{const fn=launch[item.dataset.app];if(fn){startMenu.classList.remove('open');fn();}});
+    }
+  });
+  document.getElementById('start').addEventListener('click',(e)=>{e.stopPropagation();startMenu.classList.toggle('open');});
+  document.addEventListener('pointerdown',(e)=>{if(!startMenu.contains(e.target)&&!document.getElementById('start').contains(e.target))startMenu.classList.remove('open');});
+  document.getElementById('shutdown').addEventListener('click',()=>{
+    const shade=document.createElement('div');shade.className='dialog-shade';
+    const dialog=document.createElement('div');dialog.className='dialog';
+    dialog.innerHTML='<h3>Turn off computer</h3><p>What do you want the computer to do?</p>';
+    const actions=document.createElement('div');actions.className='dialog-actions';
+    const cancel=document.createElement('button');cancel.className='xp-button';cancel.textContent='Cancel';
+    const off=document.createElement('button');off.className='xp-button';off.textContent='Turn Off';
+    cancel.onclick=()=>shade.remove();off.onclick=()=>DTM&&DTM.system&&DTM.system.exit&&DTM.system.exit();
+    actions.append(cancel,off);dialog.appendChild(actions);shade.appendChild(dialog);root.appendChild(shade);startMenu.classList.remove('open');
+  });
+  const context=document.getElementById('context-menu');
+  root.addEventListener('contextmenu',(e)=>{e.preventDefault();context.style.left=Math.min(e.clientX,innerWidth-190)+'px';context.style.top=Math.min(e.clientY,innerHeight-120)+'px';context.classList.add('open');});
+  document.addEventListener('pointerdown',(e)=>{if(!context.contains(e.target))context.classList.remove('open');});
+  context.addEventListener('click',(e)=>{const action=e.target.dataset.action;context.classList.remove('open');if(action==='explorer')openExplorer('');if(action==='calculator')openCalculator();if(action==='switch')switchEra();});
+  document.addEventListener('keydown',(e)=>{if(e.key==='F8'){e.preventDefault();switchEra();}if(e.key==='Escape')context.classList.remove('open');});
+})();
+</script>
+</body>
+</html>

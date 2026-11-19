@@ -64,7 +64,7 @@ class SkinManager {
         name: 'TempleOS',
         period: '2013–2017',
         version: '0.1.0',
-        description: 'A TempleOS 5.03-inspired 640×480, 16-color desktop with a HolyC-style command prompt and small built-in tools.',
+        description: 'TempleOS V5.03 with 640×480 graphics, a 16-color display, a HolyC command prompt, and built-in tools.',
         author: 'Desktop Time Machine',
         entry: './skins/templeos/desktop.html',
         status: 'ready',
@@ -75,34 +75,37 @@ class SkinManager {
         id: 'windowsXP',
         name: 'Windows XP (Luna)',
         period: '2001',
-        version: '0.1.0',
-        description: 'The iconic blue Luna interface with two-column Start menu, rounded window frames, and vibrant wallpapers.',
-        author: 'Community',
-        status: 'roadmap',
-        icon: '🖼️',
-        capabilities: ['luna-theme', 'two-column-start', 'visual-styles']
+        version: '1.0.0',
+        description: 'The Luna desktop with a two-column Start menu, taskbar, grouped windows, and Explorer-style file browsing.',
+        author: 'Desktop Time Machine',
+        entry: './skins/windowsXP/desktop.html',
+        status: 'ready',
+        icon: '🪟',
+        capabilities: ['window-management', 'filesystem', 'application-launcher', 'desktop-icons', 'start-menu', 'taskbar', 'luna-theme', 'two-column-start', 'visual-styles']
       },
       {
         id: 'amiga-workbench',
         name: 'Amiga Workbench 3.1',
-        period: '1985–1993',
-        version: '0.1.0',
-        description: 'Preemptive multitasking pioneer with top title bar, blue/orange palette, ram disk icons, and high-performance feel.',
-        author: 'Community',
-        status: 'roadmap',
+        period: '1992',
+        version: '1.0.0',
+        description: 'Workbench 3.1 with disk and drawer icons, the screen title bar, Intuition-style windows, and AmigaShell.',
+        author: 'Desktop Time Machine',
+        entry: './skins/amiga-workbench/desktop.html',
+        status: 'ready',
         icon: '💾',
-        capabilities: ['amiga-dock', 'custom-screens', 'cli']
+        capabilities: ['window-management', 'filesystem', 'application-launcher', 'desktop-icons', 'cli']
       },
       {
         id: 'beos',
         name: 'BeOS R5',
-        period: '1998',
-        version: '0.1.0',
-        description: 'The revolutionary multimedia OS featuring yellow tabbed window title bars, Deskbar, and clean typography.',
-        author: 'Community',
-        status: 'roadmap',
+        period: '2000',
+        version: '1.0.0',
+        description: 'The BeOS R5 desktop with tabbed windows, Tracker-style file browsing, a Deskbar, and four workspaces.',
+        author: 'Desktop Time Machine',
+        entry: './skins/beos/desktop.html',
+        status: 'ready',
         icon: '⚡',
-        capabilities: ['tabbed-windows', 'deskbar', 'workspaces']
+        capabilities: ['window-management', 'filesystem', 'application-launcher', 'desktop-icons', 'tabbed-windows', 'deskbar', 'workspaces', 'cli', 'multimedia']
       }
     ];
   }

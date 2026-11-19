@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file:;">
+<title>Workbench 3.1</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font:12px "Topaz","Courier New",monospace;color:#111;user-select:none}
+button,input,textarea{font:inherit}
+#desktop{position:fixed;inset:0;overflow:hidden;background-color:#0560a8;background-image:linear-gradient(135deg,rgba(255,255,255,.05) 25%,transparent 25%,transparent 50%,rgba(0,0,0,.05) 50%,rgba(0,0,0,.05) 75%,transparent 75%);background-size:8px 8px}
+#screenbar{height:25px;display:flex;align-items:center;gap:14px;padding:0 8px;background:#c7c7c7;border-bottom:2px solid #555;box-shadow:0 1px #fff}
+#screenbar strong{font-weight:bold}
+#screenbar .screen-title{margin:auto;font-weight:bold}
+#screenbar .clock{margin-left:auto}
+.menu-button{padding:3px 8px;border:1px solid transparent;background:transparent;cursor:pointer}
+.menu-button:hover{border-color:#fff #555 #555 #fff;background:#aaa}
+#menu-popup{position:absolute;top:24px;left:8px;z-index:999;display:none;min-width:160px;padding:3px;background:#ccc;border:2px solid;border-color:#fff #555 #555 #fff;box-shadow:2px 2px #222}
+#menu-popup.open{display:block}
+#menu-popup button{display:block;width:100%;padding:5px 14px;text-align:left;border:0;background:transparent;cursor:pointer}
+#menu-popup button:hover{color:#fff;background:#0560a8}
+#icons{position:absolute;inset:32px 0 0;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;gap:10px;padding:12px}
+.wb-icon{width:78px;height:83px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;text-shadow:1px 1px #034;text-align:center;cursor:default}
+.wb-icon .picture{width:45px;height:44px;display:grid;place-items:center;color:#111;font-size:31px;background:linear-gradient(135deg,#fff,#aaa);border:1px solid #222;box-shadow:inset 1px 1px #fff,2px 2px #023}
+.wb-icon.selected .picture{outline:2px dotted #fff}
+.wb-icon.selected span:last-child{background:#f80;color:#000;text-shadow:none}
+#windows{position:absolute;inset:25px 0 0;pointer-events:none}
+.wb-window{position:absolute;left:130px;top:65px;width:570px;height:390px;min-width:280px;min-height:170px;display:flex;flex-direction:column;background:#bbb;border:2px solid;border-color:#fff #333 #333 #fff;box-shadow:2px 2px #111;pointer-events:auto}
+.wb-titlebar{height:23px;flex:none;display:flex;align-items:center;gap:5px;padding:2px;background:#c5c5c5;border-bottom:1px solid #555;cursor:move}
+.wb-title{flex:1;text-align:center;font-weight:bold;background:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gadget{width:17px;height:17px;flex:none;border:2px solid;border-color:#fff #333 #333 #fff;background:#bbb;color:#111;line-height:11px;text-align:center;cursor:pointer}
+.gadget:active{border-color:#333 #fff #fff #333}
+.wb-content{flex:1;min-height:0;overflow:auto;margin:3px;background:#eee;border:1px solid;border-color:#555 #fff #fff #555}
+.wb-menu{height:22px;display:flex;align-items:center;gap:16px;padding:0 8px;background:#ccc;border-bottom:1px solid #888}
+.wb-toolbar{display:flex;align-items:center;gap:6px;padding:6px;background:#c7c7c7;border-bottom:1px solid #777}
+.wb-button{padding:3px 10px;border:2px solid;border-color:#fff #555 #555 #fff;background:#ccc;cursor:pointer}
+.wb-button:active{border-color:#555 #fff #fff #555}
+.drawer-list{display:flex;flex-wrap:wrap;gap:14px;padding:14px}
+.drawer-item{width:88px;min-height:80px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:5px;cursor:pointer;text-align:center}
+.drawer-item:hover{background:#d8e8f6;outline:1px dotted #222}
+.drawer-glyph{font-size:34px;line-height:40px}
+.amiga-terminal{height:100%;min-height:200px;display:flex;flex-direction:column;background:#111;color:#6f6;font:13px "Courier New",monospace}
+.cli-output{flex:1;padding:8px;overflow:auto;white-space:pre-wrap}
+.cli-form{display:flex;gap:5px;padding:5px;border-top:1px solid #666}
+.cli-form input{flex:1;min-width:0;border:0;outline:0;background:#111;color:#fff;font:inherit;user-select:text}
+.prefs{padding:12px;display:grid;gap:10px}
+.prefs label{display:flex;align-items:center;gap:8px}
+.prefs input[type=color]{width:42px;height:26px;border:0;background:none}
+.calc{width:255px;margin:12px auto;padding:8px;background:#bbb;border:2px solid;border-color:#fff #555 #555 #fff}
+.calc-display{padding:6px;margin-bottom:6px;text-align:right;font:bold 20px "Courier New";background:#eee;border:2px solid;border-color:#555 #fff #fff #555}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.calc-grid button{height:34px;border:2px solid;border-color:#fff #555 #555 #fff;background:#ccc;cursor:pointer}
+.wb-about{padding:20px;text-align:center;line-height:1.7}
+.wb-about .logo{font-size:52px}
+.status{height:20px;display:flex;align-items:center;padding:0 6px;background:#ccc;border-top:1px solid #fff;color:#444}
+.dialog-shade{position:absolute;inset:25px 0 0;z-index:1200;display:grid;place-items:center;background:rgba(0,0,0,.35)}
+.dialog{width:300px;padding:14px;background:#ccc;border:2px solid;border-color:#fff #444 #444 #fff;box-shadow:3px 3px #222}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+</style>
+</head>
+<body>
+<main id="desktop">
+  <header id="screenbar">
+    <button class="menu-button" data-menu="Workbench">Workbench</button>
+    <button class="menu-button" data-menu="Window">Window</button>
+    <button class="menu-button" data-menu="Tools">Tools</button>
+    <strong class="screen-title">Workbench 3.1</strong>
+    <span>DF0: [ ]</span><span>RAM: 2M</span><span class="clock" id="clock"></span>
+  </header>
+  <div id="menu-popup"></div>
+  <section id="icons">
+    <div class="wb-icon" data-app="sys"><span class="picture">💾</span><span>SYS:</span></div>
+    <div class="wb-icon" data-app="ram"><span class="picture">💿</span><span>RAM:</span></div>
+    <div class="wb-icon" data-app="utilities"><span class="picture">🧰</span><span>Utilities</span></div>
+    <div class="wb-icon" data-app="shell"><span class="picture">⌨️</span><span>Shell</span></div>
+    <div class="wb-icon" data-app="trash"><span class="picture">🗑️</span><span>Trashcan</span></div>
+  </section>
+  <section id="windows"></section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const DTM = (window.parent && window.parent.DTM) ? window.parent.DTM : window.DTM;
+  const root=document.getElementById('desktop'), layer=document.getElementById('windows');
+  let z=10,count=0,activeMenu=null,calcValue='0',calcFirst=null,calcOp='';
+  const windows=new Map(), popup=document.getElementById('menu-popup');
+  const menuItems={
+    Workbench:[['About Workbench',()=>about()],['Backdrop',()=>preferences()],['Switch Era…',()=>switchEra()],['Quit',()=>shutdown()]],
+    Window:[['New Shell',()=>shell()],['Close Active Window',()=>{const e=[...windows.values()].sort((a,b)=>b.z-a.z)[0];if(e)e.win.querySelector('.gadget').click();}]],
+    Tools:[['Utilities',()=>calculator()],['File Browser',()=>fileWindow('')],['Preferences',()=>preferences()]]
+  };
+  function switchEra(){window.parent.postMessage('dtm:open-switcher','*');}
+  function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
+  updateClock();setInterval(updateClock,15000);
+  function activate(entry){entry.z=++z;entry.win.style.zIndex=entry.z;}
+  function createWindow(title,content,width=560,height=370){
+    const win=document.createElement('section');win.className='wb-window';
+    win.style.left=Math.min(130+count*24,Math.max(16,innerWidth-width-20))+'px';
+    win.style.top=Math.min(64+count*18,Math.max(30,innerHeight-height-30))+'px';
+    win.style.width=width+'px';win.style.height=height+'px';win.style.zIndex=String(++z);count++;
+    const bar=document.createElement('header');bar.className='wb-titlebar';
+    const close=document.createElement('button');close.className='gadget';close.textContent='×';close.title='Close';
+    const name=document.createElement('span');name.className='wb-title';name.textContent=title;
+    const depth=document.createElement('button');depth.className='gadget';depth.textContent='▽';depth.title='Send window behind';
+    bar.append(close,name,depth);
+    const inner=document.createElement('div');inner.className='wb-content';inner.appendChild(content);
+    const status=document.createElement('div');status.className='status';status.textContent='Workbench 3.1';
+    win.append(bar,inner,status);layer.appendChild(win);
+    const entry={win,bar,name,content,status,z};windows.set(win,entry);
+    close.onclick=()=>{win.remove();windows.delete(win);};
+    depth.onclick=()=>{win.style.zIndex='1';};
+    win.addEventListener('pointerdown',()=>activate(entry));
+    let drag=null;
+    bar.addEventListener('pointerdown',(e)=>{if(e.target.closest('button'))return;drag={x:e.clientX,y:e.clientY,left:win.offsetLeft,top:win.offsetTop};bar.setPointerCapture(e.pointerId);activate(entry);});
+    bar.addEventListener('pointermove',(e)=>{if(!drag)return;win.style.left=Math.max(-win.offsetWidth+80,Math.min(innerWidth-80,drag.left+e.clientX-drag.x))+'px';win.style.top=Math.max(25,Math.min(innerHeight-35,drag.top+e.clientY-drag.y))+'px';});
+    bar.addEventListener('pointerup',()=>drag=null);bar.addEventListener('pointercancel',()=>drag=null);
+    return entry;
+  }
+  async function list(path){
+    if(!DTM||!DTM.system||!DTM.system.listDirectory)throw new Error('File system unavailable');
+    return DTM.system.listDirectory(path);
+  }
+  async function fileWindow(startPath){
+    const body=document.createElement('div');body.style.height='100%';
+    const menu=document.createElement('div');menu.className='wb-menu';menu.textContent='File   Edit   View   Icons   Window';
+    const tools=document.createElement('div');tools.className='wb-toolbar';
+    const up=document.createElement('button');up.className='wb-button';up.textContent='Parent';
+    const pathText=document.createElement('span');pathText.textContent=startPath||'Workbench';
+    tools.append(up,pathText);
+    const listEl=document.createElement('div');listEl.className='drawer-list';
+    const status=document.createElement('div');status.className='status';
+    body.append(menu,tools,listEl,status);
+    const entry=createWindow('Workbench',body,600,390);
+    let current=startPath||'';
+    async function load(path){
+      listEl.replaceChildren();status.textContent='Reading drawer…';
+      try{
+        const result=await list(path);current=result.currentPath||path||'';pathText.textContent=current||'Workbench';
+        up.disabled=!result.parentPath;up.onclick=()=>result.parentPath&&load(result.parentPath);
+        result.items.forEach(item=>{
+          const node=document.createElement('div');node.className='drawer-item';
+          const glyph=document.createElement('span');glyph.className='drawer-glyph';glyph.textContent=item.isDirectory?'📂':'📄';
+          const label=document.createElement('span');label.textContent=item.name;node.append(glyph,label);
+          node.addEventListener('dblclick',async()=>{if(item.isDirectory)load(item.path);else try{await DTM.system.openPath(item.path);}catch(e){status.textContent=e.message;}});
+          listEl.appendChild(node);
+        });
+        status.textContent=result.items.length+' items';
+      }catch(e){status.textContent=e.message;}
+    }
+    await load(current);
+    return entry;
+  }
+  function shell(){
+    const cli=document.createElement('div');cli.className='amiga-terminal';
+    const output=document.createElement('div');output.className='cli-output';output.textContent='AmigaDOS 3.1\\nWorkbench Shell\\nType HELP for commands.\\n\\n';
+    const form=document.createElement('form');form.className='cli-form';
+    const prompt=document.createElement('span');prompt.textContent='1>';
+    const input=document.createElement('input');input.setAttribute('aria-label','AmigaShell command');
+    form.append(prompt,input);cli.append(output,form);
+    form.addEventListener('submit',(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='1>'+cmd+'\\n';
+      if(/^help$/i.test(cmd))output.textContent+='DIR  LIST  DATE  VERSION  ENDCLI\\n';
+      else if(/^(dir|list)$/i.test(cmd))output.textContent+='SYS:  RAM:  Utilities/  Trashcan/\\n';
+      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\\n';
+      else if(/^version$/i.test(cmd))output.textContent+='Workbench 3.1  Kickstart 40.63\\n';
+      else if(cmd&&!/^endcli$/i.test(cmd))output.textContent+='Unknown command. Type HELP.\\n';
+      output.scrollTop=output.scrollHeight;
+    });
+    createWindow('Shell',cli,570,330);input.focus();
+  }
+  function calculator(){
+    const calc=document.createElement('div');calc.className='calc';
+    const display=document.createElement('div');display.className='calc-display';display.textContent='0';
+    const grid=document.createElement('div');grid.className='calc-grid';
+    ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+','C'].forEach(key=>{
+      const b=document.createElement('button');b.textContent=key;b.onclick=()=>{
+        if(key==='C'){calcValue='0';calcFirst=null;calcOp='';}
+        else if('+-*/'.includes(key)){calcFirst=Number(calcValue);calcOp=key;calcValue='0';}
+        else if(key==='='){const a=calcFirst||0,b=Number(calcValue);calcValue=String(calcOp==='+'?a+b:calcOp==='-'?a-b:calcOp==='*'?a*b:calcOp==='/'?a/b:b);calcFirst=null;calcOp='';}
+        else calcValue=calcValue==='0'?key:calcValue+key;
+        display.textContent=calcValue;
+      };grid.appendChild(b);
+    });
+    calc.append(display,grid);createWindow('Calculator',calc,300,330);
+  }
+  function about(){
+    const box=document.createElement('div');box.className='wb-about';
+    box.innerHTML='<div class="logo">💾</div><h2>Workbench 3.1</h2><p>Amiga Kickstart 40.63</p><p>Copyright © Commodore-Amiga, Inc.</p><p>Desktop Time Machine</p>';
+    createWindow('About Workbench',box,380,290);
+  }
+  function preferences(){
+    const panel=document.createElement('div');panel.className='prefs';
+    panel.innerHTML='<b>Workbench Preferences</b><label>Screen color <input type="color" value="#0560a8"></label><label>Screen mode <select><option>640 × 256</option><option>640 × 512</option></select></label>';
+    panel.querySelector('input').addEventListener('input',(e)=>root.style.backgroundColor=e.target.value);
+    createWindow('Workbench Preferences',panel,380,270);
+  }
+  function trash(){const box=document.createElement('div');box.className='wb-about';box.textContent='The Trashcan is empty.';createWindow('Trashcan',box,340,220);}
+  function shutdown(){
+    const shade=document.createElement('div');shade.className='dialog-shade';
+    const box=document.createElement('div');box.className='dialog';box.innerHTML='<b>Workbench 3.1</b><p>Do you really want to shut down?</p>';
+    const actions=document.createElement('div');actions.className='dialog-actions';
+    const cancel=document.createElement('button');cancel.className='wb-button';cancel.textContent='Cancel';cancel.onclick=()=>shade.remove();
+    const off=document.createElement('button');off.className='wb-button';off.textContent='Shut Down';off.onclick=()=>DTM&&DTM.system&&DTM.system.exit&&DTM.system.exit();
+    actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
+  }
+  function launch(name){
+    if(name==='sys'||name==='ram')fileWindow(name==='sys'?'':'');
+    else if(name==='utilities')calculator();
+    else if(name==='shell')shell();
+    else if(name==='trash')trash();
+  }
+  document.querySelectorAll('.wb-icon').forEach(icon=>{
+    icon.addEventListener('click',()=>{document.querySelectorAll('.wb-icon').forEach(other=>other.classList.toggle('selected',other===icon));});
+    icon.addEventListener('dblclick',()=>launch(icon.dataset.app));
+  });
+  document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener('click',(event)=>{
+    const name=button.dataset.menu;
+    if(activeMenu===name){popup.classList.remove('open');activeMenu=null;return;}
+    activeMenu=name;popup.replaceChildren();
+    (menuItems[name]||[]).forEach(([label,action])=>{const item=document.createElement('button');item.textContent=label;item.onclick=()=>{popup.classList.remove('open');activeMenu=null;action();};popup.appendChild(item);});
+    popup.style.left=Math.max(0,button.offsetLeft)+'px';popup.classList.add('open');event.stopPropagation();
+  }));
+  document.addEventListener('pointerdown',(event)=>{if(!popup.contains(event.target)&&!event.target.closest('[data-menu]')){popup.classList.remove('open');activeMenu=null;}});
+  document.addEventListener('keydown',(event)=>{if(event.key==='F8'){event.preventDefault();switchEra();}if(event.key==='Escape')popup.classList.remove('open');});
+})();
+</script>
+</body>
+</html>

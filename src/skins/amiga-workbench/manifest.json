@@ -1,0 +1,28 @@
+{
+  "id": "amiga-workbench",
+  "name": "Amiga Workbench 3.1",
+  "era": "1992",
+  "period": "1992–1993",
+  "version": "1.0.0",
+  "description": "Workbench 3.1 with disk and drawer icons, the screen title bar, Intuition-style windows, and AmigaShell.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "💾",
+  "themeColor": "#0055aa",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "filesystem",
+    "application-launcher",
+    "desktop-icons",
+    "cli"
+  ],
+  "meta": {
+    "developer": "Commodore International",
+    "releaseDate": "1992-10-01",
+    "successor": "AmigaOS 3.5",
+    "kernelFamily": "AmigaOS"
+  }
+}

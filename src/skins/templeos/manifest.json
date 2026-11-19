@@ -4,7 +4,7 @@
   "era": "2017",
   "period": "2013–2017",
   "version": "0.1.0",
-  "description": "A TempleOS 5.03-inspired 640×480, 16-color desktop with a HolyC-style command prompt and small built-in tools.",
+  "description": "TempleOS V5.03 with 640×480 graphics, a 16-color display, a HolyC command prompt, and built-in tools.",
   "author": "Desktop Time Machine",
   "entry": "desktop.html",
   "engineCompatibility": "1.0",
