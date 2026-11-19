@@ -23,6 +23,7 @@ const results = {
   win95: {},
   win98: {},
   macos8: {},
+  macosx: {},
   switching: {},
   templeos: {},
   windowsXP: {},
@@ -539,7 +540,34 @@ app.whenReady().then(async () => {
     results.errors.push('BeOS test error: ' + e.message);
   }
 
-  // Test 10: Switch back to Windows 95
+  // Test 10: Mac OS X Aqua
+  try {
+    await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('macosx');`);
+    await new Promise(r => setTimeout(r, 1700));
+    results.macosx = await win.webContents.executeJavaScript(`
+      (async () => {
+        const doc = document.getElementById('skin-viewport').contentWindow.document;
+        await new Promise(r => setTimeout(r, 250));
+        const out = {
+          activeSkin: window.dtmSkinManager.getCurrentSkin().id,
+          bootComplete: doc.getElementById('boot-screen').style.display === 'none',
+          desktopIcons: doc.querySelectorAll('.desktop-icon').length,
+          dockApps: doc.querySelectorAll('#dock .dock-icon[data-app]').length,
+          finderWindow: !!doc.querySelector('.window[data-app="finder"]'),
+          finderItems: doc.querySelectorAll('.window[data-app="finder"] .finder-icon').length > 0
+        };
+        doc.querySelector('#dock .dock-icon[data-app="calculator"]').click();
+        const calc = doc.querySelector('.window[data-app="calculator"]');
+        ['7','+','5','='].forEach(key => calc.querySelector('.calc-key[data-key="' + key + '"]').click());
+        out.calculator = calc.querySelector('.calc-display').textContent === '12';
+        return out;
+      })()
+    `);
+  } catch (e) {
+    results.errors.push('Mac OS X test error: ' + e.message);
+  }
+
+  // Test 11: Switch back to Windows 95
   try {
     await win.webContents.executeJavaScript(`window.dtmSkinManager.switchSkin('windows95');`);
     await new Promise(r => setTimeout(r, 1800));
