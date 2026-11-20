@@ -1,4 +1,4 @@
 @echo off
 title Desktop Time Machine
-cd /d "Z:\github\skinsos"
+cd /d "%~dp0"
 node node_modules\.bin\electron.cmd .

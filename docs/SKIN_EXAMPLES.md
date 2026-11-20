@@ -322,7 +322,7 @@ async function launchApp(appName) {
 
     case 'doom':
       // LAUNCHES REAL EXECUTABLE via engine
-      const eng = window.DTM.engine;
+      const eng = window.DTM;
       if (eng && eng.process) {
         try {
           await eng.process.spawn('doom.exe', ['-iwad', 'doom.wad']);

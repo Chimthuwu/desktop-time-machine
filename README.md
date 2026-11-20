@@ -1,8 +1,8 @@
 # Desktop Time Machine ⏳
 
-> **A multi-environment retro desktop simulator for Windows 10 & Windows 11.**
+> **A modular retro-computing simulator for Windows 10 and Windows 11.**
 
-Desktop Time Machine transforms your modern Windows computer into a living museum of historically inspired desktop operating systems. Running on top of Windows with a shared modular engine, Desktop Time Machine lets you switch between different computing eras while retaining access to your real files, applications, and hardware.
+Desktop Time Machine turns a modern Windows machine into a museum of historically inspired operating systems. Each era is a self-contained skin with its own applications and personality; a shared engine supplies capabilities such as real filesystem access, window management and live desktop mirroring.
 
 ---
 
@@ -16,90 +16,113 @@ Screenshots are captured from the real application by `npm run screenshots`.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Available operating systems
 
-### One Engine, Many Desktop Environments
-- **Windows 95 (1995)**: Teal desktop (`#008080`), classic Start button and menu, 3D grey beveled window frames, taskbar, system tray clock, and retro applications.
-- **Mac OS 8 (1997)**: Classic Macintosh Platinum interface, 50% grey dither pattern, top menu bar with Apple logo, authentic startup chime via Web Audio, Control Strip, window shading, and trash bin.
-- **Era Switcher Museum (F8)**: Visual gallery allowing seamless time travel between operating system eras.
-- **Real Windows Integration**:
-  - Browse real Windows directories and folders from within the retro interface.
-  - Open files in your Windows default applications.
-  - Launch approved host utilities (`calc.exe`, `notepad.exe`, `mspaint.exe`, `explorer.exe`).
-  - Open web links in your modern Windows default browser.
+All eight skins are registered and loadable:
 
-### Preserved Classic Applications (Windows 95)
-- **Minesweeper**: Authentic 9×9 grid, timer, flag counter, and smile/dead/cool face reactions.
-- **Paint**: Functional drawing canvas with classic retro color palette.
-- **Notepad**: Text editor with Courier New typography.
-- **Internet Explorer**: Web browsing frame with navigation controls and external browser launcher.
-- **Display Properties**: Mystify and Starfield Simulation screen saver canvas previews.
-- **DOOM**: Classic js-dos DOOM launcher.
-- **Safe Shutdown**: Authentic "It is now safe to turn off your computer" screen with an option to exit cleanly back to Windows.
+- **Windows 95 (1995)** — teal desktop, Start menu, grey 3D bevels, taskbar, Notepad, Paint, Minesweeper, Display Properties, DOOM launcher and a limited Command Prompt.
+- **Windows 98 (1998)** — Active Desktop styling, Quick Launch, Explorer, Paint, Minesweeper and a two-column Start menu.
+- **Windows XP (2001)** — Luna desktop, two-column Start menu, taskbar grouping and Explorer-style browsing.
+- **Mac OS 8 (1997)** — Platinum interface, Apple menu, Control Strip, window shading, SimpleText and Stickies.
+- **Mac OS X (2001)** — Aqua menu bar and Dock, Finder over real host files, Calculator, Terminal and a Safari window backed by a real embedded browser view.
+- **Amiga Workbench 3.1 (1992)** — screen bar, disk/drawer icons, Intuition-style windows and AmigaShell.
+- **BeOS R5 (2000)** — Deskbar, tabbed windows, Tracker and four workspaces.
+- **TempleOS (2013)** — 640×480 sixteen-colour display and a HolyC-inspired command prompt.
+
+The **Era Switcher** (`F8`) shows the full gallery and remembers the selection between launches. Personal settings such as desktop icon positions are stored per skin.
+
+### Shared engine capabilities
+
+- **Real Windows integration** — browse and manage actual host files from every skin; open files with their Windows default application.
+- **Desktop mirror** — the user's real desktop icons, Recycle Bin, drives and network locations are rendered inside each retro desktop with live filesystem updates.
+- **Shell integration** — pinned taskbar items, running windows, the notification area and volume controls are mirrored where the host supports them.
+- **External browsing** — the retro Internet Explorer uses a real, separately installed Chromium browser profile.
+
+The shared engine provides capabilities; each skin owns its appearance, applications and behaviour.
 
 ---
 
-## 🚀 How to Launch the Application
+## 🚀 Setup and development
 
 ### Prerequisites
-- Node.js (v18+)
-- Windows 10 or Windows 11
 
-### Quick Start
+- Node.js 18 or newer
+- npm
+- Windows 10 or Windows 11 (the real filesystem and shell integrations are Windows-only)
+- Electron is installed as a dev dependency by `npm install`
+
+### Commands
+
 ```powershell
-# Navigate to project directory
-cd Z:\github\skinsos
-
-# Launch the application
-npm start
+# From the repository root
+npm install
+npm start          # Launch the Electron application
+npm test           # Full verification suite (all skins, security, switching)
+npm run screenshots  # Regenerate the gallery screenshots
 ```
+
+Additional focused suites can be run directly:
+
+```powershell
+npx electron test/security-regressions.js
+npx electron test/phase4-security.js
+npx electron test/phase4-skins.js
+npx electron test/mirror-smoke.js
+```
+
+### Browser development mode
+
+Opening `src/index.html` in an ordinary browser works for UI work. In that mode there is no Electron preload bridge: the engine substitutes an in-memory mock filesystem, so files, shell integration and live desktop updates are **not** real. Only Electron mode exercises host integration.
 
 ### Real browser engine
 
-The retro Internet Explorer is a real Ungoogled Chromium window on a private
-profile, so the app needs that engine on disk. On a machine that does not have
-it, the app provisions it by itself on first launch: it downloads the current
-official Windows installer, runs it silently for the current user, and then
-writes an **Internet Explorer** desktop and Start menu shortcut carrying the
-classic icon. Shortcuts that already exist are left untouched, so a custom icon
-is never replaced.
+The retro Internet Explorer is a real Ungoogled Chromium window on a private profile. On a machine without it, the app provisions it on first launch by downloading the official Windows installer, running it silently for the current user and creating an **Internet Explorer** shortcut. Existing shortcuts are never replaced.
 
-To hand the folder to someone without internet access, drop the installer in
-`resources/` before you copy it over:
+For an offline copy, place one of these files in `resources/` before copying the folder:
 
 ```
 resources/
-  ungoogled-chromium-installer-x64.exe            # or the official
-  ungoogled-chromium_<version>_installer_x64.exe  # release file name
+  ungoogled-chromium-installer-x64.exe
+  ungoogled-chromium_<version>_installer_x64.exe
 ```
 
-`DTM_CHROMIUM_INSTALLER` can point at an installer anywhere on disk, and
-`DTM_CHROMIUM` at an existing `chrome.exe` to skip provisioning entirely.
+`DTM_CHROMIUM_INSTALLER` points at an installer anywhere on disk; `DTM_CHROMIUM` points at an existing `chrome.exe` and skips provisioning.
 
 ---
 
-## ⌨️ Shortcuts & Controls
+## ⌨️ Shortcuts & controls
 
-| Action | Shortcut / Trigger |
+| Action | Shortcut / trigger |
 |---|---|
-| **Open Era Switcher (Museum)** | Press <kbd>F8</kbd> or <kbd>Ctrl+Shift+T</kbd> |
-| **Switch Era (In-Desktop)** | Double-click the ⏳ **Time Machine** desktop icon or Start Menu item |
-| **Toggle Fullscreen / Kiosk** | Double-click the taskbar clock / tray area |
-| **Window Shading (Mac OS 8)** | Double-click the window title bar |
-| **Safe Exit to Windows** | Start > Shut Down > Shut down the computer > Yes |
+| Open Era Switcher | <kbd>F8</kbd> (also <kbd>Ctrl+Shift+T</kbd> in skins that forward it) |
+| Switch era from inside a skin | Double-click the ⏳ Time Machine icon or use its Start-menu entry |
+| Toggle fullscreen | <kbd>Ctrl+F5</kbd>, or double-click the taskbar tray/clock |
+| Window shading (Mac OS 8) | Double-click the window title bar |
+| Safe exit to Windows | Start menu → Shut Down → Turn Off |
 
 ---
 
-## 🛡️ Security Model
+## 🛡️ Security model
 
-- `contextIsolation: true` and `nodeIntegration: false` enforced.
-- Renderer processes never access raw Node.js or child process APIs.
-- External program launching is strictly whitelisted.
-- Filesystem access is mediated through validated asynchronous IPC channels.
+- `contextIsolation: true`, `nodeIntegration: false` and a frozen `contextBridge` preload; renderer code cannot import Node.js or Electron modules.
+- Every IPC channel is restricted to the application's own `file://` origin. Remote webview guests cannot invoke filesystem or shell handlers.
+- The preload's event subscription is limited to the two desktop-update channels the app actually uses.
+- Host programs are restricted to four pinned system binaries: `notepad.exe`, `calc.exe`, `mspaint.exe` and `explorer.exe`. No shell is spawned for program launches.
+- The in-skin Command Prompt implements a small allowlisted command set in the main process; it never evaluates renderer input in PowerShell.
+- Filesystem paths are normalized and resolved through their real ancestors before validation; device namespaces, UNC paths, 8.3 short names, reserved device names, junctions into protected trees and credential directories are rejected. Destructive operations additionally protect system and profile roots.
+- External URLs must be `http:` or `https:` with a hostname. The same rule applies to the external browser engine; local `file:` URLs are not accepted from renderer input.
+- Guest webviews are hardened (sandboxed, no preload, no popups, http(s) navigation only).
+- No permission is granted automatically. Camera, microphone, geolocation, notifications, clipboard and display capture are denied unless a user grants them through a system prompt. Screen sharing uses the operating-system picker; the app never silently selects a source.
+
+Filesystem access is **real host access**, not a sandboxed virtual disk. Treat skins as trusted application code; the boundary protects against accidental or injected renderer misuse, not against a malicious local installation.
 
 ---
 
 ## 📚 Documentation
-- [Architecture & Process Model](file:///Z:/github/skinsos/docs/ARCHITECTURE.md)
-- [Skin Development Guide](file:///Z:/github/skinsos/docs/SKIN_DEVELOPMENT.md)
-- [LLM Skin Generation Guide](file:///Z:/github/skinsos/docs/LLM_SKIN_GENERATION.md)
+
+- [Architecture & process model](docs/ARCHITECTURE.md)
+- [Skin development guide](docs/SKIN_DEVELOPMENT.md)
+- [Skin SDK](docs/SKIN_SDK.md)
+- [Skin manifest specification](docs/SKIN_MANIFEST_SPEC.md)
+- [LLM skin generation guide](docs/LLM_SKIN_GENERATION.md)
+- [Phase 2 report](PHASE_2_REPORT.md) · [Phase 3 report](PHASE_3_REPORT.md)

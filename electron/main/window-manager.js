@@ -5,6 +5,7 @@
 
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { hardenWebviews } = require('./webview-security');
 
 let mainWindow = null;
 
@@ -49,6 +50,10 @@ function createMainWindow() {
     mainWindow = null;
   });
 
+  // Every window gets the same webview hardening, including windows created
+  // later when the app is re-activated on macOS.
+  hardenWebviews(mainWindow.webContents);
+
   // Handle external navigation prevention
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     // If it's a web link opened via window.open, don't let it hijack the app window
@@ -57,7 +62,15 @@ function createMainWindow() {
 
   // Prevent top-frame navigation away from the local application
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    if (!navigationUrl.startsWith('file://')) {
+    try {
+      const parsed = new URL(navigationUrl);
+      const localPath = decodeURIComponent(parsed.pathname).replace(/^\/([a-zA-Z]:)/, '$1');
+      const resolved = path.resolve(localPath);
+      const appRoot = path.resolve(__dirname, '../..');
+      if (parsed.protocol !== 'file:' || !(resolved === appRoot || resolved.startsWith(appRoot + path.sep))) {
+        event.preventDefault();
+      }
+    } catch {
       event.preventDefault();
     }
   });

@@ -94,8 +94,14 @@ const dtmBridge = {
   maximizeWindow: () => ipcRenderer.invoke('dtm:maximize-window'),
   exitApp: () => ipcRenderer.invoke('dtm:exit-app'),
 
-  // Event subscription (used for live filesystem watch notifications)
-  on: (channel, callback) => ipcRenderer.on(channel, (_event, ...args) => callback(...args)),
+  // Event subscription is limited to the two channels the application uses
+  // for live desktop updates. A renderer must not be able to listen to every
+  // main-process event.
+  on: (channel, callback) => {
+    const ALLOWED_EVENTS = ['dtm:fs-changed', 'dtm:fs-icons-changed'];
+    if (!ALLOWED_EVENTS.includes(channel)) throw new Error('Unsupported event channel');
+    return ipcRenderer.on(channel, (_event, ...args) => callback(...args));
+  },
 
   // Skin Management
   getAvailableSkins: () => ipcRenderer.invoke('dtm:get-available-skins'),

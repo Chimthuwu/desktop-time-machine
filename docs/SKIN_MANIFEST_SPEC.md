@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Format:** JSON  
-**Validation:** `window.DTM.engine.validateManifest(manifest)` or IPC `validate-manifest`
+**Validation:** `window.DTM.sdk.validateManifest(manifest, folderName)` or IPC `dtm:validate-manifest`
 
 ---
 
@@ -82,12 +82,12 @@
     "engineCompatibility": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
-      "description": "Engine version this skin targets (e.g., '1.0'). Skin Manager warns on mismatch."
+      "description": "Engine version this skin targets (e.g., '1.0'). Format is checked; compatibility is not yet enforced."
     },
     "status": {
       "type": "string",
-      "enum": ["ready", "roadmap", "experimental"],
-      "description": "Ready = fully functional. Roadmap = planned. Experimental = partial/incomplete."
+      "enum": ["ready", "roadmap", "beta", "deprecated"],
+      "description": "Ready = fully functional. Other values are displayed but not loadable in the Era Switcher."
     },
     "icon": {
       "type": "string",
@@ -221,9 +221,9 @@
 - **Examples:** `#008080` (teal), `#888888` (platinum), `#000080` (navy), `#ffcc00` (amber)
 - **Used for:** Era Switcher card accent, active skin highlight, window chrome tint
 
-### `previewImage` (Required, nullable)
-- **Format:** Relative path from skin root, or `null`
-- **Recommended:** `"assets/preview.png"` (800×600, PNG)
+### `previewImage` (Optional, nullable)
+- **Format:** Path relative to `src/index.html` (the shell document), or `null`. For example `"../screenshots/gallery-my-skin.png"`.
+- **Recommended:** a wide PNG screenshot; a missing file degrades to the themed placeholder.
 - **Used for:** Era Switcher card preview image
 - **If null:** Placeholder icon shown with themeColor background
 
@@ -257,24 +257,19 @@ Future-proofing for engine version constraints.
 
 ## Validation Rules
 
-### Hard Errors (Manifest Rejected)
-1. Missing required field
-2. Field type mismatch
-3. `id` doesn't match `^[a-z0-9-]+$`
-4. `version` not valid semver
-5. `themeColor` not valid hex
-6. `entry` file doesn't exist
-7. `capabilities` array empty or has duplicates
-8. `status` not in enum
-9. `previewImage` not null and file doesn't exist
+### What the current validator checks
+The main-process validator returns `{ valid, errors }` and checks:
 
-### Warnings (Logged, Manifest Accepted)
-1. `meta` missing (recommended for historical skins)
-2. `previewImage` is null (no screenshot in Era Switcher)
-3. Unknown capability identifier (not in standard list)
-4. `engineCompatibility` major version mismatch
-5. `description` under 50 chars (may be too brief)
-6. `historicalNote` missing from `meta`
+1. Required fields: `id`, `name`, `era`, `version`, `entry`, `engineCompatibility`, `status`.
+2. `id` matches the skin directory name.
+3. `status` is one of `ready`, `roadmap`, `beta`, `deprecated`.
+4. Optional string fields have the correct type and `icon` is not empty.
+5. `capabilities` is an array of strings when present.
+6. `entry` is a `.html` filename with no path separators.
+7. `engineCompatibility` has a numeric major/minor format.
+8. The `entry` file exists on disk (reported by discovery, not by `sdk.validateManifest`).
+
+A manifest with errors is still registered so one bad skin cannot break the app; the errors are logged and surfaced by the validation API. Missing preview images degrade to the themed placeholder. There is no `warnings` array and no CLI validation script in this release.
 
 ---
 
@@ -282,22 +277,20 @@ Future-proofing for engine version constraints.
 
 ### In Renderer (Skin Code)
 ```javascript
-const engine = window.DTM.engine;
-const result = await engine.validateManifest(manifestObject);
-// result: { valid: boolean, errors: [], warnings: [] }
+const result = await window.DTM.sdk.validateManifest(manifestObject, folderName);
+// result: { valid: boolean, errors: string[] }
 ```
 
 ### In Main Process (IPC)
 ```javascript
 // From main process or preload
-const result = await ipcRenderer.invoke('validate-manifest', manifestObject);
+const result = await ipcRenderer.invoke('dtm:validate-manifest', manifestObject, folderName);
 ```
 
-### CLI Validation (Development)
-```bash
-# Validate a manifest file
-npm run validate-manifest -- src/skins/my-skin/manifest.json
-```
+### Automated check
+`npx electron test/phase4-skins.js` verifies that every discovered manifest
+validates, that its preview asset resolves and that the fallback registry
+matches the manifests.
 
 ---
 

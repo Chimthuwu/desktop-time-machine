@@ -36,11 +36,11 @@ All environments share the same underlying host hardware, filesystem, and applic
            +--------------------------+--------------------------+
            |                                                     |
 +-----------------------------+               +-----------------------------+
-| Active Skin: Windows 95     |               | Active Skin: Mac OS 8       |
-| - 3D Grey Bevels & Start    |               | - Platinum & Apple Menu     |
-| - Taskbar & Tray            |               | - Control Strip & Pinstripe |
-| - Minesweeper, Paint, IE    |               | - SimpleText, Calc, Stickies|
-| - Real Filesystem Explorer  |               | - Startup Chime & Trash     |
+ | One active skin in iframe   |               | Electron main process       |
+ | (eight are registered):     |               | - Validated IPC handlers    |
+ | Windows 95 / 98 / XP        |               | - Real filesystem/Windows   |
+ | Mac OS 8 / Mac OS X         |               | - Browser engine + webviews |
+ | Amiga / BeOS / TempleOS     |               | - Least-privilege permissions|
 +-----------------------------+               +-----------------------------+
 ```
 

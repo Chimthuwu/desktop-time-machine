@@ -327,13 +327,14 @@
     entry.disposed = true;
     clearTimeout(entry.timer);
     for (const id of entry.watchIds || []) {
-      try { entry.DTM.fs.unwatch(id); } catch {}
+      try { Promise.resolve(entry.DTM.fs.unwatch(id)).catch(() => {}); } catch {}
     }
     entry.watchIds.clear();
     entry.watchedPaths.clear();
     try {
       if (entry.view && entry.onResize) entry.view.removeEventListener('resize', entry.onResize);
       if (entry.resizeObserver) entry.resizeObserver.disconnect();
+      for (const dispose of entry.listenerDisposers || []) dispose();
     } catch {}
     try {
       if (entry.layer && entry.layer.parentNode) entry.layer.remove();
@@ -869,6 +870,16 @@
 
     const doc = desktop.ownerDocument;
     const view = doc.defaultView;
+    // Listeners added for this mount are removed explicitly on unmount so a
+    // second mount into the same document cannot retain old drag/menu state.
+    const listenerDisposers = [];
+    const track = (target, type, handler, options) => {
+      if (!target || typeof target.addEventListener !== 'function') return;
+      target.addEventListener(type, handler, options);
+      listenerDisposers.push(() => {
+        try { target.removeEventListener(type, handler, options); } catch {}
+      });
+    };
     const DTM = window.dtmEngine;
     const preload = window.dtmPreload;
     if (!DTM || !DTM.fs) { console.warn('[DTM mirror] engine.fs unavailable'); return; }
@@ -1039,10 +1050,11 @@
     // Releases that never reach the icon (an ancestor captured the pointer)
     // still end every in-flight drag, so nothing stays glued to the cursor.
     const activeDrags = new Set();
+    const stopActiveDrags = () => { activeDrags.forEach((stop) => stop()); };
     ['pointerup', 'pointercancel'].forEach((type) => {
-      view.addEventListener(type, () => { activeDrags.forEach((stop) => stop()); }, true);
+      track(view, type, stopActiveDrags, true);
     });
-    view.addEventListener('blur', () => { activeDrags.forEach((stop) => stop()); });
+    track(view, 'blur', stopActiveDrags);
 
     // Dragging one icon moves every icon that is selected with it, keeping the
     // arrangement the user picked, and each moved icon keeps its new position.
@@ -1810,7 +1822,7 @@
       }
     }
 
-    const renderer = { render, refreshIcons: () => invalidateArtwork(null, state.items), state, watchIds: new Set(), DTM, timer: null, watchedPaths: new Set(), layer, doc, view, disposed: false };
+    const renderer = { render, refreshIcons: () => invalidateArtwork(null, state.items), state, watchIds: new Set(), DTM, timer: null, watchedPaths: new Set(), layer, doc, view, disposed: false, listenerDisposers };
     liveRenderers.set(skinId, renderer);
 
     // Rubber-band selection: dragging an empty stretch of desktop selects every
@@ -1866,10 +1878,10 @@
     // Pointer capture can be refused, so the release is also watched on the
     // window; either one finishes the band.
     ['pointerup', 'pointercancel'].forEach((type) => {
-      layer.addEventListener(type, stopBand);
-      view.addEventListener(type, stopBand);
+      track(layer, type, stopBand);
+      track(view, type, stopBand);
     });
-    view.addEventListener('blur', stopBand);
+    track(view, 'blur', stopBand);
 
     // Background click clears selection / closes menus; right-click offers real
     // Windows actions (new folder / text document / terminal here).
@@ -1886,7 +1898,7 @@
       e.stopPropagation();
       showDesktopMenu(e.clientX, e.clientY);
     });
-    doc.addEventListener('pointerdown', (e) => {
+    track(doc, 'pointerdown', (e) => {
       if (!e.target.closest('.dtm-context') && !e.target.closest('.dtm-icon')) closeMenus();
     });
     // Column counts depend on the viewport height; dropped icons keep their

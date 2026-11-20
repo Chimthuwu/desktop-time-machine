@@ -1069,7 +1069,7 @@ function setupTerminal(w, opts) {
     if (cmd === 'exit') { close(w); return; }
     if (cmd === 'help') {
       write('Built in: cd <dir>, cd .., cls, exit, help');
-      write('Everything else runs in PowerShell in the current folder.');
+      write('Host commands: dir, type, echo, pwd, whoami, date, time, ver');
       return;
     }
     if (cmd === 'cd' || cmd === 'chdir') {

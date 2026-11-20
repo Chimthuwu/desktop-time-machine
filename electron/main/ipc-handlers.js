@@ -7,7 +7,7 @@ const { ipcMain, app, dialog, BrowserWindow } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
-const { isSafePath } = require('../security/permissions');
+const { isSafePath, isTrustedRendererUrl } = require('../security/permissions');
 const browser = require('./browser');
 
 // Required manifest fields for a skin to be considered valid
@@ -21,6 +21,9 @@ const MANIFEST_VALID_STATUSES = ['ready', 'roadmap', 'beta', 'deprecated'];
  */
 function validateManifest(manifest, skinFolderName) {
   const errors = [];
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    return { valid: false, errors: ['Manifest must be a JSON object'] };
+  }
 
   // Required fields
   for (const field of MANIFEST_REQUIRED_FIELDS) {
@@ -39,14 +42,30 @@ function validateManifest(manifest, skinFolderName) {
     errors.push(`Unknown status "${manifest.status}". Must be one of: ${MANIFEST_VALID_STATUSES.join(', ')}`);
   }
 
-  // capabilities must be an array if present
-  if (manifest.capabilities !== undefined && !Array.isArray(manifest.capabilities)) {
-    errors.push(`"capabilities" must be an array`);
+  // Optional metadata must have the right shape. Bad values degrade
+  // gracefully instead of breaking the switcher.
+  for (const field of ['name', 'era', 'period', 'version', 'description', 'author', 'icon', 'themeColor']) {
+    if (manifest[field] !== undefined && typeof manifest[field] !== 'string') {
+      errors.push(`"${field}" must be a string`);
+    }
+  }
+  if (manifest.icon === '') errors.push(`"icon" must not be empty`);
+  if (manifest.previewImage !== undefined && manifest.previewImage !== null && typeof manifest.previewImage !== 'string') {
+    errors.push(`"previewImage" must be a string or null`);
+  }
+
+  // capabilities must be an array of strings if present
+  if (manifest.capabilities !== undefined) {
+    if (!Array.isArray(manifest.capabilities)) {
+      errors.push(`"capabilities" must be an array`);
+    } else if (manifest.capabilities.some((capability) => typeof capability !== 'string')) {
+      errors.push(`"capabilities" must contain only strings`);
+    }
   }
 
   // entry must not contain path separators (security: cannot escape skin directory)
-  if (manifest.entry && /[/\\]/.test(manifest.entry)) {
-    errors.push(`"entry" must be a filename only (no path separators)`);
+  if (manifest.entry && (/[/\\]/.test(manifest.entry) || !/^[\w.-]+\.html$/i.test(manifest.entry))) {
+    errors.push(`"entry" must be a .html filename only (no path separators)`);
   }
 
   // engineCompatibility must be a semver-like string
@@ -69,6 +88,23 @@ const { getMainWindow, toggleFullScreen } = require('./window-manager');
 
 function registerIpcHandlers() {
   const FS_PATH_LIMIT = 1024;
+  const APP_ROOT = path.resolve(__dirname, '../..');
+
+  /**
+   * Every IPC channel is restricted to the application's own local window.
+   * Guest webviews (remote sites) never receive the preload bridge and must
+   * not be able to reach filesystem, shell or system handlers.
+   */
+  function handle(channel, listener) {
+    ipcMain.handle(channel, (event, ...args) => {
+      let senderUrl = '';
+      try { senderUrl = event && event.sender && !event.sender.isDestroyed() ? event.sender.getURL() : ''; } catch {}
+      if (!isTrustedRendererUrl(senderUrl, APP_ROOT)) {
+        throw new Error('Unauthorized IPC sender');
+      }
+      return listener(event, ...args);
+    });
+  }
 
   /**
    * Validates an optional/required filesystem path argument coming from IPC.
@@ -85,12 +121,12 @@ function registerIpcHandlers() {
   }
 
   // System Info
-  ipcMain.handle('dtm:get-system-info', async () => {
+  handle('dtm:get-system-info', async () => {
     return getSystemInfo();
   });
 
   // Filesystem Browsing (legacy shape used by Windows 95/98 Explorer)
-  ipcMain.handle('dtm:list-directory', async (_event, dirPath) => {
+  handle('dtm:list-directory', async (_event, dirPath) => {
     assertPathArg(dirPath, 'dirPath');
     const result = await fsService.listDirectory(dirPath);
     return {
@@ -104,27 +140,27 @@ function registerIpcHandlers() {
   // -----------------------------------------------------------------------
   // Real filesystem API — one shared backend for every skin
   // -----------------------------------------------------------------------
-  ipcMain.handle('dtm:fs-list', async (_event, dirPath) => {
+  handle('dtm:fs-list', async (_event, dirPath) => {
     assertPathArg(dirPath, 'dirPath');
     return fsService.listDirectory(dirPath);
   });
 
-  ipcMain.handle('dtm:fs-stat', async (_event, targetPath) => {
+  handle('dtm:fs-stat', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.statPath(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-read', async (_event, targetPath) => {
+  handle('dtm:fs-read', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.readFileText(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-read-binary', async (_event, targetPath) => {
+  handle('dtm:fs-read-binary', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.readFileBinary(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-write', async (_event, targetPath, content) => {
+  handle('dtm:fs-write', async (_event, targetPath, content) => {
     assertPathArg(targetPath, 'targetPath');
     if (typeof content !== 'string') {
       throw new Error('Invalid argument: content must be a string');
@@ -132,17 +168,17 @@ function registerIpcHandlers() {
     return fsService.writeFileText(targetPath, content);
   });
 
-  ipcMain.handle('dtm:fs-write-binary', async (_event, targetPath, data) => {
+  handle('dtm:fs-write-binary', async (_event, targetPath, data) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.writeFileBinary(targetPath, data);
   });
 
-  ipcMain.handle('dtm:fs-mkdir', async (_event, targetPath) => {
+  handle('dtm:fs-mkdir', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.makeDirectory(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-rename', async (_event, targetPath, newName) => {
+  handle('dtm:fs-rename', async (_event, targetPath, newName) => {
     assertPathArg(targetPath, 'targetPath');
     if (typeof newName !== 'string' || newName.length === 0) {
       throw new Error('Invalid argument: newName must be a non-empty string');
@@ -153,40 +189,40 @@ function registerIpcHandlers() {
     return fsService.renamePath(targetPath, newName);
   });
 
-  ipcMain.handle('dtm:fs-copy', async (_event, srcPath, destPath) => {
+  handle('dtm:fs-copy', async (_event, srcPath, destPath) => {
     assertPathArg(srcPath, 'srcPath');
     assertPathArg(destPath, 'destPath');
     return fsService.copyPath(srcPath, destPath);
   });
 
-  ipcMain.handle('dtm:fs-move', async (_event, srcPath, destPath) => {
+  handle('dtm:fs-move', async (_event, srcPath, destPath) => {
     assertPathArg(srcPath, 'srcPath');
     assertPathArg(destPath, 'destPath');
     return fsService.movePath(srcPath, destPath);
   });
 
-  ipcMain.handle('dtm:fs-remove', async (_event, targetPath) => {
+  handle('dtm:fs-remove', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.removePath(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-remove-recursive', async (_event, targetPath) => {
+  handle('dtm:fs-remove-recursive', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.removeRecursive(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-exists', async (_event, targetPath) => {
+  handle('dtm:fs-exists', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return fsService.existsPath(targetPath);
   });
 
-  ipcMain.handle('dtm:fs-drives', async () => {
+  handle('dtm:fs-drives', async () => {
     // Use the enhanced drive enumeration (real labels, types, capacity) with a
     // graceful Node fallback inside desktop-integration.
     return desktopIntegration.getEnhancedDrives();
   });
 
-  ipcMain.handle('dtm:fs-special-folders', async () => {
+  handle('dtm:fs-special-folders', async () => {
     const folders = fsService.getSpecialFolders();
     try {
       const desktopPaths = await desktopIntegration.getDesktopPaths();
@@ -204,7 +240,7 @@ function registerIpcHandlers() {
 
   // Combined listing of every real Desktop location (User, redirected
   // OneDrive Desktop, Public), de-duplicated by item name.
-  ipcMain.handle('dtm:fs-desktop', async () => {
+  handle('dtm:fs-desktop', async () => {
     const started = Date.now();
     const dbg = process.env.DTM_DESKTOP_DEBUG === '1';
     try {
@@ -269,23 +305,23 @@ function registerIpcHandlers() {
   });
 
   // Real desktop icon layout (names + positions from IFolderView2).
-  ipcMain.handle('dtm:fs-desktop-layout', async () => {
+  handle('dtm:fs-desktop-layout', async () => {
     return desktopLayout.getDesktopLayout();
   });
 
-  ipcMain.handle('dtm:fs-desktop-layout-reset', async () => {
+  handle('dtm:fs-desktop-layout-reset', async () => {
     desktopLayout.invalidate();
     return true;
   });
 
   // Resolve a real .lnk / .url shortcut target.
-  ipcMain.handle('dtm:fs-resolve-shortcut', async (_event, targetPath) => {
+  handle('dtm:fs-resolve-shortcut', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return desktopIntegration.resolveShortcut(targetPath);
   });
 
   // Extract the ACTUAL Windows shell icon for a path as a PNG data URL.
-  ipcMain.handle('dtm:fs-icon', async (_event, targetPath, size) => {
+  handle('dtm:fs-icon', async (_event, targetPath, size) => {
     assertPathArg(targetPath, 'targetPath');
     const iconSize = Number(size) === 16 || Number(size) === 48 ? Number(size) : 32;
     // Artwork can live far from the desktop (a shortcut's IconLocation), so the
@@ -345,7 +381,7 @@ function registerIpcHandlers() {
   }
 
   // Pick a local audio/video file for the retro Windows Media Player.
-  ipcMain.handle('dtm:fs-pick-media', async () => {
+  handle('dtm:fs-pick-media', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Open Media',
       properties: ['openFile'],
@@ -366,7 +402,7 @@ function registerIpcHandlers() {
   });
 
   // Pick replacement icon art for a shortcut (Properties > Change Icon).
-  ipcMain.handle('dtm:fs-pick-icon', async () => {
+  handle('dtm:fs-pick-icon', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Change Icon',
       properties: ['openFile'],
@@ -380,7 +416,7 @@ function registerIpcHandlers() {
   });
 
   // Re-point a shortcut at another icon file.
-  ipcMain.handle('dtm:fs-set-shortcut-icon', async (_event, targetPath, iconPath) => {
+  handle('dtm:fs-set-shortcut-icon', async (_event, targetPath, iconPath) => {
     assertPathArg(targetPath, 'targetPath');
     assertPathArg(iconPath, 'iconPath');
     const result = await desktopIntegration.setShortcutIcon(targetPath, iconPath);
@@ -390,18 +426,18 @@ function registerIpcHandlers() {
   });
 
   // Safe recycle-bin delete (moves the real file to the Recycle Bin).
-  ipcMain.handle('dtm:fs-recycle', async (_event, targetPath) => {
+  handle('dtm:fs-recycle', async (_event, targetPath) => {
     assertPathArg(targetPath, 'targetPath');
     return desktopIntegration.recycleItem(targetPath);
   });
 
   // Enumerate the real Recycle Bin.
-  ipcMain.handle('dtm:fs-recycle-list', async () => {
+  handle('dtm:fs-recycle-list', async () => {
     return desktopIntegration.listRecycleBin();
   });
 
   // Empty the real Recycle Bin.
-  ipcMain.handle('dtm:fs-recycle-empty', async () => {
+  handle('dtm:fs-recycle-empty', async () => {
     return desktopIntegration.emptyRecycleBin();
   });
 
@@ -412,7 +448,7 @@ function registerIpcHandlers() {
   const wcDestroyBound = new WeakSet();
   let watchSeq = 0;
 
-  ipcMain.handle('dtm:fs-watch', (event, watchPath) => {
+  handle('dtm:fs-watch', (event, watchPath) => {
     assertPathArg(watchPath, 'watchPath');
     if (!isSafePath(watchPath)) {
       throw new Error('Access denied: path outside permitted boundaries');
@@ -457,7 +493,7 @@ function registerIpcHandlers() {
     return id;
   });
 
-  ipcMain.handle('dtm:fs-unwatch', (_event, id) => {
+  handle('dtm:fs-unwatch', (_event, id) => {
     const entry = watchers.get(id);
     if (entry) entry.cleanup();
     return { success: true };
@@ -466,63 +502,63 @@ function registerIpcHandlers() {
   // -----------------------------------------------------------------------
   // Network Neighborhood + real Windows taskbar mirror + terminal
   // -----------------------------------------------------------------------
-  ipcMain.handle('dtm:fs-network', async () => {
+  handle('dtm:fs-network', async () => {
     return desktopIntegration.getNetworkLocations();
   });
 
-  ipcMain.handle('dtm:shell-taskbar', async () => {
+  handle('dtm:shell-taskbar', async () => {
     return desktopIntegration.getTaskbarState();
   });
 
-  ipcMain.handle('dtm:shell-tray-invoke', async (_event, name) => {
+  handle('dtm:shell-tray-invoke', async (_event, name) => {
     if (typeof name !== 'string' || !name.trim() || name.length > 200) {
       throw new Error('Invalid argument: name must be a tray item label');
     }
     return desktopIntegration.invokeTrayItem(name);
   });
 
-  ipcMain.handle('dtm:shell-tray-overflow', async () => {
+  handle('dtm:shell-tray-overflow', async () => {
     return desktopIntegration.toggleTrayOverflow();
   });
 
-  ipcMain.handle('dtm:shell-tray-overflow-click', async (_event, x, y) => {
+  handle('dtm:shell-tray-overflow-click', async (_event, x, y) => {
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
       throw new Error('Invalid coordinates');
     }
     return desktopIntegration.clickTrayOverflowAt(x, y);
   });
 
-  ipcMain.handle('dtm:system-volume-get', async () => {
+  handle('dtm:system-volume-get', async () => {
     return desktopIntegration.getSystemVolume();
   });
 
-  ipcMain.handle('dtm:system-volume-set', async (_event, level, muted) => {
+  handle('dtm:system-volume-set', async (_event, level, muted) => {
     if (typeof level !== 'number' || !Number.isFinite(level)) {
       throw new Error('Invalid argument: level must be a number');
     }
     return desktopIntegration.setSystemVolume(level, muted === null ? null : !!muted);
   });
 
-  ipcMain.handle('dtm:shell-activate-window', async (_event, pid) => {
+  handle('dtm:shell-activate-window', async (_event, pid) => {
     if (typeof pid !== 'number' || !Number.isFinite(pid)) {
       throw new Error('Invalid argument: pid must be a number');
     }
     return desktopIntegration.activateWindow(pid);
   });
 
-  ipcMain.handle('dtm:open-terminal', async (_event, dirPath) => {
+  handle('dtm:open-terminal', async (_event, dirPath) => {
     assertPathArg(dirPath, 'dirPath');
     return desktopIntegration.openTerminal(dirPath);
   });
 
-  ipcMain.handle('dtm:terminal-run', async (_event, command, cwd) => {
+  handle('dtm:terminal-run', async (_event, command, cwd) => {
     if (typeof command !== 'string') throw new Error('Invalid argument: command must be a string');
     assertPathArg(cwd, 'cwd');
     return desktopIntegration.runTerminalCommand(command, cwd);
   });
 
   // Open Path
-  ipcMain.handle('dtm:open-path', async (_event, targetPath) => {
+  handle('dtm:open-path', async (_event, targetPath) => {
     if (typeof targetPath !== 'string' || targetPath.length === 0 || targetPath.length > 1024) {
       throw new Error('Invalid argument: targetPath must be a non-empty string under 1024 characters');
     }
@@ -530,7 +566,7 @@ function registerIpcHandlers() {
   });
 
   // Open External URL
-  ipcMain.handle('dtm:open-external-url', async (_event, url) => {
+  handle('dtm:open-external-url', async (_event, url) => {
     if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {
       throw new Error('Invalid argument: url must be a non-empty string under 2048 characters');
     }
@@ -538,7 +574,7 @@ function registerIpcHandlers() {
   });
 
   // Launch Program
-  ipcMain.handle('dtm:launch-program', async (_event, program) => {
+  handle('dtm:launch-program', async (_event, program) => {
     if (typeof program !== 'string' || program.length === 0 || program.length > 64) {
       throw new Error('Invalid argument: program must be a valid executable name under 64 characters');
     }
@@ -546,22 +582,22 @@ function registerIpcHandlers() {
   });
 
   // Window Controls
-  ipcMain.handle('dtm:toggle-fullscreen', async () => {
+  handle('dtm:toggle-fullscreen', async () => {
     return toggleFullScreen();
   });
 
-  ipcMain.handle('dtm:exit-app', async () => {
+  handle('dtm:exit-app', async () => {
     app.quit();
     return { success: true };
   });
 
-  ipcMain.handle('dtm:minimize-window', async () => {
+  handle('dtm:minimize-window', async () => {
     const win = getMainWindow();
     if (win) win.minimize();
     return { success: true };
   });
 
-  ipcMain.handle('dtm:maximize-window', async () => {
+  handle('dtm:maximize-window', async () => {
     const win = getMainWindow();
     if (win) {
       if (win.isMaximized()) {
@@ -574,7 +610,7 @@ function registerIpcHandlers() {
   });
 
   // Load Available Skins
-  ipcMain.handle('dtm:get-available-skins', async () => {
+  handle('dtm:get-available-skins', async () => {
     const skinsDir = path.join(__dirname, '../../src/skins');
     const skins = [];
 
@@ -593,6 +629,17 @@ function registerIpcHandlers() {
                 const validation = validateManifest(manifest, entry.name);
                 if (!validation.valid) {
                   console.warn(`[DTM] Skin "${entry.name}" has manifest validation warnings:`, validation.errors);
+                }
+
+                // A manifest can be well formed but point at a missing entry
+                // file. Report it clearly; do not prevent other skins loading.
+                if (typeof manifest.entry === 'string' && !/[/\\]/.test(manifest.entry)) {
+                  const entryFile = path.join(skinsDir, entry.name, manifest.entry);
+                  if (!fs.existsSync(entryFile)) {
+                    validation.valid = false;
+                    validation.errors.push(`Entry file is missing: ${manifest.entry}`);
+                    console.warn(`[DTM] Skin "${entry.name}" entry file is missing: ${manifest.entry}`);
+                  }
                 }
 
                 skins.push({
@@ -617,7 +664,7 @@ function registerIpcHandlers() {
   });
 
   // Manifest Validation — called by skin manager to validate a manifest before loading
-  ipcMain.handle('dtm:validate-manifest', async (_event, manifest, skinFolderName) => {
+  handle('dtm:validate-manifest', async (_event, manifest, skinFolderName) => {
     if (typeof manifest !== 'object' || manifest === null) {
       return { valid: false, errors: ['manifest must be a JSON object'] };
     }
@@ -628,22 +675,22 @@ function registerIpcHandlers() {
   });
 
   // Retro "Internet Explorer" — a docked, real Chromium (or Waterfox) window.
-  ipcMain.handle('dtm:waterfox-status', async () => browser.status());
-  ipcMain.handle('dtm:browser-ensure', async () => browser.ensure());
-  ipcMain.handle('dtm:waterfox-open', async (_event, url) => browser.open(url));
-  ipcMain.handle('dtm:waterfox-new-tab', async (_event, url) => browser.newTab(url));
-  ipcMain.handle('dtm:waterfox-switch-tab', async (_event, tabId) => browser.switchTab(tabId));
-  ipcMain.handle('dtm:waterfox-close-tab', async (_event, tabId) => browser.closeTab(tabId));
-  ipcMain.handle('dtm:waterfox-get-tabs', async () => browser.getTabs());
-  ipcMain.handle('dtm:waterfox-navigate', async (_event, url) => browser.navigate(url));
-  ipcMain.handle('dtm:waterfox-reload', async () => browser.reload());
-  ipcMain.handle('dtm:waterfox-history', async (_event, delta) => browser.history(Number(delta)));
-  ipcMain.handle('dtm:waterfox-state', async () => browser.state());
-  ipcMain.handle('dtm:waterfox-dock', async (_event, rect) => browser.dock(rect));
-  ipcMain.handle('dtm:waterfox-show', async () => browser.show());
-  ipcMain.handle('dtm:waterfox-hide', async () => browser.hide());
-  ipcMain.handle('dtm:waterfox-raise', async () => browser.raise());
-  ipcMain.handle('dtm:waterfox-close', async () => browser.close());
+  handle('dtm:waterfox-status', async () => browser.status());
+  handle('dtm:browser-ensure', async () => browser.ensure());
+  handle('dtm:waterfox-open', async (_event, url) => browser.open(url));
+  handle('dtm:waterfox-new-tab', async (_event, url) => browser.newTab(url));
+  handle('dtm:waterfox-switch-tab', async (_event, tabId) => browser.switchTab(tabId));
+  handle('dtm:waterfox-close-tab', async (_event, tabId) => browser.closeTab(tabId));
+  handle('dtm:waterfox-get-tabs', async () => browser.getTabs());
+  handle('dtm:waterfox-navigate', async (_event, url) => browser.navigate(url));
+  handle('dtm:waterfox-reload', async () => browser.reload());
+  handle('dtm:waterfox-history', async (_event, delta) => browser.history(Number(delta)));
+  handle('dtm:waterfox-state', async () => browser.state());
+  handle('dtm:waterfox-dock', async (_event, rect) => browser.dock(rect));
+  handle('dtm:waterfox-show', async () => browser.show());
+  handle('dtm:waterfox-hide', async () => browser.hide());
+  handle('dtm:waterfox-raise', async () => browser.raise());
+  handle('dtm:waterfox-close', async () => browser.close());
 
   app.on('before-quit', () => {
     try { browser.dispose(); } catch (e) { /* already gone */ }

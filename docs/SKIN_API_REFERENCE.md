@@ -1,40 +1,35 @@
 # Desktop Time Machine — Skin API Reference
 
 **Version:** 1.0  
-**Engine Compatibility:** 1.0+  
-**Language:** TypeScript 5.x definitions
+**Engine Compatibility:** 1.0+
+
+> **Implementation status.** `window.DTM` **is** the engine instance (there is
+> no `DTM.engine` property). Skins run in an iframe and normally reach it via
+> `window.parent.DTM`. The only implemented engine surfaces are `fs`, `desktop`,
+> `system` and `sdk`, plus `on`/`off`/`emit`. APIs described below such as
+> `process`, `windows`, `notify`, `clipboard`, `onSkinUnload`, `version` and
+> `hasFeature` are **planned, not implemented** and must not be used by skins.
+> Where this document disagrees with the source, the source is authoritative.
 
 ---
 
 ## Global Namespace: `window.DTM`
 
 ```typescript
-interface DTMNamespace {
-  /** The shared engine instance — primary API surface for skins */
-  engine: Engine;
-  
-  /** Skin manager — discovery, switching, registry */
-  skins: SkinManager;
-  
-  /** UI components — Era Switcher, etc. */
-  ui: {
-    switcher: SkinSwitcherUI;
-  };
-}
-
 declare global {
   interface Window {
-    DTM: DTMNamespace;
-    dtmEngine: Engine;           // Legacy alias
-    dtmSkinManager: SkinManager; // Legacy alias
-    dtmSwitcherUI: SkinSwitcherUI; // Legacy alias
+    /** The engine instance itself. */
+    DTM: Engine;
+    dtmEngine: Engine;            // Same instance
+    dtmSkinManager: SkinManager;  // Skin registry and switching
+    dtmSwitcherUI: SkinSwitcherUI; // Era Switcher component
   }
 }
 ```
 
 ---
 
-## Engine API (`window.DTM.engine`)
+## Engine API (`window.DTM`)
 
 ### Types
 
@@ -466,7 +461,7 @@ interface SkinSwitcherUI {
 
 ```typescript
 // Available in main process via IPC: validate-manifest
-// In renderer: window.DTM.engine.validateManifest(manifest)
+// In renderer: window.DTM.validateManifest(manifest)
 
 interface ManifestValidationResult {
   valid: boolean;
@@ -579,7 +574,7 @@ class EngineError extends Error {
 ### Basic Filesystem Operations
 
 ```typescript
-const engine = window.DTM.engine;
+const engine = window.DTM;
 
 // List desktop
 const files = await engine.list('/home/user/Desktop');
@@ -598,7 +593,7 @@ await engine.mkdir('/home/user/Desktop/MyFolder');
 ### Process Execution
 
 ```typescript
-const engine = window.DTM.engine;
+const engine = window.DTM;
 
 // Check if allowed
 if (await engine.isAllowed('notepad.exe')) {
@@ -610,7 +605,7 @@ if (await engine.isAllowed('notepad.exe')) {
 ### Engine Window Creation
 
 ```typescript
-const engine = window.DTM.engine;
+const engine = window.DTM;
 
 const winId = await engine.windows.create({
   title: 'My Engine Window',
@@ -627,7 +622,7 @@ await engine.windows.close(winId);
 ### Skin Lifecycle
 
 ```typescript
-const engine = window.DTM.engine;
+const engine = window.DTM;
 
 function cleanup() {
   // Clear intervals
@@ -656,7 +651,7 @@ engine.onSkinUnload('my-skin-id', cleanup);
 ### Event Handling
 
 ```typescript
-const engine = window.DTM.engine;
+const engine = window.DTM;
 
 // Listen for skin changes
 engine.on('dtm:skin-changed', (skin) => {

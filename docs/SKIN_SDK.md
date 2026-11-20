@@ -4,6 +4,13 @@
 **Engine Compatibility:** 1.0+  
 **Status:** Living Document
 
+> **Current implementation.** `window.DTM` is the engine instance; skins reach
+> it through `window.parent.DTM` because they are mounted in an iframe. Only
+> `DTM.fs`, `DTM.desktop`, `DTM.system`, `DTM.sdk` and the event helpers exist.
+> Sections describing `DTM.process`, `DTM.windows`, `DTM.notify`,
+> `DTM.clipboard` and `onSkinUnload` describe planned APIs and are not available
+> in this release. Paths are real host paths, not a sandboxed virtual disk.
+
 ---
 
 ## Overview
@@ -199,7 +206,7 @@ Use these standard identifiers so the Era Switcher displays consistent tags:
 
 ## Shared Engine API
 
-Access via `window.DTM.engine` (available after `DOMContentLoaded` in the skin iframe).
+Access via `window.DTM` (available after `DOMContentLoaded` in the skin iframe).
 
 ### Filesystem API (`engine.fs`)
 
@@ -501,7 +508,7 @@ Viewport navigates to new skin → old skin's JS context discarded.
 │  │  • No nodeIntegration                               │   │
 │  │  • No contextIsolation bypass                       │   │
 │  │  • No direct require/electron/fs/process            │   │
-│  │  • All privileged ops via window.DTM.engine         │   │
+│  │  • All privileged ops via window.DTM         │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -516,12 +523,12 @@ Viewport navigates to new skin → old skin's JS context discarded.
 - ❌ `new WebSocket('ws://localhost:...')` to local ports
 - ❌ `eval()` / `Function()` on untrusted input
 - ❌ Access `parent` or `top` window properties
-- ❌ Modify `window.DTM.engine` or preload exports
+- ❌ Modify `window.DTM` or preload exports
 
 **ALWAYS do these:**
-- ✅ Use `window.DTM.engine.fs` for filesystem
-- ✅ Use `window.DTM.engine.process.spawn()` for executables
-- ✅ Use `window.DTM.engine.windows` for engine windows
+- ✅ Use `window.DTM.fs` for filesystem
+- ✅ Use `window.DTM.process.spawn()` for executables
+- ✅ Use `window.DTM.windows` for engine windows
 - ✅ Register cleanup via `engine.onSkinUnload()`
 - ✅ Keep all code in ES modules (`type="module"`)
 - ✅ Scope CSS with skin-specific prefixes or CSS modules
@@ -583,7 +590,7 @@ During development (`npm run dev`), the renderer supports HMR for skin code. The
 
 ```javascript
 // In skin code — access engine for debugging
-console.log('[MySkin] Engine:', window.DTM.engine);
+console.log('[MySkin] Engine:', window.DTM);
 
 // Inspect skin manager
 console.log('[MySkin] Skins:', window.DTM.skins.getAvailableSkins());

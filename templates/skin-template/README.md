@@ -252,14 +252,14 @@ npm test
 1. Place skin in `src/skins/your-skin-id/`
 2. Ensure `manifest.json` is valid
 3. Add preview screenshot as `assets/preview.png` (800×600 recommended)
-4. Update `manifest.json` `previewImage` to `"assets/preview.png"`
+4. Optionally set `manifest.json` `previewImage` to a path relative to `src/` (for example `../screenshots/gallery-my-skin.png`)
 5. Run full test suite: `npm test`
 6. Open PR with screenshots of your skin running
 
 ## Resources
 
-- [Skin SDK Specification](../docs/SKIN_SDK.md)
-- [API Reference](../docs/SKIN_API_REFERENCE.md)
-- [Manifest Spec](../docs/SKIN_MANIFEST_SPEC.md)
-- [LLM Generation Guide](../docs/LLM_SKIN_GENERATION.md)
-- [Examples](../docs/SKIN_EXAMPLES.md)
+- [Skin SDK Specification](../../docs/SKIN_SDK.md)
+- [API Reference](../../docs/SKIN_API_REFERENCE.md)
+- [Manifest Spec](../../docs/SKIN_MANIFEST_SPEC.md)
+- [LLM Generation Guide](../../docs/LLM_SKIN_GENERATION.md)
+- [Examples](../../docs/SKIN_EXAMPLES.md)

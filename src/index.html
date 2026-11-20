@@ -43,20 +43,44 @@
   <script src="./components/ShellApps/shell-apps.js"></script>
 
   <script>
+    function showStartupFailure(message) {
+      let overlay = document.getElementById('dtmStartupFailure');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'dtmStartupFailure';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:#1b1b1b;color:#eee;font:14px Tahoma,Arial,sans-serif;text-align:center';
+        overlay.innerHTML = '<div><h2>Desktop Time Machine could not start</h2><p id="dtmStartupFailureDetail"></p><button id="dtmStartupRetry">Retry</button></div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('#dtmStartupRetry').addEventListener('click', async () => {
+          overlay.querySelector('#dtmStartupRetry').disabled = true;
+          const ok = await window.dtmSkinManager.mountActiveSkin();
+          if (ok) overlay.remove();
+          else overlay.querySelector('#dtmStartupRetry').disabled = false;
+        });
+      }
+      overlay.querySelector('#dtmStartupFailureDetail').textContent = message;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
-      // Initialize Desktop Engine
-      await window.dtmEngine.init();
+      try {
+        // Initialize Desktop Engine
+        await window.dtmEngine.init();
 
-      // Initialize Skin Manager
-      await window.dtmSkinManager.init();
+        // Initialize Skin Manager
+        await window.dtmSkinManager.init();
 
-      // Initialize Era Switcher UI
-      window.dtmSwitcherUI.init();
+        // Initialize Era Switcher UI
+        window.dtmSwitcherUI.init();
 
-      // Load (and verify) the active skin
-      const mounted = await window.dtmSkinManager.mountActiveSkin();
-      if (!mounted) {
-        console.error('[DTM] Startup skin could not be mounted.');
+        // Load (and verify) the active skin
+        const mounted = await window.dtmSkinManager.mountActiveSkin();
+        if (!mounted) {
+          console.error('[DTM] Startup skin could not be mounted.');
+          showStartupFailure('No desktop skin could be loaded. Check the installed skins and try again.');
+        }
+      } catch (error) {
+        console.error('[DTM] Startup failed:', error);
+        showStartupFailure(error && error.message ? error.message : String(error));
       }
     });
 

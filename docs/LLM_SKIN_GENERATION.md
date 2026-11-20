@@ -4,6 +4,12 @@
 **Target:** External LLMs (Claude, GPT, Gemini, etc.)  
 **Purpose:** Enable AI-assisted creation of historical desktop environment skins
 
+> **Current implementation.** Skins are loaded in an iframe and access the
+> engine via `window.parent.DTM`. `window.DTM` is the engine itself; there is no
+> `DTM.engine`, `DTM.process`, `DTM.windows`, `DTM.notify` or `DTM.clipboard`.
+> Use `DTM.fs`, `DTM.system`, `DTM.desktop` and `DTM.sdk` only. Examples using
+> the other APIs describe planned features and will not run.
+
 ---
 
 ## Overview
@@ -61,7 +67,7 @@ You are an expert desktop environment historian and frontend engineer. Your task
 **Architecture:**
 - Skins run in **sandboxed iframes** — NO Node.js/Electron access
 - **Shared engine** provides: filesystem, process execution (allowlisted), window management, system info, notifications, clipboard
-- Access via `window.DTM.engine` (see API reference)
+- Access via `window.DTM` (see API reference)
 - **Lifecycle is mandatory** — every skin MUST implement `cleanup()` disposing ALL resources
 
 ### YOUR TASK
@@ -83,16 +89,16 @@ Given a target historical OS (e.g., "Windows XP Luna", "Amiga Workbench 3.1", "B
 - `fetch('file://...')` or any `file:` URLs
 - `eval()` / `Function()` on untrusted input
 - Access `parent`, `top`, or `window.parent` properties
-- Modify `window.DTM.engine` or preload exports
+- Modify `window.DTM` or preload exports
 - Assume capabilities not in `SKIN_API_REFERENCE.md`
 - Invent new engine APIs — use only documented ones
 - Skip `cleanup()` or leave resources undisposed
 - Copy Windows 95 code and just recolour it — **each OS must feel authentic**
 
 #### ✅ ALWAYS DO THESE
-- Use `window.DTM.engine.fs` for ALL filesystem operations
-- Use `window.DTM.engine.process.spawn()` for executables (allowlisted only)
-- Use `window.DTM.engine.windows` for engine-level windows
+- Use `window.DTM.fs` for ALL filesystem operations
+- Use `window.DTM.process.spawn()` for executables (allowlisted only)
+- Use `window.DTM.windows` for engine-level windows
 - Register cleanup: `engine.onSkinUnload('your-skin-id', cleanup)`
 - Define ALL colours as CSS custom properties in `:root`
 - Load authentic fonts via `@font-face` from `assets/fonts/`
@@ -146,7 +152,7 @@ Before delivering, verify your generated code:
 - [ ] `desktop.js` has `init()` and `cleanup()` with complete resource disposal
 - [ ] `cleanup()` clears: intervals, timeouts, animation frames, event listeners, audio contexts, observers, DOM nodes
 - [ ] No `require`, `process`, `fs`, `electron`, `Buffer` anywhere
-- [ ] All engine access via `window.DTM.engine.*`
+- [ ] All engine access via `window.DTM.*`
 - [ ] Window management implements YOUR OS's chrome (not Win95)
 - [ ] Shell paradigm matches YOUR OS (Start menu / Apple menu / Dock / Workbench)
 - [ ] Apps demonstrate engine API usage (fs, process, notifications, clipboard)

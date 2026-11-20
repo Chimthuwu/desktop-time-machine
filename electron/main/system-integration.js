@@ -8,7 +8,7 @@ const path = require('path');
 const os = require('os');
 const { shell } = require('electron');
 const { spawn } = require('child_process');
-const { isSafePath, isSafeExternalUrl, isApprovedProgram, getPinnedExecutablePath } = require('../security/permissions');
+const { isSafePath, isProtectedPath, isSafeExternalUrl, isApprovedProgram, getPinnedExecutablePath } = require('../security/permissions');
 
 /**
  * Returns safe system information about the host
@@ -84,7 +84,7 @@ async function listDirectory(dirPath) {
  * @param {string} targetPath 
  */
 async function openPath(targetPath) {
-  if (!isSafePath(targetPath)) {
+  if (!isSafePath(targetPath) || isProtectedPath(targetPath, { destructive: true })) {
     throw new Error('Access denied: Invalid target path');
   }
   const errorMessage = await shell.openPath(targetPath);

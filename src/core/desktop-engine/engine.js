@@ -10,7 +10,6 @@ class DesktopEngine {
   constructor() {
     this.preload = window.dtmPreload || this.createMockPreload();
     this.systemInfo = null;
-    this.currentSkin = 'windows95';
     this.listeners = new Map();
     this._desktopCache = null;
     this._desktopCacheAt = 0;

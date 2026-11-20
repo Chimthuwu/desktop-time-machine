@@ -18,6 +18,7 @@ const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { createDock } = require('./window-dock');
+const { isSafeExternalUrl } = require('../security/permissions');
 
 const PROFILE_MARKER = 'waterfox-ie';
 const WINDOW_CLASS_HINT = 'waterfox';
@@ -188,10 +189,9 @@ function status() {
 }
 
 function safeUrl(raw) {
-  const value = String(raw || '').trim();
-  if (!value) return null;
-  if (/^https?:/i.test(value) || /^about:/i.test(value) || /^file:/i.test(value)) return value;
-  return null;
+  // Only public web URLs are handed to the external browser engine. Local
+  // files and custom schemes must never be opened from renderer input.
+  return isSafeExternalUrl(raw) ? String(raw).trim() : null;
 }
 
 async function open(rawUrl) {
@@ -427,4 +427,4 @@ function dispose() {
   if (dockHelper) { dockHelper.dispose(); dockHelper = null; }
 }
 
-module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose, newTab, switchTab, closeTab, getTabs };
+module.exports = { status, open, navigate, reload, history, state, dock, show, hide, raise, close, dispose, newTab, switchTab, closeTab, getTabs, safeUrl };

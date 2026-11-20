@@ -10,7 +10,7 @@
   "engineCompatibility": "1.0",
   "status": "ready",
   "icon": "🪟",
-  "themeColor": "#0054e3",
+  "themeColor": "#008080",
   "previewImage": "./skins/windows98/assets/preview.svg",
   "capabilities": [
     "window-management",

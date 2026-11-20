@@ -280,7 +280,7 @@ Drives the real Electron app with real browser-level mouse input (CDP `Input.dis
 
 **Target:** `node_modules\electron\dist\electron.exe`
 **Arguments:** `.` (the project root)
-**Working Directory:** `Z:\github\skinsos`
+**Working Directory:** repository root
 
 Direct-Electron launch — no console window flashes at startup. The app boots muted by default (`app.commandLine.appendSwitch('mute-audio')` in the main process).
 

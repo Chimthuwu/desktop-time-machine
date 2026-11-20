@@ -6,8 +6,13 @@ const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 const { createMainWindow, getMainWindow } = require('./window-manager');
 const { registerIpcHandlers } = require('./ipc-handlers');
-const { hardenWebviews } = require('./webview-security');
 const browser = require('./browser');
+const {
+  shouldGrantPermissionRequest,
+  shouldAllowPermissionCheck,
+  DISPLAY_MEDIA_USE_SYSTEM_PICKER,
+  displayMediaChoice
+} = require('../security/permission-policy');
 
 // Skin beeps/UI sounds stay muted (see setAudioMuted below), but the global
 // mute-audio switch is intentionally NOT used: it would also silence the
@@ -29,30 +34,32 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     registerIpcHandlers();
 
-    // Grant media/display-capture permissions so the retro browser and Discord
-    // webviews can use the microphone, camera and (where supported) screen
-    // sharing instead of being silently denied by Chromium's defaults.
-    const { desktopCapturer } = require('electron');
+    // Least privilege: no camera, microphone, location, notification,
+    // clipboard or display-capture access is granted silently. Permission
+    // decisions are made by the shared policy module so they can be tested.
     const configureSession = (s) => {
       if (!s) return;
       try {
         s.setPermissionRequestHandler((webContents, permission, callback) => {
-          const allowed = ['media', 'display-capture', 'geolocation', 'notifications', 'clipboard-read', 'clipboard-sanitized-write'];
-          callback(allowed.includes(permission));
+          const requestedOrigin = (() => {
+            try { return webContents && webContents.getURL ? webContents.getURL() : ''; } catch { return ''; }
+          })();
+          callback(shouldGrantPermissionRequest(permission, { requestedOrigin }));
         });
       } catch {}
-      try { s.setPermissionCheckHandler(() => true); } catch {}
       try {
-        s.setDisplayMediaRequestHandler(async (request, callback) => {
-          try {
-            const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
-            const screen = sources.find((x) => String(x.id).startsWith('screen')) || sources[0];
-            if (screen) callback({ video: screen });
-            else callback({});
-          } catch (e) {
-            try { callback({}); } catch {}
-          }
-        }, { useSystemPicker: false });
+        s.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+          const origin = requestingOrigin || (() => {
+            try { return webContents && webContents.getURL ? webContents.getURL() : ''; } catch { return ''; }
+          })();
+          return shouldAllowPermissionCheck(permission, { requestedOrigin: origin });
+        });
+      } catch {}
+      try {
+        s.setDisplayMediaRequestHandler((_request, callback) => {
+          // The OS picker chooses the source. Never enumerate and pick one.
+          try { callback(displayMediaChoice()); } catch {}
+        }, { useSystemPicker: DISPLAY_MEDIA_USE_SYSTEM_PICKER });
       } catch {}
     };
     configureSession(session.defaultSession);
@@ -64,7 +71,6 @@ if (!gotTheLock) {
     try { await session.defaultSession.clearCache(); } catch {}
 
     const mainWindow = createMainWindow();
-    hardenWebviews(mainWindow.webContents);
     // Keep the skin's UI beeps (MS-DOS prompt, macos8 chimes) silent while
     // leaving the browser/Discord webviews audible — they have their own
     // WebContents and are not affected by this flag.

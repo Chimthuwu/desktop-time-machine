@@ -37,6 +37,12 @@ const BLOCKED_DEVICE_NAMESPACE = /^\\\\[.?]\\/;
 // Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
 const RESERVED_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 
+// UNC/network paths are not used by the simulator and bypass local protections.
+const BLOCKED_UNC = /^\\\\/;
+
+// 8.3 short names can spell a protected directory without matching its text.
+const SHORT_NAME = /~[0-9]+$/;
+
 /**
  * Validates whether an external URL is safe to open via shell.openExternal
  * @param {string} urlString 
@@ -62,46 +68,76 @@ function isSafeExternalUrl(urlString) {
 }
 
 /**
- * Validates a filesystem path to ensure it is within safe boundaries and does not contain null bytes or sensitive locations
- * @param {string} targetPath 
+ * Normalizes a Windows path the way the filesystem does: trailing dots and
+ * spaces on each component are ignored, and reserved device names are rejected
+ * anywhere in the path (not only as the basename).
+ */
+function normalizeWindowsPath(targetPath) {
+  if (BLOCKED_UNC.test(targetPath)) return null;
+  const resolved = path.resolve(targetPath);
+  const parsed = path.parse(resolved);
+  const dir = parsed.dir.startsWith(parsed.root) ? parsed.dir.slice(parsed.root.length) : parsed.dir;
+  const segments = dir.split(/[\\/]+/).filter(Boolean).concat(parsed.base);
+  const clean = [];
+  for (const segment of segments) {
+    const trimmed = segment.replace(/[. ]+$/, '');
+    if (!trimmed || trimmed === '.') continue;
+    if (RESERVED_DEVICE_NAME.test(trimmed)) return null;
+    if (SHORT_NAME.test(trimmed)) return null;
+    clean.push(trimmed);
+  }
+  return path.resolve(parsed.root, ...clean);
+}
+
+/**
+ * Resolves symlinks/junctions for the longest existing ancestor so a path that
+ * does not exist yet (a write target) is still checked against its real parent.
+ */
+function canonicalizeForCheck(normalized) {
+  let candidate = normalized;
+  const tail = [];
+  while (candidate && candidate !== path.parse(candidate).root) {
+    try {
+      if (fs.existsSync(candidate)) {
+        return path.resolve(fs.realpathSync(candidate), ...tail);
+      }
+    } catch {
+      // Fall through to the parent; an unreadable ancestor is handled by the
+      // caller's own error handling.
+    }
+    tail.unshift(path.basename(candidate));
+    candidate = path.dirname(candidate);
+  }
+  return normalized;
+}
+
+function matchesSensitivePatterns(targetPath) {
+  return SENSITIVE_PATH_PATTERNS.some((pattern) => pattern.test(targetPath));
+}
+
+/**
+ * Validates a filesystem path to ensure it is within safe boundaries and does
+ * not contain null bytes, device namespaces, short names or sensitive
+ * locations. Both the lexical path and its canonical (symlink-resolved) form
+ * are checked so junctions cannot be used to escape the policy.
+ * @param {string} targetPath
  * @returns {boolean}
  */
 function isSafePath(targetPath) {
   if (!targetPath || typeof targetPath !== 'string') return false;
   if (targetPath.length > 1024) return false;
 
-  // Disallow null bytes or control characters
+  // Disallow null bytes, control characters and raw device namespaces.
   if (targetPath.includes('\0')) return false;
-
-  // Disallow raw device namespaces (\\.\ and \\?\)
   if (BLOCKED_DEVICE_NAMESPACE.test(targetPath)) return false;
 
-  const resolved = path.resolve(targetPath);
+  const normalized = normalizeWindowsPath(targetPath);
+  if (!normalized) return false;
 
-  // Disallow Windows reserved device names
-  if (RESERVED_DEVICE_NAME.test(path.basename(resolved))) return false;
+  if (matchesSensitivePatterns(normalized)) return false;
 
-  // Check against sensitive system and credential patterns
-  for (const pattern of SENSITIVE_PATH_PATTERNS) {
-    if (pattern.test(resolved)) {
-      return false;
-    }
-  }
-
-  // Symlink check: if file/folder exists, resolve canonical real path
-  try {
-    if (fs.existsSync(resolved)) {
-      const canonical = fs.realpathSync(resolved);
-      for (const pattern of SENSITIVE_PATH_PATTERNS) {
-        if (pattern.test(canonical)) {
-          return false;
-        }
-      }
-    }
-  } catch {
-    // If realpath fails (e.g. broken link or permission error), consider unsafe
-    return false;
-  }
+  const canonical = canonicalizeForCheck(normalized);
+  if (matchesSensitivePatterns(canonical)) return false;
 
   return true;
 }
@@ -183,6 +219,29 @@ function getPinnedSystemBinary(name) {
   return null;
 }
 
+/**
+ * Verifies that an IPC sender belongs to the application's own local window.
+ * Guest webviews (remote http(s) content) never receive the privileged preload
+ * bridge and must never be able to invoke filesystem or shell handlers.
+ *
+ * @param {string} senderUrl URL reported by event.sender.getURL()
+ * @param {string} appRoot Absolute application root directory
+ * @returns {boolean}
+ */
+function isTrustedRendererUrl(senderUrl, appRoot) {
+  if (!senderUrl || typeof senderUrl !== 'string' || !appRoot || typeof appRoot !== 'string') return false;
+  try {
+    const parsed = new URL(senderUrl);
+    if (parsed.protocol !== 'file:') return false;
+    const localPath = decodeURIComponent(parsed.pathname).replace(/^\/([a-zA-Z]:)/, '$1');
+    const resolved = path.resolve(localPath);
+    const root = path.resolve(appRoot);
+    return resolved === root || resolved.startsWith(root + path.sep);
+  } catch {
+    return false;
+  }
+}
+
 function normalizeForCompare(targetPath) {
   return path.resolve(targetPath).replace(/[\\/]+$/, '').toLowerCase();
 }
@@ -208,12 +267,16 @@ function isSameOrInside(candidateNorm, protectedNorm) {
 function isProtectedPath(targetPath, { destructive = false } = {}) {
   if (!targetPath || typeof targetPath !== 'string') return false;
 
-  const resolved = path.resolve(targetPath);
-  const normalized = normalizeForCompare(resolved);
+  const normalizedPath = normalizeWindowsPath(targetPath);
+  if (!normalizedPath) return true;
+  const resolved = normalizedPath;
+  const canonical = canonicalizeForCheck(normalizedPath);
+  const candidates = [resolved, canonical].map(normalizeForCompare);
+  const isInside = (protectedDir) => candidates.some((candidate) => isSameOrInside(candidate, protectedDir));
   const root = path.parse(resolved).root;
 
   // Drive roots such as C:\
-  if (/^[a-z]:$/.test(normalized)) return true;
+  if (/^[a-z]:$/.test(candidates[0])) return true;
 
   const systemRoot = normalizeForCompare(process.env.SystemRoot || 'C:\\Windows');
   const writeProtectedDirs = [
@@ -226,15 +289,13 @@ function isProtectedPath(targetPath, { destructive = false } = {}) {
   ];
 
   for (const protectedDir of writeProtectedDirs) {
-    if (isSameOrInside(normalized, protectedDir)) return true;
+    if (isInside(protectedDir)) return true;
   }
 
   if (destructive) {
-    if (normalized === normalizeForCompare(os.homedir())) return true;
-    if (normalized === normalizeForCompare(path.join(root, 'Users'))) return true;
-    for (const pattern of SENSITIVE_PATH_PATTERNS) {
-      if (pattern.test(resolved)) return true;
-    }
+    if (candidates.includes(normalizeForCompare(os.homedir()))) return true;
+    if (candidates.includes(normalizeForCompare(path.join(root, 'Users')))) return true;
+    if (matchesSensitivePatterns(resolved) || matchesSensitivePatterns(canonical)) return true;
   }
 
   return false;
@@ -243,6 +304,7 @@ function isProtectedPath(targetPath, { destructive = false } = {}) {
 module.exports = {
   isSafeExternalUrl,
   isSafePath,
+  isTrustedRendererUrl,
   isApprovedProgram,
   getPinnedExecutablePath,
   getPinnedSystemBinary,
@@ -250,5 +312,8 @@ module.exports = {
   APPROVED_PROGRAMS,
   SENSITIVE_PATH_PATTERNS,
   BLOCKED_DEVICE_NAMESPACE,
-  RESERVED_DEVICE_NAME
+  BLOCKED_UNC,
+  RESERVED_DEVICE_NAME,
+  normalizeWindowsPath,
+  canonicalizeForCheck
 };

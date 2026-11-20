@@ -6,6 +6,9 @@
   "scripts": {
     "start": "electron .",
     "test": "electron test/verify-all.js",
+    "test:security": "electron test/security-regressions.js && electron test/phase4-security.js",
+    "test:skins": "electron test/phase4-skins.js",
+    "verify": "npm test && npm run test:security && npm run test:skins",
     "screenshots": "electron test/capture-gallery.js"
   },
   "keywords": [

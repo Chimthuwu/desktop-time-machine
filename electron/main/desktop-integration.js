@@ -942,64 +942,91 @@ async function openTerminal(dirPath) {
   return { success: true, path: resolved, terminal: 'powershell' };
 }
 
-// Runs a single command in the REAL host shell for the in-skin Command
-// Prompt and returns its output. The command itself is user-supplied (that is
-// what a terminal is), but every invocation is non-interactive, time-limited,
-// runs as the current user with the app's environment, and starts in a
-// validated folder.
+// The in-skin Command Prompt deliberately does NOT execute an arbitrary
+// renderer-supplied string in a host shell. A compromised skin or injected
+// script could otherwise run commands as the current Windows user. Only a
+// small, side-effect-free command set is implemented here, entirely in the
+// main process, with validated paths.
 const MAX_TERMINAL_COMMAND = 2000;
 const MAX_TERMINAL_OUTPUT = 200 * 1024;
-const TERMINAL_TIMEOUT_MS = 20000;
+const TERMINAL_COMMANDS = Object.freeze([
+  'help', 'ver', 'date', 'time', 'echo', 'pwd', 'whoami', 'dir', 'type'
+]);
 
 async function runTerminalCommand(command, cwd) {
   if (typeof command !== 'string' || !command.trim()) throw new Error('Command must be a non-empty string');
   if (command.length > MAX_TERMINAL_COMMAND) throw new Error('Command is too long');
   if (command.includes('\0')) throw new Error('Invalid command');
+  // Shell metacharacters must never reach a host command, even for a safe verb.
+  if (/[|&;<>`]/.test(command)) {
+    return { stdout: '', stderr: 'Shell metacharacters are not supported.\r\n', code: 1 };
+  }
 
   const resolved = path.resolve(cwd || os.homedir());
   if (!isSafePath(resolved)) throw new Error('Access denied: terminal path outside permitted boundaries');
   let stat;
   try { stat = await fsp.stat(resolved); } catch { throw new Error('Folder not found: ' + resolved); }
   if (!stat.isDirectory()) throw new Error('Terminal path is not a folder');
-  if (process.platform !== 'win32') throw new Error('Command Prompt is only supported on Windows');
 
-  const systemRoot = process.env.SystemRoot || 'C:\\Windows';
-  const powershell = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-  const exe = fs.existsSync(powershell) ? powershell : 'powershell.exe';
-  const script = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ' + command;
+  const parts = command.trim().split(/\s+/);
+  const verb = parts[0].toLowerCase();
+  const output = { stdout: '', stderr: '', code: 0 };
 
-  return new Promise((resolve) => {
-    const child = spawn(exe, ['-NoProfile', '-NonInteractive', '-Command', script], {
-      cwd: resolved,
-      windowsHide: true,
-      env: process.env
-    });
-    let stdout = '';
-    let stderr = '';
-    let done = false;
-    let timer = null;
+  if (!TERMINAL_COMMANDS.includes(verb)) {
+    output.stderr = `'${verb}' is not a supported command. Type HELP for the command list.`;
+    output.code = 1;
+    return output;
+  }
 
-    const finish = (code) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      resolve({ stdout, stderr, code });
-    };
-
-    child.stdout.on('data', (chunk) => {
-      if (stdout.length < MAX_TERMINAL_OUTPUT) stdout += chunk.toString('utf8');
-    });
-    child.stderr.on('data', (chunk) => {
-      if (stderr.length < MAX_TERMINAL_OUTPUT) stderr += chunk.toString('utf8');
-    });
-    child.on('error', (err) => { stderr += err.message; finish(-1); });
-    child.on('close', (code) => finish(code === null ? -1 : code));
-
-    timer = setTimeout(() => {
-      try { child.kill(); } catch {}
-      finish(-2);
-    }, TERMINAL_TIMEOUT_MS);
-  });
+  switch (verb) {
+    case 'help':
+      output.stdout = 'Supported commands: ' + TERMINAL_COMMANDS.join(', ') + '\r\n';
+      break;
+    case 'ver':
+      output.stdout = 'Desktop Time Machine Command Prompt [Version 1.0]\r\n';
+      break;
+    case 'date':
+      output.stdout = new Date().toLocaleDateString() + '\r\n';
+      break;
+    case 'time':
+      output.stdout = new Date().toLocaleTimeString() + '\r\n';
+      break;
+    case 'echo':
+      output.stdout = parts.slice(1).join(' ') + '\r\n';
+      break;
+    case 'pwd':
+      output.stdout = resolved + '\r\n';
+      break;
+    case 'whoami':
+      output.stdout = os.userInfo().username + '\r\n';
+      break;
+    case 'dir': {
+      const entries = await fsp.readdir(resolved, { withFileTypes: true });
+      const lines = [
+        ' Directory of ' + resolved,
+        '',
+        ...entries.map((entry) => `${entry.isDirectory() ? '<DIR>' : '     '} ${entry.name}`),
+        '',
+        `    ${entries.length} item(s)`
+      ];
+      output.stdout = lines.join('\r\n') + '\r\n';
+      break;
+    }
+    case 'type': {
+      if (!parts[1]) { output.stderr = 'Syntax: type <file>\r\n'; output.code = 1; break; }
+      const target = path.resolve(resolved, parts[1]);
+      if (!isSafePath(target)) { output.stderr = 'Access denied.\r\n'; output.code = 1; break; }
+      try {
+        const content = await fsp.readFile(target, 'utf8');
+        output.stdout = content.slice(0, MAX_TERMINAL_OUTPUT) + '\r\n';
+      } catch (e) {
+        output.stderr = e.message + '\r\n';
+        output.code = 1;
+      }
+      break;
+    }
+  }
+  return output;
 }
 
 function scanDrivesNode() {
