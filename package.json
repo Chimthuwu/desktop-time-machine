@@ -5,7 +5,8 @@
   "main": "electron/main/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "electron test/verify-all.js"
+    "test": "electron test/verify-all.js",
+    "screenshots": "electron test/capture-gallery.js"
   },
   "keywords": [
     "retro",

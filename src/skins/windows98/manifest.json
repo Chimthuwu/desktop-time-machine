@@ -11,7 +11,7 @@
   "status": "ready",
   "icon": "🪟",
   "themeColor": "#0054e3",
-  "previewImage": "assets/preview.svg",
+  "previewImage": "./skins/windows98/assets/preview.svg",
   "capabilities": [
     "window-management",
     "filesystem",

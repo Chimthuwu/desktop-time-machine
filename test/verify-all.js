@@ -473,6 +473,23 @@ app.whenReady().then(async () => {
         doc.querySelector('.desktop-icon[data-app="computer"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         await new Promise(r => setTimeout(r, 250));
         out.fileBrowser = !!doc.querySelector('.win .file-path');
+        out.timeMachineMenu = !!doc.querySelector('#start-menu [data-app="timemachine"]');
+        const engine = window.dtmEngine;
+        const systemDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(engine), 'system');
+        let fsCalls = 0;
+        Object.defineProperty(engine, 'system', {
+          configurable: true,
+          get() { return Object.assign({}, systemDesc.get.call(this), { toggleFullScreen: () => { fsCalls++; return Promise.resolve(true); } }); }
+        });
+        const fsEvent = new doc.defaultView.KeyboardEvent('keydown', { key: 'F5', ctrlKey: true, bubbles: true, cancelable: true });
+        doc.dispatchEvent(fsEvent);
+        out.ctrlF5Handled = fsEvent.defaultPrevented && fsCalls === 1;
+        delete engine.system;
+        doc.getElementById('start').click();
+        doc.querySelector('#start-menu [data-app="timemachine"]').click();
+        await new Promise(r => setTimeout(r, 100));
+        out.timeMachineOpens = window.dtmSwitcherUI.isOpen;
+        window.dtmSwitcherUI.close();
         return out;
       })()
     `);
@@ -560,6 +577,26 @@ app.whenReady().then(async () => {
         const calc = doc.querySelector('.window[data-app="calculator"]');
         ['7','+','5','='].forEach(key => calc.querySelector('.calc-key[data-key="' + key + '"]').click());
         out.calculator = calc.querySelector('.calc-display').textContent === '12';
+
+        // Safari search must keep the Safari window and render inside it.
+        document.getElementById('skin-viewport').contentWindow.openApp('safari');
+        const safariWin = doc.querySelector('.window[data-app="safari"]');
+        const content = safariWin.querySelector('.safari-start');
+        const rect = content.getBoundingClientRect();
+        safariWin.querySelector('.safari-search input').value = 'hello';
+        safariWin.querySelector('.safari-search button').click();
+        await new Promise(r => setTimeout(r, 300));
+        out.safariWindowKept = !!doc.querySelector('.window[data-app="safari"]');
+        out.safariToolbarKept = !!safariWin.querySelector('.safari-toolbar') && !!safariWin.querySelector('.safari-bookmarks');
+        const safariWeb = document.querySelector('#shell-app-layer .dtmshell-safari-web');
+        out.safariWebAttached = !!safariWeb && safariWeb.style.display !== 'none';
+        out.safariWebInPlace = !!safariWeb && Math.abs(safariWeb.offsetLeft - rect.left) < 2 && Math.abs(safariWeb.offsetTop - rect.top) < 2;
+        safariWin.style.left = (parseFloat(safariWin.style.left) + 40) + 'px';
+        await new Promise(r => setTimeout(r, 250));
+        out.safariWebFollowsMove = !!safariWeb && Math.abs(safariWeb.offsetLeft - content.getBoundingClientRect().left) < 2;
+        safariWin.querySelector('.t-close').click();
+        await new Promise(r => setTimeout(r, 150));
+        out.safariWebClosed = !document.querySelector('#shell-app-layer .dtmshell-safari-web');
         return out;
       })()
     `);

@@ -52,6 +52,18 @@
   <script src="./finder.js"></script>
   <script src="./apps.js"></script>
   <script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'macosx' });
+        }
+      } catch (e) { console.warn('[DTM] macosx mirror mount failed:', e); }
+    })();
+  </script>
+  <script>
     (() => {
       const boot = document.getElementById('boot-screen');
       const recovery = document.getElementById('boot-recovery');

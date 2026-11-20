@@ -875,7 +875,7 @@
     injectCss(doc);
 
     // Hide the skin's own (fake) desktop icons — the real mirror replaces them.
-    ['#iconGrid', '#desktop-icons'].forEach((sel) => {
+    ['#iconGrid', '#desktop-icons', '#icons'].forEach((sel) => {
       const c = doc.querySelector(sel);
       if (c) c.style.display = 'none';
     });
@@ -889,10 +889,13 @@
     const layer = el(doc, 'div', 'dtm-desktop-layer');
     layer.dataset.skin = skinId;
     // Windows skins pass the full-viewport desktop; both Mac skins pass a
-    // #desktop that already starts below the menu bar. Reserve only the
-    // bottom chrome: 28px Control Strip (+2 gutter) vs 64px Dock + 10 gutter.
+    // #desktop that already starts below the menu bar. Reserve chrome so
+    // mirrored icons don't overlap skin UI (taskbars, docks, screen bars).
     if (skinId === 'macos8') { layer.style.top = '0'; layer.style.bottom = '30px'; }
     else if (skinId === 'macosx') { layer.style.top = '0'; layer.style.bottom = '74px'; }
+    else if (skinId === 'amiga-workbench') { layer.style.top = '25px'; layer.style.bottom = '0'; }
+    else if (skinId === 'beos') { layer.style.top = '0'; layer.style.bottom = '0'; }
+    else if (skinId === 'windowsXP') { layer.style.top = '0'; layer.style.bottom = '38px'; }
     else { layer.style.top = '0'; layer.style.bottom = '42px'; }
     desktop.appendChild(layer);
 

@@ -224,5 +224,17 @@ button,input,textarea{font:inherit}
   document.addEventListener('keydown',(event)=>{if(event.key==='F8'){event.preventDefault();switchEra();}if(event.key==='Escape')popup.classList.remove('open');});
 })();
 </script>
+<script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'amiga-workbench' });
+        }
+      } catch (e) { console.warn('[DTM] amiga-workbench mirror mount failed:', e); }
+    })();
+</script>
 </body>
 </html>

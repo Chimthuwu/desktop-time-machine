@@ -6,6 +6,16 @@ Desktop Time Machine transforms your modern Windows computer into a living museu
 
 ---
 
+## 🖥️ A Tour Through Time
+
+| Windows 95 · 1995 | Windows XP · 2001 | Mac OS X · 2001 |
+|:---:|:---:|:---:|
+| ![Windows 95 desktop with Notepad and Minesweeper](screenshots/gallery-win95.png) | ![Windows XP Luna desktop with the Start menu](screenshots/gallery-winxp.png) | ![Mac OS X Aqua desktop with Calculator and Stickies](screenshots/gallery-macosx.png) |
+
+Screenshots are captured from the real application by `npm run screenshots`.
+
+---
+
 ## 🌟 Key Features
 
 ### One Engine, Many Desktop Environments

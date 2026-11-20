@@ -2,17 +2,59 @@
   'use strict';
   const DTM = (window.parent && window.parent.DTM) ? window.parent.DTM : (window.DTM || null);
 
-  function launchBrowser(url = 'https://www.apple.com/') {
-    if (window.parent) {
-      window.parent.postMessage({ type: 'dtm:launch-webapp', app: 'browser', url }, '*');
-    } else if (DTM && DTM.system && DTM.system.openExternalUrl) {
-      DTM.system.openExternalUrl(url);
-    }
+  function postToShell(data) {
+    if (window.parent) window.parent.postMessage(data, '*');
   }
 
   function activeWindow(appId) {
     return document.querySelector('.window.active[data-app="' + appId + '"]');
   }
+
+  // Safari's chrome is drawn here, but its pages need the shell's real
+  // <webview>. The shell parks a borderless webview over Safari's content
+  // area, so keep it fed with the latest rectangle as the window moves,
+  // resizes, minimizes or zooms.
+  let activeSafariEntry = null;
+  let safariSyncTimer = null;
+
+  function safariContentRect(entry) {
+    const area = entry.body.querySelector('.safari-start');
+    const win = entry.body.closest('.window');
+    if (!area || !win || win.style.display === 'none') {
+      return { left: 0, top: 0, width: 0, height: 0, visible: false };
+    }
+    const r = area.getBoundingClientRect();
+    return { left: r.left, top: r.top, width: r.width, height: r.height, visible: true };
+  }
+
+  function syncSafariWeb() {
+    if (!activeSafariEntry || !activeSafariEntry.safariActive) return;
+    postToShell({ type: 'dtm:safari-sync', rect: safariContentRect(activeSafariEntry) });
+  }
+
+  function safariAction(action, url) {
+    postToShell({ type: 'dtm:safari-action', action, url });
+  }
+
+  function stopSafariWeb(entry) {
+    if (!entry || entry !== activeSafariEntry) return;
+    entry.safariActive = false;
+    activeSafariEntry = null;
+    if (safariSyncTimer) { clearInterval(safariSyncTimer); safariSyncTimer = null; }
+    postToShell({ type: 'dtm:safari-close' });
+  }
+
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || !activeSafariEntry) return;
+    if (data.type === 'dtm:safari-url') {
+      const address = activeSafariEntry.body.querySelector('.safari-url');
+      if (address && document.activeElement !== address && data.url) address.value = data.url;
+    } else if (data.type === 'dtm:safari-title') {
+      const title = activeSafariEntry.win.querySelector('.title-text');
+      if (title && data.title) title.textContent = data.title;
+    }
+  });
 
   function simpleTextBody() {
     return `
@@ -199,10 +241,21 @@
       if (!text) return;
       const url = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : (/^[\w.-]+\.[a-z]{2,}/i.test(text) ? 'https://' + text : 'https://www.google.com/search?q=' + encodeURIComponent(text));
       address.value = url;
-      launchBrowser(url);
+      if (window.parent) {
+        activeSafariEntry = entry;
+        entry.safariActive = true;
+        postToShell({ type: 'dtm:safari-navigate', url, rect: safariContentRect(entry) });
+        if (!safariSyncTimer) safariSyncTimer = setInterval(syncSafariWeb, 120);
+      } else if (DTM && DTM.system && DTM.system.openExternalUrl) {
+        DTM.system.openExternalUrl(url);
+      }
     };
     entry.body.querySelector('.safari-go').addEventListener('click', () => go());
     entry.body.querySelector('.safari-launch').addEventListener('click', () => go(search.value || address.value));
+    entry.body.querySelector('.safari-search button').addEventListener('click', () => go(search.value));
+    entry.body.querySelector('.safari-back').addEventListener('click', () => safariAction('back'));
+    entry.body.querySelector('.safari-forward').addEventListener('click', () => safariAction('forward'));
+    entry.body.querySelector('.safari-reload').addEventListener('click', () => safariAction('reload'));
     address.addEventListener('keydown', (event) => { if (event.key === 'Enter') go(); });
     search.addEventListener('keydown', (event) => { if (event.key === 'Enter') go(search.value); });
     entry.body.querySelectorAll('.safari-bookmarks span').forEach((bookmark) => bookmark.addEventListener('click', () => go(bookmark.dataset.url)));
@@ -368,7 +421,7 @@
   });
   window.registerMacApp('safari', {
     name: 'Safari', title: 'Safari', icon: '🧭', width: 780, height: 540,
-    body: safariBody, mount: mountSafari,
+    body: safariBody, mount: mountSafari, onClose: stopSafariWeb,
     menus: { File: [{ label: 'New Window', shortcut: '⌘N', action: () => window.openApp('safari', { newWindow: true }) }, { label: 'Close Window', shortcut: '⌘W', action: () => window.closeActiveWindow() }], View: [{ label: 'Reload Page', action: () => activeWindow('safari')?.querySelector('.safari-reload')?.click() }] }
   });
   window.registerMacApp('terminal', {

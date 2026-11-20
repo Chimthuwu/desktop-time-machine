@@ -106,6 +106,7 @@ button,input,textarea{font:inherit}
         <div class="start-item" data-app="computer"><b>🖥️</b>My Computer</div>
         <div class="start-item" data-app="control"><b>⚙️</b>Control Panel</div>
         <div class="start-item" data-app="about"><b>❔</b>Help and Support</div>
+        <div class="start-item" data-app="timemachine"><b>⏳</b>Desktop Time Machine</div>
       </div>
     </div>
     <div class="start-foot"><button id="shutdown">Turn Off Computer</button></div>
@@ -113,8 +114,20 @@ button,input,textarea{font:inherit}
 </main>
 <footer id="taskbar">
   <button id="start">◉ start</button><div id="tasks"></div>
-  <div id="tray"><span>🔊</span><span>🛡️</span><span id="clock"></span></div>
+  <div id="tray" title="Double click (or Ctrl+F5) to toggle fullscreen"><span>🔊</span><span>🛡️</span><span id="clock"></span></div>
 </footer>
+<script>
+    // Desktop Time Machine — mount the REAL Windows desktop mirror.
+    (function () {
+      try {
+        var DTM = window.parent && window.parent.DTM;
+        var desktop = document.getElementById('desktop');
+        if (DTM && DTM.mountDesktop && desktop) {
+          DTM.mountDesktop({ desktop: desktop, skinId: 'windowsXP' });
+        }
+      } catch (e) { console.warn('[DTM] windowsXP mirror mount failed:', e); }
+    })();
+</script>
 <script>
 (() => {
   'use strict';
@@ -205,7 +218,9 @@ button,input,textarea{font:inherit}
   }
   function openAbout() {
     const box = document.createElement('div'); box.className='xp-content';
-    box.innerHTML='<h2>Windows XP</h2><p>Home Edition · Version 5.1</p><p>The Luna desktop is ready.</p><p>Desktop Time Machine</p>';
+    box.innerHTML='<h2>Windows XP</h2><p>Home Edition · Version 5.1</p><p>The Luna desktop is ready.</p><p>Press <b>F8</b> or <b>Ctrl+Shift+T</b> to travel between eras.</p>';
+    const tm=document.createElement('button'); tm.className='xp-button'; tm.style.marginTop='8px'; tm.textContent='⏳ Open Desktop Time Machine';
+    tm.addEventListener('click',switchEra); box.appendChild(tm);
     createWindow('System Properties', box, {width:430,height:280});
   }
   function openEditor() {
@@ -311,7 +326,8 @@ button,input,textarea{font:inherit}
     browser:openBrowser, internet:openBrowser, editor:openEditor, notepad:openEditor,
     calculator:openCalculator, terminal:openTerminal, computer:()=>openExplorer(''),
     documents:()=>openExplorer(''), files:()=>openExplorer(''), recycle:openRecycle,
-    control:openControlPanel, about:openAbout, 'all-programs':openAllPrograms
+    control:openControlPanel, about:openAbout, 'all-programs':openAllPrograms,
+    timemachine:switchEra, switch:switchEra
   };
   document.querySelectorAll('[data-app]').forEach((item)=>{
     if(item.classList.contains('desktop-icon')){
@@ -337,7 +353,12 @@ button,input,textarea{font:inherit}
   root.addEventListener('contextmenu',(e)=>{e.preventDefault();context.style.left=Math.min(e.clientX,innerWidth-190)+'px';context.style.top=Math.min(e.clientY,innerHeight-120)+'px';context.classList.add('open');});
   document.addEventListener('pointerdown',(e)=>{if(!context.contains(e.target))context.classList.remove('open');});
   context.addEventListener('click',(e)=>{const action=e.target.dataset.action;context.classList.remove('open');if(action==='explorer')openExplorer('');if(action==='calculator')openCalculator();if(action==='switch')switchEra();});
-  document.addEventListener('keydown',(e)=>{if(e.key==='F8'){e.preventDefault();switchEra();}if(e.key==='Escape')context.classList.remove('open');});
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='F8'||(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='t')){e.preventDefault();switchEra();}
+    else if(e.ctrlKey&&e.key==='F5'){e.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
+    if(e.key==='Escape')context.classList.remove('open');
+  });
+  document.getElementById('tray').addEventListener('dblclick',()=>{if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();});
 })();
 </script>
 </body>

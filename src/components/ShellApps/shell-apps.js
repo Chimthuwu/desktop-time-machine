@@ -28,6 +28,7 @@
   if (window.dtmEngine) {
     window.dtmEngine.on('dtm:skin-changed', (skin) => {
       activeSkinId = skin.id;
+      if (skin.id !== 'macosx' && safariWeb) closeSafariWeb();
     });
   }
 
@@ -37,6 +38,73 @@
 
   function skinFrame() {
     return document.getElementById('skin-viewport');
+  }
+
+  function postToSkin(data) {
+    const frame = skinFrame();
+    if (!frame || !frame.contentWindow) return;
+    try { frame.contentWindow.postMessage(data, '*'); } catch (e) { /* skin not mounted */ }
+  }
+
+  // Mac OS X Safari is a real window inside the skin iframe, but <webview>
+  // only works in this top-level document. Keep a borderless webview parked
+  // over Safari's content area; the skin sends rect updates as the Safari
+  // window moves/resizes, so the page appears to render inside Safari itself.
+  let safariWeb = null;
+
+  function applySafariRect(rect) {
+    if (!safariWeb || !rect) return;
+    const visible = rect.visible !== false &&
+      Number.isFinite(rect.width) && rect.width > 0 &&
+      Number.isFinite(rect.height) && rect.height > 0;
+    safariWeb.style.display = visible ? 'flex' : 'none';
+    if (!visible) return;
+    safariWeb.style.left = rect.left + 'px';
+    safariWeb.style.top = rect.top + 'px';
+    safariWeb.style.width = rect.width + 'px';
+    safariWeb.style.height = rect.height + 'px';
+  }
+
+  function closeSafariWeb() {
+    if (!safariWeb) return;
+    safariWeb.remove();
+    safariWeb = null;
+  }
+
+  function openSafariWeb(url, rect) {
+    if (!safariWeb) {
+      safariWeb = document.createElement('div');
+      safariWeb.className = 'dtmshell-safari-web';
+      const webview = document.createElement('webview');
+      webview.className = 'dtmshell-web';
+      webview.setAttribute('partition', PARTITION);
+      webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/10.1 Safari/605.1.15');
+      webview.setAttribute('src', normalizeUrl(url));
+      safariWeb.appendChild(webview);
+      layer.appendChild(safariWeb);
+
+      webview.addEventListener('did-navigate', (e) => postToSkin({ type: 'dtm:safari-url', url: e.url }));
+      webview.addEventListener('did-navigate-in-page', (e) => postToSkin({ type: 'dtm:safari-url', url: e.url }));
+      webview.addEventListener('page-title-updated', (e) => {
+        if (e.title) postToSkin({ type: 'dtm:safari-title', title: e.title });
+      });
+    } else {
+      try { safariWeb.querySelector('webview').loadURL(normalizeUrl(url)); } catch (e) {}
+    }
+    applySafariRect(rect);
+  }
+
+  function safariAction(action, url) {
+    if (!safariWeb) return;
+    const webview = safariWeb.querySelector('webview');
+    if (!webview) return;
+    try {
+      if (action === 'back') webview.goBack();
+      else if (action === 'forward') webview.goForward();
+      else if (action === 'reload') webview.reload();
+      else if (action === 'stop') webview.stop();
+      else if (action === 'navigate' && url) webview.loadURL(normalizeUrl(url));
+    } catch (e) {}
   }
 
   function notifySkin(app, isOpen, minimized) {
@@ -1422,6 +1490,14 @@ async function syncTabsFromBridge(entry) {
       focusWindow(data.app);
     } else if (data.type === 'dtm:webapp-close') {
       closeWindow(data.app);
+    } else if (data.type === 'dtm:safari-navigate') {
+      openSafariWeb(data.url, data.rect);
+    } else if (data.type === 'dtm:safari-sync') {
+      applySafariRect(data.rect);
+    } else if (data.type === 'dtm:safari-action') {
+      safariAction(data.action, data.url);
+    } else if (data.type === 'dtm:safari-close') {
+      closeSafariWeb();
     }
   });
 

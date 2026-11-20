@@ -11,7 +11,7 @@
   "status": "ready",
   "icon": "🪟",
   "themeColor": "#008080",
-  "previewImage": null,
+  "previewImage": "../screenshots/gallery-win95.png",
   "capabilities": [
     "window-management",
     "filesystem",
