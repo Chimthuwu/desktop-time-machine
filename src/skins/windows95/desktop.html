@@ -87,7 +87,9 @@ button{font:inherit}
 .context div:hover{background:var(--navy);color:white}
 .submenu{display:none;position:absolute;left:100%;top:-4px;background:var(--gray);border:2px solid;border-color:white #404040 #404040 white;padding:3px;min-width:140px;box-shadow:2px 2px #000;color:black;}
 .context div:hover > .submenu{display:block}
-.notepad{width:100%;height:100%;border:0;resize:none;outline:none;font:14px "Courier New",monospace;padding:7px;user-select:text}
+.notepad{width:100%;height:calc(100% - 30px);display:block;border:0;resize:none;outline:none;font:14px "Courier New",monospace;padding:7px;user-select:text}
+.np-bar{display:flex;align-items:center;gap:4px;padding:3px;background:var(--gray);border-bottom:1px solid #808080}
+.np-status{margin-left:auto;font-size:11px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .computer{padding:16px;display:flex;gap:25px;flex-wrap:wrap}
 .computer-item{width:100px;text-align:center;padding:8px;cursor:pointer;border:1px solid transparent}
 .computer-item:hover{background:#000080;color:white}
@@ -849,7 +851,7 @@ const apps={
     <div class="ms-grid"></div>
   </div>`},
 
- notepad:{title:'Untitled - Notepad',icon:'📝',iconSrc:'../shared/icons/win95/notepad.ico',width:520,height:370,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>Search</span><span>Help</span></div><textarea class="notepad" spellcheck="false">Welcome to Windows 95 on Desktop Time Machine!\n\nIt feels good to be here.\n\nType something or enjoy the authentic retro environment!</textarea>`},
+ notepad:{title:'Untitled - Notepad',icon:'📝',iconSrc:'../shared/icons/win95/notepad.ico',width:520,height:370,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>Search</span><span>Help</span></div><div class="np-bar"><button class="win95-button np-open">Open…</button><button class="win95-button np-save">Save</button><span class="np-status">Untitled</span></div><textarea class="notepad" id="npArea" spellcheck="false">Welcome to Windows 95 on Desktop Time Machine!\n\nIt feels good to be here.\n\nType something or enjoy the authentic retro environment!</textarea>`},
  
  paint:{title:'untitled - Paint',icon:'🎨',iconSrc:'../shared/icons/win95/paint.ico',width:560,height:420,body:()=>`<div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></div><div class="paint-tools"><button class="win95-button" data-color="#000000">■</button><button class="win95-button" data-color="#ff0000">■</button><button class="win95-button" data-color="#0000ff">■</button><button class="win95-button" data-color="#008000">■</button><button class="win95-button" data-color="#ffff00">■</button><button class="win95-button" data-color="#ffffff">□</button></div><canvas class="paint" width="900" height="560"></canvas>`},
  
@@ -1046,8 +1048,42 @@ function setupDisplay(w) {
   w.querySelector('#settingsOk').addEventListener('click', () => close(w));
 }
 
+// NOTEPAD — real host file open/save through the shared filesystem bridge
+function setupNotepad(w) {
+  const area = w.querySelector('#npArea');
+  const status = w.querySelector('.np-status');
+  let path = null;
+  async function save() {
+    if (!DTM || !DTM.fs) { status.textContent = 'Filesystem unavailable'; return; }
+    if (!path) path = await hostPrompt('Save As', 'Enter a full file path:', 'Untitled.txt');
+    if (!path) return;
+    try {
+      await DTM.fs.write(path, area.value);
+      status.textContent = path;
+    } catch (e) { status.textContent = 'Save failed: ' + e.message; }
+  }
+  w.querySelector('.np-save').addEventListener('click', save);
+  w.querySelector('.np-open').addEventListener('click', async () => {
+    if (!DTM || !DTM.fs) { status.textContent = 'Filesystem unavailable'; return; }
+    const target = await hostPrompt('Open', 'Enter a full file path:');
+    if (!target) return;
+    try {
+      area.value = await DTM.fs.read(target);
+      path = target;
+      status.textContent = target;
+    } catch (e) { status.textContent = 'Open failed: ' + e.message; }
+  });
+  area.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+  });
+}
+
 // MS-DOS PROMPT — real PowerShell execution at a real host directory
 function setupTerminal(w, opts) {
+  // The classic terminal must fill the window body; .window-body is not a
+  // flex container by default, which left a white area under the black screen.
+  const body = w.querySelector('.window-body');
+  if (body) { body.style.display = 'flex'; body.style.flexDirection = 'column'; }
   const screenEl = w.querySelector('#termScreen');
   const log = w.querySelector('#termLog');
   const input = w.querySelector('#termInput');
@@ -1196,6 +1232,7 @@ function openApp(key, opts){
  if(key==='display'){
    setupDisplay(w);
  }
+ if(key==='notepad'){ setupNotepad(w); }
  if(key==='terminal'){
    setupTerminal(w, opts || {});
  }

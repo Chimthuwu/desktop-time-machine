@@ -573,6 +573,10 @@
     if (event.key === 'F8' || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 't')) {
       event.preventDefault();
       window.parent.postMessage('dtm:open-switcher', '*');
+    } else if (event.ctrlKey && event.key === 'F5') {
+      event.preventDefault();
+      const engine = window.DTM || (window.parent && window.parent.DTM);
+      if (engine && engine.system && engine.system.toggleFullScreen) engine.system.toggleFullScreen();
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w') {
       event.preventDefault();
       if (activeWindow) window.requestCloseWindow(activeWindow);

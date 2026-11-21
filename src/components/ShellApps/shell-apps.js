@@ -986,16 +986,10 @@ async function syncTabsFromBridge(entry) {
 
   function buildWebviewBrowser(startUrl) {
       const frame = browserChrome(startUrl);
-      const webview = document.createElement('webview');
-      webview.className = 'dtmshell-web';
-      webview.setAttribute('partition', PARTITION);
-      webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-      webview.setAttribute('src', startUrl);
-
-      // For webview, we simulate tabs by keeping a list of URLs
+      const stack = document.createElement('div');
+      stack.className = 'dtmshell-webviews';
       const entry = {
         win: frame.win,
-        webview,
         titleText: frame.titleText,
         statusLeft: frame.statusLeft,
         maximized: false,
@@ -1004,20 +998,75 @@ async function syncTabsFromBridge(entry) {
         activeTabId: 1,
         isMac: frame.isMac
       };
-      // Initialize with first tab
-      entry.tabs.set(1, { url: startUrl, title: 'New Tab' });
+
+      function activeWebview() {
+        const tab = entry.tabs.get(entry.activeTabId);
+        return tab ? tab.webview : null;
+      }
+      Object.defineProperty(entry, 'webview', { get: activeWebview });
+
+      function attachTabWebview(tabId, url) {
+        const webview = document.createElement('webview');
+        webview.className = 'dtmshell-web';
+        webview.setAttribute('partition', PARTITION);
+        webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        webview.setAttribute('src', normalizeUrl(url));
+        const tab = entry.tabs.get(tabId);
+        tab.webview = webview;
+        stack.appendChild(webview);
+
+        webview.addEventListener('did-navigate', (e) => {
+          tab.url = e.url;
+          if (entry.activeTabId === tabId) address.value = e.url;
+          frame.statusLeft.textContent = e.url;
+        });
+        webview.addEventListener('did-navigate-in-page', (e) => {
+          tab.url = e.url;
+          if (entry.activeTabId === tabId) address.value = e.url;
+        });
+        webview.addEventListener('did-start-loading', () => {
+          if (entry.activeTabId === tabId) frame.statusLeft.textContent = 'Opening page…';
+        });
+        webview.addEventListener('did-stop-loading', () => {
+          if (entry.activeTabId === tabId) frame.statusLeft.textContent = 'Done';
+        });
+        webview.addEventListener('did-fail-load', (e) => {
+          if (e.errorCode === -3) return;
+          if (entry.activeTabId === tabId) frame.statusLeft.textContent = 'Could not load page (' + (e.errorDescription || e.errorCode) + ')';
+        });
+        webview.addEventListener('page-title-updated', (e) => {
+          if (!e.title) return;
+          tab.title = e.title;
+          updateTabBar(entry);
+          if (entry.activeTabId === tabId) {
+            frame.titleText.textContent = e.title + ' - Internet Explorer';
+            document.title = e.title;
+          }
+        });
+        return webview;
+      }
+
+      function applyTabVisibility() {
+        entry.tabs.forEach((tab, tabId) => {
+          if (tab.webview) tab.webview.style.display = tabId === entry.activeTabId ? 'flex' : 'none';
+        });
+      }
+
+      entry.tabs.set(1, { url: normalizeUrl(startUrl), title: 'New Tab' });
+      attachTabWebview(1, startUrl);
       updateTabBar(entry);
 
       const address = browserAddress(frame, (value) => {
-        try { webview.loadURL(normalizeUrl(value)); } catch (e) {}
+        const webview = activeWebview();
+        try { if (webview) webview.loadURL(normalizeUrl(value)); } catch (e) {}
       });
 
       const homeUrl = frame.isMac ? 'https://home.netscape.com/' : APP_CONFIG.browser.url;
       const cmd = {
-        back: () => { try { webview.goBack(); } catch (e) {} },
-        forward: () => { try { webview.goForward(); } catch (e) {} },
-        refresh: () => { try { webview.reload(); } catch (e) {} },
-        home: () => { try { webview.loadURL(homeUrl); } catch (e) {} },
+        back: () => { const w = activeWebview(); try { if (w) w.goBack(); } catch (e) {} },
+        forward: () => { const w = activeWebview(); try { if (w) w.goForward(); } catch (e) {} },
+        refresh: () => { const w = activeWebview(); try { if (w) w.reload(); } catch (e) {} },
+        home: () => { const w = activeWebview(); try { if (w) w.loadURL(homeUrl); } catch (e) {} },
         openLocation: () => { address.focus(); address.select(); },
         close: () => closeWindow('browser'),
         newTab: () => newTabWebview(entry),
@@ -1025,105 +1074,85 @@ async function syncTabsFromBridge(entry) {
         switchTab: (tabId) => switchTabWebview(entry, tabId)
       };
 
-      // Chromium can draw the dropdown over the webview, but hiding the page
-      // while the menu is open keeps the list readable in every case.
       const holdPage = () => {
-        webview.style.visibility = 'hidden';
-        return () => { if (webview.isConnected) webview.style.visibility = ''; };
+        entry.tabs.forEach((tab) => { if (tab.webview) tab.webview.style.visibility = 'hidden'; });
+        return () => {
+          entry.tabs.forEach((tab) => { if (tab.webview && tab.webview.isConnected) tab.webview.style.visibility = ''; });
+        };
       };
 
       frame.toolbar.append(
         browserButton('⬅ Back', 'Back', cmd.back, frame.isMac),
         browserButton('➡ Forward', 'Forward', cmd.forward, frame.isMac),
-        browserButton('Stop', 'Stop', () => { try { webview.stop(); } catch (e) {} }, frame.isMac),
+        browserButton('Stop', 'Stop', () => { const w = activeWebview(); try { if (w) w.stop(); } catch (e) {} }, frame.isMac),
         browserButton('Refresh', 'Refresh', cmd.refresh, frame.isMac),
         browserButton('Home', 'Home', cmd.home, frame.isMac),
         address,
-        browserButton('Go', 'Go', () => { try { webview.loadURL(normalizeUrl(address.value)); } catch (e) {} }, frame.isMac)
+        browserButton('Go', 'Go', () => { const w = activeWebview(); try { if (w) w.loadURL(normalizeUrl(address.value)); } catch (e) {} }, frame.isMac)
       );
-    
+
       frame.body.insertBefore(makeMenuBar(browserMenuDefinitions(cmd), holdPage), frame.toolbar);
-      frame.body.append(webview, frame.status);
+      frame.body.append(stack, frame.status);
+      applyTabVisibility();
 
       windows.set('browser', entry);
       focusWindow('browser');
-
-      webview.addEventListener('did-navigate', (e) => {
-        address.value = e.url;
-        frame.statusLeft.textContent = e.url;
-        // Update current tab URL
-        if (entry.tabs.has(entry.activeTabId)) {
-          entry.tabs.get(entry.activeTabId).url = e.url;
-        }
-      });
-      webview.addEventListener('did-navigate-in-page', (e) => { 
-        address.value = e.url;
-        if (entry.tabs.has(entry.activeTabId)) {
-          entry.tabs.get(entry.activeTabId).url = e.url;
-        }
-      });
-      webview.addEventListener('did-start-loading', () => { frame.statusLeft.textContent = 'Opening page…'; });
-      webview.addEventListener('did-stop-loading', () => { frame.statusLeft.textContent = 'Done'; });
-      webview.addEventListener('did-fail-load', (e) => {
-        if (e.errorCode === -3) return;
-        frame.statusLeft.textContent = 'Could not load page (' + (e.errorDescription || e.errorCode) + ')';
-      });
-      webview.addEventListener('page-title-updated', (e) => {
-        if (!e.title) return;
-        frame.titleText.textContent = e.title + ' - Internet Explorer';
-        document.title = e.title;
-        // Update current tab title
-        if (entry.tabs.has(entry.activeTabId)) {
-          entry.tabs.get(entry.activeTabId).title = e.title;
-          updateTabBar(entry);
-        }
-      });
-    }
+  }
 
   function newTabWebview(entry, url) {
-        if (!url) url = entry.isMac ? 'https://home.netscape.com/' : 'https://www.google.com/';
-        const newTabId = Math.max(...entry.tabs.keys(), 0) + 1;
-        entry.tabs.set(newTabId, { url: normalizeUrl(url), title: 'New Tab' });
-        entry.activeTabId = newTabId;
-        updateTabBar(entry);
-  
-        // Load the URL in webview
-        if (entry.webview) {
-          try { entry.webview.loadURL(normalizeUrl(url)); } catch (e) {}
-        }
-    }
+    if (!url) url = entry.isMac ? 'https://home.netscape.com/' : 'https://www.google.com/';
+    const newTabId = Math.max(...entry.tabs.keys(), 0) + 1;
+    entry.tabs.set(newTabId, { url: normalizeUrl(url), title: 'New Tab' });
+    attachTabWebviewToEntry(entry, newTabId, url);
+    entry.activeTabId = newTabId;
+    applyTabVisibilityForEntry(entry);
+    updateTabBar(entry);
+  }
+
+  function attachTabWebviewToEntry(entry, tabId, url) {
+    const webview = document.createElement('webview');
+    webview.className = 'dtmshell-web';
+    webview.setAttribute('partition', PARTITION);
+    webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    webview.setAttribute('src', normalizeUrl(url));
+    const tab = entry.tabs.get(tabId);
+    tab.webview = webview;
+    const stack = entry.win.querySelector('.dtmshell-webviews');
+    if (stack) stack.appendChild(webview);
+    webview.addEventListener('did-navigate', (e) => { tab.url = e.url; });
+    webview.addEventListener('did-navigate-in-page', (e) => { tab.url = e.url; });
+    webview.addEventListener('page-title-updated', (e) => {
+      if (!e.title) return;
+      tab.title = e.title;
+      updateTabBar(entry);
+    });
+  }
+
+  function applyTabVisibilityForEntry(entry) {
+    entry.tabs.forEach((tab, tabId) => {
+      if (tab.webview) tab.webview.style.display = tabId === entry.activeTabId ? 'flex' : 'none';
+    });
+    const tab = entry.tabs.get(entry.activeTabId);
+    if (tab && entry.statusLeft) entry.statusLeft.textContent = tab.url;
+  }
 
   function switchTabWebview(entry, tabId) {
-      if (!entry.tabs.has(tabId)) return;
-      entry.activeTabId = tabId;
-      const tabInfo = entry.tabs.get(tabId);
-    
-      // Load the tab's URL in webview
-      if (entry.webview && tabInfo.url) {
-        try { entry.webview.loadURL(tabInfo.url); } catch (e) {}
-      }
-      updateTabBar(entry);
+    if (!entry.tabs.has(tabId)) return;
+    // No reload: each tab keeps its own live webview and page state.
+    entry.activeTabId = tabId;
+    applyTabVisibilityForEntry(entry);
+    updateTabBar(entry);
   }
 
   function closeTabWebview(entry, tabId) {
-      if (!entry.tabs.has(tabId)) return;
-      if (entry.tabs.size <= 1) {
-        closeWindow('browser');
-        return;
-      }
-    
-      entry.tabs.delete(tabId);
-    
-      if (entry.activeTabId === tabId) {
-        // Switch to first available tab
-        const firstTabId = entry.tabs.keys().next().value;
-        entry.activeTabId = firstTabId;
-        const tabInfo = entry.tabs.get(firstTabId);
-        if (entry.webview && tabInfo.url) {
-          try { entry.webview.loadURL(tabInfo.url); } catch (e) {}
-        }
-      }
-      updateTabBar(entry);
+    if (!entry.tabs.has(tabId)) return;
+    if (entry.tabs.size <= 1) { closeWindow('browser'); return; }
+    const tab = entry.tabs.get(tabId);
+    if (tab && tab.webview) tab.webview.remove();
+    entry.tabs.delete(tabId);
+    if (entry.activeTabId === tabId) entry.activeTabId = entry.tabs.keys().next().value;
+    applyTabVisibilityForEntry(entry);
+    updateTabBar(entry);
   }
 
   function navigateBrowser(entry, value) {

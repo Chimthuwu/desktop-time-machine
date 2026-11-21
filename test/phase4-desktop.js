@@ -49,8 +49,8 @@ app.whenReady().then(async () => {
       const doc = document.getElementById('skin-viewport').contentWindow.document;
       return getComputedStyle(doc.getElementById('desktop')).backgroundImage;
     })()`);
-    assert('XP uses the Bliss wallpaper asset', /bliss-wallpaper\.png/.test(wallpaper), wallpaper);
-    assert('wallpaper asset exists on disk', fs.existsSync(path.join(ROOT, 'assets/bliss-wallpaper.png')));
+    assert('XP uses the Bliss wallpaper asset', /bliss-wallpaper\.jpg/.test(wallpaper), wallpaper);
+    assert('wallpaper asset exists on disk', fs.existsSync(path.join(ROOT, 'assets/bliss-wallpaper.jpg')));
 
     // --- XP taskbar tracks real windows ---
     const tracked = await win.webContents.executeJavaScript(`(async () => {

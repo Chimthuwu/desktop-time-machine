@@ -1,0 +1,133 @@
+/** Focused regression checks for the latest user-reported fixes. */
+const { app, BrowserWindow } = require('electron');
+app.commandLine.appendSwitch('mute-audio');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { registerIpcHandlers } = require('../electron/main/ipc-handlers');
+
+const ROOT = path.resolve(__dirname, '..');
+const NOTE = path.join(os.tmpdir(), 'dtm-user-fixes-note.txt');
+const results = { passed: 0, failed: 0, tests: [] };
+function assert(name, condition, detail) {
+  if (condition) { results.passed++; results.tests.push({ name, status: 'PASS' }); }
+  else { results.failed++; results.tests.push({ name, status: 'FAIL', detail }); }
+}
+async function loadSkin(win, id, delay) {
+  await win.webContents.executeJavaScript(`localStorage.setItem('dtm_active_skin', ${JSON.stringify(id)})`);
+  await win.webContents.reload();
+  await new Promise((r) => setTimeout(r, delay || 1800));
+}
+const FILL = `
+async function fillPrompt(doc, value) {
+  for (let i = 0; i < 60; i++) {
+    const input = doc.querySelector('.dtm-modal-overlay input, .sheet-overlay input, .dtm-app-dialog .dtm-app-input');
+    if (input) {
+      input.value = value;
+      const root = input.closest('.dtm-modal-overlay, .sheet-overlay, .dtm-app-dialog');
+      const ok = root.querySelector('.hostprompt-ok') || root.querySelector('button:last-child');
+      if (ok) ok.click();
+      return true;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return false;
+}
+`;
+
+app.whenReady().then(async () => {
+  registerIpcHandlers();
+  try { fs.rmSync(NOTE, { force: true }); } catch (e) {}
+  const win = new BrowserWindow({ show: false, width: 1280, height: 840, webPreferences: {
+    preload: path.join(ROOT, 'electron/preload/index.js'), contextIsolation: true, nodeIntegration: false, webviewTag: true
+  } });
+  const errors = [];
+  win.webContents.on('console-message', (e, level, message) => {
+    if (level >= 2 && !/Autoplay|ERR_/.test(message)) errors.push(message);
+  });
+
+  try {
+    await win.loadFile(path.join(ROOT, 'src/index.html'));
+
+    // --- XP user + start menu ---
+    await loadSkin(win, 'windowsXP', 2000);
+    const xp = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      await new Promise(r => setTimeout(r, 300));
+      return {
+        user: doc.getElementById('xpUser').textContent,
+        flyout: !!doc.querySelector('.programs-flyout [data-shared-app="notepad"]'),
+        wallpaper: getComputedStyle(doc.getElementById('desktop')).backgroundImage
+      };
+    })()`);
+    assert('XP Start menu shows the real Windows user', xp.user === os.userInfo().username, xp);
+    assert('XP All Programs flyout exists', xp.flyout, xp);
+    assert('XP uses the supplied Bliss wallpaper', /bliss-wallpaper\.jpg/.test(xp.wallpaper), xp.wallpaper);
+
+    // --- mac OS 8: running indicators, recycle helpers, SimpleText save ---
+    await loadSkin(win, 'macos8', 1800);
+    const mac8 = await win.webContents.executeJavaScript(`(() => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.postMessage({ type: 'dtm:windows-state', windows: [{ id: 'x1', app: 'notepad', title: 'Test', icon: '📝', active: false, minimized: false }] }, '*');
+      return { strip: !!doc.getElementById('csRunning'), recycle: typeof w.recycleSelected === 'function', trashRender: typeof w.renderTrashWindow === 'function', simpleTextSave: !!doc.querySelector('.window[data-app="simpletext"] .st-save') };
+    })()`);
+    await new Promise((r) => setTimeout(r, 200));
+    const dot = await win.webContents.executeJavaScript(`document.getElementById('skin-viewport').contentDocument.querySelectorAll('#csRunning .cs-running-item').length`);
+    assert('Mac OS 8 has a running-app strip', mac8.strip && dot >= 1, { mac8, dot });
+    assert('Mac OS 8 exposes real recycle helpers', mac8.recycle && mac8.trashRender, mac8);
+
+    const simpleText = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.openApp('simpletext');
+      const winEl = doc.querySelector('.window[data-app="simpletext"]');
+      ${FILL}
+      winEl.querySelector('.st-save').click();
+      const filled = await fillPrompt(doc, ${JSON.stringify(NOTE.replace(/\\/g, '/'))});
+      await new Promise(r => setTimeout(r, 600));
+      return { filled, status: winEl.querySelector('.st-status').textContent };
+    })()`);
+    const content = fs.existsSync(NOTE) ? fs.readFileSync(NOTE, 'utf8') : null;
+    assert('Mac OS 8 SimpleText saves a real file', simpleText.filled && typeof content === 'string', { simpleText, content });
+
+    // --- Shell browser tabs keep independent webviews ---
+    await win.webContents.executeJavaScript(`window.dtmShellApps.open('browser','https://www.google.com/')`);
+    await new Promise((r) => setTimeout(r, 800));
+    const browserTabs = await win.webContents.executeJavaScript(`(async () => {
+      const doc = document;
+      const first = doc.querySelector('.dtmshell-win .dtmshell-tab-new');
+      if (first) first.click();
+      await new Promise(r => setTimeout(r, 900));
+      const webviews = doc.querySelectorAll('.dtmshell-webviews webview');
+      const tabs = doc.querySelectorAll('.dtmshell-win .dtmshell-tab');
+      const displayed = Array.from(webviews).filter(v => v.style.display !== 'none').length;
+      return { webviews: webviews.length, tabs: tabs.length, displayed };
+    })()`);
+    assert('shell browser creates one webview per tab', browserTabs.webviews >= 2, browserTabs);
+    assert('only one tab webview is visible', browserTabs.displayed === 1, browserTabs);
+    await win.webContents.executeJavaScript(`window.dtmShellApps.close('browser')`);
+
+    // --- macOS Ctrl+F5 ---
+    await loadSkin(win, 'macosx', 2800);
+    const fsKey = await win.webContents.executeJavaScript(`(() => {
+      const patchWindow = document.getElementById('skin-viewport').contentWindow;
+      const event = new patchWindow.KeyboardEvent('keydown', { key: 'F5', ctrlKey: true, bubbles: true, cancelable: true });
+      patchWindow.document.dispatchEvent(event);
+      return event.defaultPrevented;
+    })()`);
+    assert('Ctrl+F5 works in Mac OS X', fsKey, fsKey);
+
+    assert('no unexpected console errors', errors.length === 0, errors);
+  } catch (e) {
+    results.failed++;
+    results.tests.push({ name: 'suite error', status: 'FAIL', detail: e.stack || e.message });
+  }
+
+  try { fs.rmSync(NOTE, { force: true }); } catch (e) {}
+  console.log('=== USER FIXES TEST ===');
+  console.log(JSON.stringify(results, null, 2));
+  win.close();
+  app.quit();
+});

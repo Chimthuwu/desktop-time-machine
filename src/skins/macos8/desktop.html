@@ -96,6 +96,9 @@ body {
 .cs-icon { width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; border: 1px solid transparent; border-radius: 3px; }
 .cs-icon:hover { border-color: #888 #fff #fff #888; background: #e0e0e0; }
 .cs-icon:active { border-color: #fff #888 #888 #fff; background: #ccc; }
+.cs-running { display: flex; align-items: center; gap: 3px; padding: 0 5px; border-left: 1px solid #aaa; margin-right: 3px; min-height: 22px; }
+.cs-running-item { width: 18px; height: 18px; display: grid; place-items: center; font-size: 11px; border: 1px solid #888; border-radius: 2px; background: #ddd; cursor: pointer; }
+.cs-running-item.active { background: var(--blue); color: #fff; }
 
 /* WINDOWS */
 .window {
@@ -175,7 +178,10 @@ body {
 .calc-btn.op { background: #bbb; }
 
 /* SIMPLETEXT */
-.simpletext-area { width: 100%; height: 100%; border: none; resize: none; outline: none; font-family: "Courier", monospace; font-size: 13px; padding: 10px; user-select: text; }
+.simpletext-area { width: 100%; height: calc(100% - 30px); border: none; resize: none; outline: none; font-family: "Courier", monospace; font-size: 13px; padding: 10px; user-select: text; display: block; }
+.st-bar { display: flex; align-items: center; gap: 6px; height: 30px; padding: 3px 6px; background: #ddd; border-bottom: 1px solid #888; }
+.st-bar button { font: 11px Geneva, sans-serif; padding: 2px 8px; background: #ddd; border: 2px solid; border-color: #fff #444 #444 #fff; cursor: pointer; }
+.st-status { margin-left: auto; font: 11px Geneva, sans-serif; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* STICKIES */
 .stickies-container { padding: 10px; background: #fff; height: 100%; overflow: auto; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; }
@@ -258,13 +264,14 @@ body {
 <div class="control-strip" id="controlStrip">
   <div class="cs-apple" onclick="toggleAppleMenu(event)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" style="display:block;"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="#000"/></svg></div>
   <div class="cs-drag"></div>
+  <div class="cs-running" id="csRunning"></div>
   <div class="cs-icon" onclick="openApp('calculator')" title="Calculator">🔢</div>
   <div class="cs-icon" onclick="openApp('stickies')" title="Stickies">📝</div>
   <div class="cs-icon" onclick="openApp('simpletext')" title="SimpleText">📄</div>
   <div class="cs-icon" onclick="openApp('sharedapps')" title="Applications">🧰</div>
   <div class="cs-icon" onclick="if(window.parent)window.parent.postMessage('dtm:open-switcher','*');" title="Desktop Time Machine">⏳</div>
-  <div class="cs-icon" onclick="alert('Volume: 100%')" title="Volume">🔊</div>
-  <div class="cs-icon" onclick="alert('Battery: 100%')" title="Battery">🔋</div>
+  <div class="cs-icon" onclick="cycleVolume()" title="Volume (click to mute/unmute)">🔊</div>
+  <div class="cs-icon" onclick="alert('This computer has no battery.')" title="Power">🔋</div>
 </div>
 
 <script>
@@ -286,8 +293,39 @@ window.addEventListener('keydown', (e) => {
     // Ctrl+F5 toggles fullscreen for the whole app.
     e.preventDefault();
     if (DTM && DTM.system.toggleFullScreen) DTM.system.toggleFullScreen();
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (recycleSelected()) e.preventDefault();
   }
 });
+
+// Shared window state drives the running-application strip in the Control Strip.
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data && data.type === 'dtm:windows-state') renderRunningApps(data.windows || []);
+});
+function renderRunningApps(states) {
+  const strip = document.getElementById('csRunning');
+  if (!strip) return;
+  strip.replaceChildren();
+  states.forEach((state) => {
+    const item = document.createElement('div');
+    item.className = 'cs-running-item' + (state.active ? ' active' : '');
+    item.textContent = state.icon || '🪟';
+    item.title = state.title + (state.minimized ? ' (minimized)' : '');
+    item.addEventListener('click', () => {
+      if (window.parent) window.parent.postMessage({ type: 'dtm:window-action', id: state.id, app: state.app, action: state.minimized || !state.active ? 'activate' : 'minimize' }, '*');
+    });
+    strip.appendChild(item);
+  });
+}
+
+async function cycleVolume() {
+  if (!DTM || !DTM.system) return;
+  try {
+    const current = await DTM.system.getVolume();
+    await DTM.system.setVolume(current.level == null ? 1 : current.level, !(current.muted));
+  } catch (e) { /* volume control is host-dependent */ }
+}
 
 // AUDIO: MAC STARTUP CHIME
 let audioCtx = null;
@@ -377,7 +415,7 @@ function updateMenus(appName) {
     `;
   } else if (appName === 'simpletext') {
     fileMenu.innerHTML = `
-      <div class="am-item" onclick="alert('Saved!')">Save <span>⌘S</span></div>
+      <div class="am-item" onclick="document.querySelector('.window.active[data-app=\'simpletext\'] .st-save')?.click()">Save <span>⌘S</span></div>
       <div class="am-sep"></div>
       <div class="am-item" onclick="closeActiveWindow()">Close <span>⌘W</span></div>
     `;
@@ -543,6 +581,7 @@ document.getElementById('trashBin').addEventListener('click', (e) => {
   e.stopPropagation();
   document.querySelectorAll('.desktop-icon, .trash-bin').forEach(i => i.classList.remove('selected'));
   document.getElementById('trashBin').classList.add('selected');
+  openApp('trash');
 });
 document.getElementById('trashBin').addEventListener('dblclick', () => openApp('trash'));
 
@@ -566,7 +605,8 @@ const apps = {
     title: 'Read Me - SimpleText',
     width: 420, height: 320,
     body: () => `
-      <textarea class="simpletext-area" spellcheck="false">Welcome to Mac OS 8 on Desktop Time Machine!
+      <div class="st-bar"><button class="st-open">Open…</button><button class="st-save">Save</button><span class="st-status">Untitled</span></div>
+      <textarea class="simpletext-area" id="stArea" spellcheck="false">Welcome to Mac OS 8 on Desktop Time Machine!
 
 This is SimpleText, the classic text editor.
 The interface is faithfully styled with Platinum borders, pinstripe headers, and Apple font typography.
@@ -662,6 +702,7 @@ Press F8 at any time to travel between operating system eras!</textarea>
 function hostPrompt(title, message, defaultValue) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
+    overlay.className = 'dtm-modal-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:100200;display:flex;align-items:center;justify-content:center;';
     const dlg = document.createElement('div');
     dlg.style.cssText = 'width:340px;background:#d8d8d8;border:1px solid #666;box-shadow:3px 3px 8px rgba(0,0,0,.4);font-family:Geneva,Chicago,Tahoma,sans-serif;font-size:12px;';
@@ -754,7 +795,12 @@ function setupFinder(w) {
         el.className = 'finder-item';
         el.innerHTML = `<div class="icon-img">${item.isDirectory ? '📁' : '📄'}</div><div class="icon-label"></div>`;
         el.querySelector('.icon-label').textContent = item.name;
+        el.dataset.path = item.path;
         el.title = item.path;
+        el.addEventListener('click', () => {
+          list.querySelectorAll('.finder-item').forEach((node) => node.classList.remove('selected'));
+          el.classList.add('selected');
+        });
         el.addEventListener('dblclick', () => {
           if (item.isDirectory) {
             loadPath(item.path);
@@ -773,7 +819,7 @@ function setupFinder(w) {
       header.innerHTML = '<span>Error</span>';
     }
   }
-
+  window.reloadFinder = () => loadPath(currentPath);
   loadPath('');
 }
 
@@ -816,6 +862,7 @@ function openApp(key) {
   document.getElementById('desktop').appendChild(w);
   focusWin(w);
   makeDraggable(w);
+  if (key === 'trash') renderTrashWindow(w);
 
   w.querySelector('[data-close]').addEventListener('click', (e) => { e.stopPropagation(); w.remove(); });
   w.querySelector('[data-zoom]').addEventListener('click', (e) => {
@@ -865,6 +912,36 @@ function openApp(key) {
   }
 
   if (key === 'finder') setupFinder(w);
+  if (key === 'simpletext') setupSimpleText(w);
+}
+
+function setupSimpleText(w) {
+  const area = w.querySelector('#stArea');
+  const status = w.querySelector('.st-status');
+  let path = null;
+  const write = async () => {
+    if (!DTM || !DTM.fs) { status.textContent = 'Filesystem unavailable'; return; }
+    if (!path) path = await hostPrompt('Save SimpleText Document', 'Save to a full file path:', 'Untitled.txt');
+    if (!path) return;
+    try {
+      await DTM.fs.write(path, area.value);
+      status.textContent = path;
+    } catch (e) { status.textContent = 'Save failed: ' + e.message; }
+  };
+  w.querySelector('.st-save').addEventListener('click', write);
+  w.querySelector('.st-open').addEventListener('click', async () => {
+    if (!DTM || !DTM.fs) { status.textContent = 'Filesystem unavailable'; return; }
+    const target = await hostPrompt('Open SimpleText Document', 'Enter a full file path:');
+    if (!target) return;
+    try {
+      area.value = await DTM.fs.read(target);
+      path = target;
+      status.textContent = target;
+    } catch (e) { status.textContent = 'Open failed: ' + e.message; }
+  });
+  area.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); write(); }
+  });
 }
 
 function focusWin(w) {
@@ -940,14 +1017,69 @@ document.querySelectorAll('.am-item[data-app]').forEach(item => {
   item.addEventListener('click', () => openApp(item.dataset.app));
 });
 
-function emptyTrash() {
+async function renderTrashWindow(w) {
+  const body = w.querySelector('.window-body');
+  body.innerHTML = '<div style="padding:20px;color:#888;">Reading Trash…</div>';
+  let items = [];
+  try { items = DTM && DTM.fs && DTM.fs.recycleList ? await DTM.fs.recycleList() : []; } catch (e) {}
+  const real = items.filter(item => item && item.name);
+  body.replaceChildren();
+  const title = document.createElement('div');
+  title.style.cssText = 'padding:8px 12px;font-weight:bold;border-bottom:1px solid #888;';
+  title.textContent = real.length ? real.length + ' item(s) in Trash' : 'The Trash is empty.';
+  body.appendChild(title);
+  if (real.length) {
+    const list = document.createElement('div');
+    list.className = 'finder-list';
+    real.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'finder-item';
+      row.innerHTML = '<div class="icon-img">🗑️</div><div class="icon-label"></div>';
+      row.querySelector('.icon-label').textContent = item.name;
+      row.title = item.path || '';
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+    const empty = document.createElement('button');
+    empty.className = 'aqua-btn gray';
+    empty.textContent = 'Empty Trash';
+    empty.style.cssText = 'margin:10px 12px;padding:3px 12px;background:#ddd;border:2px solid;border-color:#fff #444 #444 #fff;cursor:pointer;';
+    empty.addEventListener('click', emptyTrash);
+    body.appendChild(empty);
+  }
+}
+
+async function emptyTrash() {
+  try { if (DTM && DTM.fs && DTM.fs.recycleEmpty) await DTM.fs.recycleEmpty(); } catch (e) { alert('Could not empty Trash: ' + e.message); }
   trashItems = [];
   document.getElementById('trashIcon').textContent = '🗑️';
   const trashWin = document.querySelector('.window[data-app="trash"]');
-  if (trashWin) {
-    trashWin.querySelector('.window-body').innerHTML = '<div style="padding:20px; text-align:center; color:#888;">The Trash is empty.</div>';
-  }
+  if (trashWin) renderTrashWindow(trashWin);
   document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
+}
+
+// Move the current desktop/Finder selection to the real Windows Recycle Bin.
+function recycleSelected() {
+  const paths = [];
+  document.querySelectorAll('.dtm-icon.selected[data-path]').forEach((el) => paths.push(el.dataset.path));
+  document.querySelectorAll('.window[data-app="finder"] .finder-item.selected[data-path]').forEach((el) => paths.push(el.dataset.path));
+  if (!paths.length) return false;
+  (async () => {
+    let moved = 0;
+    for (const target of paths) {
+      try { await DTM.fs.recycle(target); moved++; } catch (e) { alert('Could not move to Trash: ' + e.message); }
+    }
+    if (moved) {
+      if (DTM.desktop && DTM.desktop.invalidate) DTM.desktop.invalidate();
+      if (window.dtmMirrorHandle && window.dtmMirrorHandle.refresh) window.dtmMirrorHandle.refresh();
+      document.getElementById('trashIcon').textContent = '🗑️🗑️';
+      const trashWin = document.querySelector('.window[data-app="trash"]');
+      if (trashWin) renderTrashWindow(trashWin);
+      const finder = document.querySelector('.window[data-app="finder"]');
+      if (finder && typeof window.reloadFinder === 'function') window.reloadFinder();
+    }
+  })();
+  return true;
 }
 </script>
 <script>
@@ -957,7 +1089,7 @@ function emptyTrash() {
         var DTM = window.parent && window.parent.DTM;
         var desktop = document.getElementById('desktop');
         if (DTM && DTM.mountDesktop && desktop) {
-          DTM.mountDesktop({ desktop: desktop, skinId: 'macos8' });
+          window.dtmMirrorHandle = DTM.mountDesktop({ desktop: desktop, skinId: 'macos8' });
         }
       } catch (e) { console.warn('[DTM] macos8 mirror mount failed:', e); }
     })();
