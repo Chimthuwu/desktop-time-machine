@@ -8,6 +8,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const dtmBridge = {
   // System Info
   getSystemInfo: () => ipcRenderer.invoke('dtm:get-system-info'),
+  getAccountPicture: () => ipcRenderer.invoke('dtm:system-account-picture'),
 
   // Legacy filesystem browsing (kept for backward compatibility with older skins)
   listDirectory: (dirPath) => ipcRenderer.invoke('dtm:list-directory', dirPath),

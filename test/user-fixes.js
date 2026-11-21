@@ -174,6 +174,42 @@ app.whenReady().then(async () => {
       assert('Ctrl+F5 handled in ' + skin, handled, handled);
     }
 
+    // --- Account picture API ---
+    const picture = await win.webContents.executeJavaScript(`(async () => {
+      const engine = window.DTM;
+      const value = await engine.system.getAccountPicture();
+      return { type: typeof value, prefix: typeof value === 'string' ? value.slice(0, 22) : '' };
+    })()`);
+    assert('account picture API resolves', picture.type === 'string' || picture.type === 'object', picture);
+    if (picture.type === 'string') assert('account picture is a data URL', /^data:image\//.test(picture.prefix), picture);
+
+    // --- Mac Dock artwork ---
+    await loadSkin(win, 'macosx', 2800);
+    const dockArt = await win.webContents.executeJavaScript(`(() => {
+      const doc = document.getElementById('skin-viewport').contentDocument;
+      const icons = Array.from(doc.querySelectorAll('#dock .dock-icon'));
+      const withArt = icons.filter((icon) => icon.querySelector('.dock-glyph img'));
+      return { total: icons.length, art: withArt.length, sources: withArt.slice(0, 4).map((i) => i.querySelector('img').getAttribute('src')) };
+    })()`);
+    assert('Dock uses real icon artwork', dockArt.art >= 10, dockArt);
+    assert('Dock artwork files are SVG assets', dockArt.sources.every((src) => /assets\/dock\/.*\.svg$/.test(src)), dockArt);
+
+    // --- Win98 Control Panel entries are functional ---
+    await loadSkin(win, 'windows98', 1800);
+    const w98 = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.openApp('control');
+      const panel = doc.querySelector('.window[data-app="control"]');
+      const items = panel ? Array.from(panel.querySelectorAll('.computer-item')).map((n) => n.textContent) : [];
+      const fake = items.filter((label) => /Mouse|Keyboard|Modem|Accessibility|Regional|Power/.test(label));
+      w.openApp('sys-info');
+      const info = doc.querySelector('.window[data-app="sys-info"]');
+      return { count: items.length, fake: fake.length, hasSharedButton: !!info && !!info.querySelector('[onclick*="systeminfo"]') };
+    })()`);
+    assert('Win98 Control Panel has no placeholder applets', w98.fake === 0, w98);
+    assert('Win98 Control Panel entries launch real capabilities', w98.hasSharedButton, w98);
+
     assert('no unexpected console errors', errors.length === 0, errors);
   } catch (e) {
     results.failed++;

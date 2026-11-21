@@ -129,8 +129,52 @@ function launchProgram(program) {
   return { success: true, program, path: pinnedPath };
 }
 
+/**
+ * Returns the current Windows user's account picture as a data URL when the
+ * host exposes one. Read-only and restricted to known Windows profile paths.
+ */
+async function getAccountPicture() {
+  const home = os.homedir();
+  const username = os.userInfo().username;
+  const candidates = [
+    path.join(home, 'AppData', 'Roaming', 'Microsoft', 'Windows', 'AccountPictures'),
+    path.join(home, 'AppData', 'Local', 'Microsoft', 'Windows', 'AccountPictures'),
+    path.join(process.env.ProgramData || 'C:\\ProgramData', 'Microsoft', 'User Account Pictures', username + '.dat')
+  ];
+  const imageExt = /\.(png|jpe?g)$/i;
+  const toDataUrl = async (file) => {
+    if (!isSafePath(file)) return null;
+    try {
+      const bytes = await fs.promises.readFile(file);
+      if (bytes.length > 4 * 1024 * 1024) return null;
+      const ext = path.extname(file).toLowerCase();
+      const mime = ext === '.png' ? 'image/png' : 'image/jpeg';
+      return 'data:' + mime + ';base64,' + bytes.toString('base64');
+    } catch (e) { return null; }
+  };
+  for (const base of candidates) {
+    try {
+      const stat = await fs.promises.stat(base);
+      if (stat.isFile()) {
+        const result = await toDataUrl(base);
+        if (result) return result;
+        continue;
+      }
+      const entries = await fs.promises.readdir(base, { withFileTypes: true });
+      const files = entries.filter((entry) => entry.isFile() && imageExt.test(entry.name));
+      files.sort((a, b) => b.name.localeCompare(a.name));
+      for (const entry of files) {
+        const result = await toDataUrl(path.join(base, entry.name));
+        if (result) return result;
+      }
+    } catch (e) { /* account picture is optional */ }
+  }
+  return null;
+}
+
 module.exports = {
   getSystemInfo,
+  getAccountPicture,
   listDirectory,
   openPath,
   openExternalUrl,

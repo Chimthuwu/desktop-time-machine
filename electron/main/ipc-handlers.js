@@ -77,6 +77,7 @@ function validateManifest(manifest, skinFolderName) {
 }
 const {
   getSystemInfo,
+  getAccountPicture,
   openPath,
   openExternalUrl,
   launchProgram
@@ -124,6 +125,8 @@ function registerIpcHandlers() {
   handle('dtm:get-system-info', async () => {
     return getSystemInfo();
   });
+
+  handle('dtm:system-account-picture', async () => getAccountPicture());
 
   // Filesystem Browsing (legacy shape used by Windows 95/98 Explorer)
   handle('dtm:list-directory', async (_event, dirPath) => {

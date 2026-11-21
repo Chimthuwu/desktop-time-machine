@@ -72,6 +72,21 @@
 
   let sharedWindows = [];
   let hostWindows = [];
+  const DOCK_ART = '../../../assets/dock/';
+  function dockGlyph(id, fallback) {
+    const span = document.createElement('span');
+    span.className = 'dock-glyph';
+    if (['finder','simpletext','calculator','stickies','safari','sharedapps','terminal','activity','preferences','about','help','preview','trash'].includes(id)) {
+      const image = document.createElement('img');
+      image.src = DOCK_ART + id + '.svg';
+      image.alt = '';
+      span.appendChild(image);
+    } else {
+      span.textContent = fallback || '🪟';
+      span.style.fontSize = '34px';
+    }
+    return span;
+  }
   window.addEventListener('message', (event) => {
     const data = event.data;
     if (data && data.type === 'dtm:windows-state') {
@@ -98,10 +113,7 @@
       icon.title = app.name || app.title || id;
       icon.setAttribute('role', 'button');
       icon.tabIndex = 0;
-      const glyph = document.createElement('span');
-      glyph.className = 'dock-glyph';
-      glyph.textContent = app.icon || '📄';
-      glyph.style.fontSize = '34px';
+      const glyph = dockGlyph(id, app.icon || '📄');
       const gloss = document.createElement('span');
       gloss.className = 'dock-gloss';
       const label = document.createElement('span');
@@ -176,7 +188,13 @@
     trash.className = 'dock-icon';
     trash.dataset.app = 'trash';
     trash.title = 'Trash';
-    trash.innerHTML = '<span class="dock-glyph" style="font-size:32px">🗑️</span><span class="dock-gloss"></span><span class="dock-label">Trash</span>';
+    trash.replaceChildren(dockGlyph('trash', '🗑️'));
+    const trashGloss = document.createElement('span');
+    trashGloss.className = 'dock-gloss';
+    const trashLabel = document.createElement('span');
+    trashLabel.className = 'dock-label';
+    trashLabel.textContent = 'Trash';
+    trash.append(trashGloss, trashLabel);
     trash.addEventListener('click', () => openApp('trash'));
     dock.appendChild(trash);
   }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><defs>
+  <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".45" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient>
+  <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd0ff"/><stop offset=".5" stop-color="#3f8fe0"/><stop offset="1" stop-color="#1656a8"/></linearGradient>
+  <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2f2f2"/><stop offset=".5" stop-color="#b8b8b8"/><stop offset="1" stop-color="#7c7c7c"/></linearGradient>
+  <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#dcdcdc"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".35"/></filter>
+</defs><g filter="url(#shadow)"><path d="M34 36h60l-6 78H40z" fill="url(#metal)" stroke="#777" stroke-width="2"/><rect x="26" y="26" width="76" height="12" rx="5" fill="#d8d8d8" stroke="#777"/><rect x="58" y="18" width="12" height="10" rx="3" fill="#aaa" stroke="#777"/><g stroke="#888" stroke-width="3"><path d="M50 52v46M64 52v46M78 52v46"/></g></g></svg>

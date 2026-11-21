@@ -43,7 +43,7 @@ button,input,textarea{font:inherit}
 #start-menu{position:fixed;bottom:38px;left:0;width:410px;z-index:9100;display:none;border:1px solid #0b3f8f;border-radius:9px 9px 0 0;overflow:hidden;background:#eaf2fb;box-shadow:3px 3px 16px rgba(8,35,80,.55)}
 #start-menu.open{display:block}
 .start-head{height:60px;display:flex;align-items:center;gap:12px;padding:6px 14px;color:#fff;font-size:17px;font-weight:bold;text-shadow:1px 2px 3px #0a3a78;background:linear-gradient(var(--blue-light) 0%,var(--blue) 48%,var(--blue-dark) 52%,var(--blue) 100%);border-top:3px solid #7db8f0;border-bottom:2px solid #0b3f8f}
-.avatar{width:46px;height:46px;flex:none;border:2px solid #fff;border-radius:6px;background:radial-gradient(circle at 50% 34%,#ffe9c8 0 18%,transparent 19%),linear-gradient(180deg,#8fc8f5 0%,#4d90cf 46%,#2a639f 47%,#d9e8f5 100%);display:grid;place-items:end center;font-size:26px;line-height:1;box-shadow:0 2px 5px rgba(0,0,0,.35);overflow:hidden}
+.avatar{width:46px;height:46px;flex:none;border:2px solid #fff;border-radius:6px;background:#8fc8f5 radial-gradient(circle at 50% 34%,#ffe9c8 0 18%,transparent 19%) center/cover no-repeat;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 0 0 1px rgba(0,0,0,.15);overflow:hidden}
 .start-head .user{display:flex;flex-direction:column;line-height:1.15}
 .start-head .user b{font-size:16px}
 .start-head .user small{font-size:11px;font-weight:normal;opacity:.85}
@@ -115,7 +115,7 @@ button,input,textarea{font:inherit}
     <button data-action="calculator">Calculator</button><button data-action="switch">Switch Era…</button>
   </div>
   <div id="start-menu">
-    <div class="start-head"><span class="avatar">👤</span><span class="user"><b id="xpUser">User</b><small>Windows XP</small></span></div>
+    <div class="start-head"><span class="avatar" id="xpAvatar"></span><span class="user"><b id="xpUser">User</b><small>Windows XP</small></span></div>
     <div class="start-cols">
       <div class="start-left">
         <div class="start-item" data-app="browser"><b>🌐</b>Internet</div>
@@ -196,6 +196,11 @@ button,input,textarea{font:inherit}
       const info = await DTM.system.getInfo();
       const user = document.getElementById('xpUser');
       if (user && info && info.username) user.textContent = info.username;
+      if (DTM.system.getAccountPicture) {
+        const picture = await DTM.system.getAccountPicture();
+        const avatar = document.getElementById('xpAvatar');
+        if (picture && avatar) avatar.style.backgroundImage = 'url("' + picture + '")';
+      }
     } catch (e) {}
   })();
   function switchEra() { window.parent.postMessage('dtm:open-switcher', '*'); }

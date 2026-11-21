@@ -203,6 +203,9 @@ class DesktopEngine {
         }
         return this.systemInfo;
       },
+      getAccountPicture: () => this.preload.getAccountPicture
+        ? this.preload.getAccountPicture()
+        : Promise.resolve(null),
       // Legacy alias kept for older skins — new code should use engine.fs
       listDirectory: async (dirPath) => {
         const result = await this.fs.list(dirPath);
