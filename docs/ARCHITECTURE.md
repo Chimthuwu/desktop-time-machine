@@ -5,9 +5,9 @@
 **Desktop Time Machine** is an Electron-based desktop platform for Windows 10 and Windows 11 that transforms the computer into a collection of historically inspired retro operating system desktop environments.
 
 Unlike virtual machines or emulators, Desktop Time Machine operates under the architectural principle:
-> **ONE SHARED ENGINE, MANY RETRO ENVIRONMENTS.**
+> **ONE COMPUTER. ONE UNDERLYING ENVIRONMENT. MULTIPLE HISTORICAL PRESENTATIONS.**
 
-All environments share the same underlying host hardware, filesystem, and applications while delivering authentic, historically accurate desktop layouts, window decorations, controls, sounds, and interactions.
+All skins share the same host filesystem, user files, desktop content, application functionality, computer identity, persistence and underlying engine. Only presentation changes between skins: desktop appearance, window decorations, icons and cursors, wallpapers, menus and taskbars, dialogs, sounds, animations and historical conventions. Per-skin visual preferences (for example icon layout or wallpaper) are allowed; separate virtual disks, per-OS filesystems, duplicated home directories, virtual user accounts and host/virtual storage-mode selectors are **not part of the product** and must not be introduced.
 
 ```
 +---------------------------------------------------------------------------------+

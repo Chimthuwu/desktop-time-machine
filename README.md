@@ -2,7 +2,9 @@
 
 > **A modular retro-computing simulator for Windows 10 and Windows 11.**
 
-Desktop Time Machine turns a modern Windows machine into a museum of historically inspired operating systems. Each era is a self-contained skin with its own applications and personality; a shared engine supplies capabilities such as real filesystem access, window management and live desktop mirroring.
+Desktop Time Machine turns a modern Windows machine into a museum of historically inspired operating systems. Each era is a self-contained **presentation** of the same computer with its own applications and personality; a shared engine supplies capabilities such as real filesystem access, window management and live desktop mirroring.
+
+**One computer. One underlying environment. Multiple historical presentations.** Switching skins changes how the computer looks and feels — never which files, user data or applications it has. Skins may store visual preferences (wallpaper, icon layout, screensaver); files and application data stay on the single real host filesystem.
 
 ---
 

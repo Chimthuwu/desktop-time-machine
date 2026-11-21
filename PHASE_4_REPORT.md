@@ -69,6 +69,7 @@ Commands executed from the repository root:
 | `npx electron test/security-regressions.js` | 41 passed, 0 failed |
 | `npx electron test/phase4-security.js` | 39 passed, 0 failed, 0 skipped |
 | `npx electron test/phase4-skins.js` | 13 passed, 0 failed, 0 skipped |
+| `npx electron test/shared-computer.js` | 5 passed, 0 failed — all 8 skins read identical real host data |
 | `npx electron test/mirror-smoke.js` | Real desktop mirror rendered for Windows 95/98/Mac OS 8, `consoleErrors: []` |
 | `npm run verify` | All of the above passed |
 | `node --check` on all changed `.js` files | No syntax errors |
@@ -82,11 +83,13 @@ No lint configuration exists in the repository; `node --check` was used as the a
 ## REMAINING / DEFERRED
 
 - **Installer integrity:** `dtm:browser-ensure` still downloads and silently installs Ungoogled Chromium without signature/hash verification. This is a supply-chain concern; verifying third-party release artifacts requires a pinned manifest or signature policy and is deferred.
-- **Filesystem policy remains host-wide:** `isSafePath` is a hardened blacklist, not a virtual root. A malicious local skin that is already installed can still reach most of the user's files. A virtual disk belongs to Phase 5.
+- **Filesystem policy remains host-wide:** `isSafePath` is a hardened blacklist, not a virtual root. A malicious local skin that is already installed can still reach most of the user's files. This is intentional: the product is one computer with one real host filesystem, not independent virtual machines.
 - **Discord camera/microphone:** permissions are now denied by default, so real-time media features require a future explicit user-consent flow.
 - **Long-hanging Electron/Windows behaviour** (native tray integration, real screen-share picker) could not be exercised in this environment; the policy logic was verified directly, not the OS dialogs.
 - **Historical docs** (`SKIN_EXAMPLES.md`, parts of `SKIN_API_REFERENCE.md`) still contain aspirational APIs; prominent status notes now mark them as planned. A full rewrite is deferred.
 
 ## NEXT PHASE READINESS
 
-**Ready to begin Phase 5: Virtual Computer Foundation.** The platform now has verified IPC authorization, least-privilege permissions, hardened path handling, deterministic skin lifecycle and consistent manifests. A persistent virtual disk can be introduced as a new engine capability without repairing the platform first; the existing real-host filesystem API should remain the default until the virtual filesystem is explicitly selected.
+**Ready for the next phase.** The platform now has verified IPC authorization, least-privilege permissions, hardened path handling, deterministic skin lifecycle and consistent manifests.
+
+**Architectural constraint for all future work:** Desktop Time Machine is one computer with one underlying filesystem, one set of user data and one shared functionality layer. Skins are historical presentations of that same computer. Future phases must **not** introduce a separate virtual disk, per-OS filesystems, duplicate home directories, virtual user accounts or a host/virtual storage-mode selector. New work should add shared capabilities and OS-specific presentation of those capabilities, never competing models of how the computer works.

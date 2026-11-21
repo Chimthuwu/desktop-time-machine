@@ -8,7 +8,8 @@
     "test": "electron test/verify-all.js",
     "test:security": "electron test/security-regressions.js && electron test/phase4-security.js",
     "test:skins": "electron test/phase4-skins.js",
-    "verify": "npm test && npm run test:security && npm run test:skins",
+    "test:architecture": "electron test/shared-computer.js",
+    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture",
     "screenshots": "electron test/capture-gallery.js"
   },
   "keywords": [

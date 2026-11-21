@@ -135,4 +135,5 @@ if (window.parent) {
      }
    });
    ```
-3. **No Direct Node.js Calls**: Do NOT call `require('fs')` or `require('child_process')`. All interaction with the host must flow through `DTM.system`.
+3. **No Direct Node.js Calls**: Do NOT call `require('fs')` or `require('child_process')`. All filesystem access must use `DTM.fs`; all host interactions use `DTM.system`.
+4. **One Computer**: A skin is a presentation layer over shared capabilities. Never create a per-OS filesystem, virtual disk, separate home directory or private copy of user files. Use `DTM.fs`/`DTM.desktop` for the same real host data every other skin sees. `localStorage` is only for this skin's visual preferences (wallpaper, icon layout, screensaver), not for user documents or application data that should be shared.
