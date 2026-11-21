@@ -50,7 +50,29 @@ app.whenReady().then(async () => {
         `localStorage.setItem('dtm_active_skin', ${JSON.stringify(skinId)})`
       );
       await win.webContents.reload();
-      await new Promise((r) => setTimeout(r, skinId === 'macosx' ? 2600 : 1400));
+      await win.webContents.executeJavaScript(`new Promise((resolve) => {
+        const started = Date.now();
+        const check = () => {
+          const ok = window.dtmSkinManager && window.dtmSkinManager.getCurrentSkin().id === ${JSON.stringify(skinId)};
+          if (ok || Date.now() - started > 12000) resolve();
+          else setTimeout(check, 100);
+        };
+        check();
+      })`);
+      if (skinId !== 'templeos') {
+        await win.webContents.executeJavaScript(`new Promise((resolve) => {
+          const started = Date.now();
+          const check = () => {
+            const frame = document.getElementById('skin-viewport');
+            const doc = frame && frame.contentDocument;
+            const ready = doc && doc.querySelectorAll('.dtm-icon').length > 0;
+            if (ready || Date.now() - started > 12000) resolve();
+            else setTimeout(check, 100);
+          };
+          check();
+        })`);
+      }
+      await new Promise((r) => setTimeout(r, skinId === 'macosx' ? 1600 : 500));
 
       const data = await win.webContents.executeJavaScript(`(async () => {
         const w = window;

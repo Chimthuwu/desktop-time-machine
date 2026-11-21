@@ -34,6 +34,15 @@
     renderDock();
   }
 
+  let sharedWindows = [];
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (data && data.type === 'dtm:windows-state') {
+      sharedWindows = data.windows || [];
+      renderDock();
+    }
+  });
+
   function renderDock() {
     const dock = document.getElementById('dock');
     if (!dock) return;
@@ -57,7 +66,10 @@
       label.textContent = app.name || app.title || id;
       const dot = document.createElement('span');
       dot.className = 'running-dot';
-      dot.style.display = [...windows.values()].some((entry) => entry.app === id) ? '' : 'none';
+      const isRunning = sharedWindows.length
+        ? sharedWindows.some((state) => !state.minimized && (state.app === id || (app.title && state.title === app.title)))
+        : [...windows.values()].some((entry) => entry.app === id);
+      dot.style.display = isRunning ? '' : 'none';
       icon.append(glyph, gloss, label, dot);
       icon.addEventListener('click', () => {
         const existing = [...windows.values()].find((entry) => entry.app === id);
@@ -75,6 +87,23 @@
         }
       });
       dock.appendChild(icon);
+    });
+    sharedWindows.filter((state) => state.minimized).forEach((state) => {
+      const item = document.createElement('div');
+      item.className = 'dock-icon dock-minimized';
+      item.title = state.title;
+      const glyph = document.createElement('span');
+      glyph.className = 'dock-glyph';
+      glyph.style.fontSize = '30px';
+      glyph.textContent = state.icon || '🪟';
+      const gloss = document.createElement('span');
+      gloss.className = 'dock-gloss';
+      const label = document.createElement('span');
+      label.className = 'dock-label';
+      label.textContent = state.title || 'Window';
+      item.append(glyph, gloss, label);
+      item.addEventListener('click', () => window.parent.postMessage({ type: 'dtm:window-action', id: state.id, app: state.app, action: 'activate' }, '*'));
+      dock.appendChild(item);
     });
     const separator = document.createElement('span');
     separator.className = 'dock-sep';
@@ -446,7 +475,7 @@
       const appleMenu = document.createElement('div');
       appleMenu.id = 'appleMenu';
       appleMenu.className = 'mb-menu';
-      appleMenu.style.cssText = 'position:fixed;left:4px;top:24px;z-index:12000;display:none;flex-direction:column;min-width:190px;padding:4px;background:#f2f2f2;color:#111;border:1px solid #999;box-shadow:2px 2px 6px rgba(0,0,0,.3)';
+      appleMenu.style.cssText = 'position:fixed;left:4px;top:24px;z-index:12000;flex-direction:column;min-width:190px;padding:4px;background:#f2f2f2;color:#111;border:1px solid #999;box-shadow:2px 2px 6px rgba(0,0,0,.3)';
       appleMenu.innerHTML = '<div class="am-item" data-app="about" style="padding:5px 9px;cursor:default">About This Mac</div>' +
         '<div class="am-item" style="padding:5px 9px;cursor:default">Shut Down…</div>' +
         '<div class="am-item" style="padding:5px 9px;cursor:default">Restart…</div>' +

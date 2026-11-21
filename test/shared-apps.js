@@ -67,6 +67,7 @@ app.whenReady().then(async () => {
   });
 
   try {
+    try { fs.rmSync(NOTE_FILE, { force: true }); } catch (e) {}
     await win.loadFile(path.join(ROOT, 'src/index.html'));
     await loadSkin(win, 'windows95', 1600);
 
@@ -115,7 +116,14 @@ app.whenReady().then(async () => {
       return { dialog: true, status: winEl.querySelector('.dtm-app-status').textContent };
     })()`);
     assert('notepad opened a real save dialog', notepadSaved.dialog, notepadSaved);
-    const savedContent = fs.existsSync(NOTE_FILE) ? fs.readFileSync(NOTE_FILE, 'utf8') : null;
+    let savedContent = null;
+    for (let i = 0; i < 60; i++) {
+      if (fs.existsSync(NOTE_FILE)) {
+        savedContent = fs.readFileSync(NOTE_FILE, 'utf8');
+        if (savedContent === 'written by shared notepad') break;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
     assert('notepad wrote real file content', savedContent === 'written by shared notepad', savedContent);
 
     // --- Calculator computes correctly and rejects bad input ---
@@ -166,9 +174,14 @@ app.whenReady().then(async () => {
       if (!dialog) return { dialog: false };
       dialog.value = ${JSON.stringify(PNG_FILE.replace(/\\/g, '/'))};
       doc.querySelector('.dtm-app-dialog .dtm-app-button.primary').click();
-      await new Promise(r => setTimeout(r, 500));
       const el = doc.querySelector('.dtm-shared-app[data-app="imageviewer"]');
-      return { dialog: true, image: !!el.querySelector('img') };
+      let image = null;
+      for (let i = 0; i < 60; i++) {
+        image = el.querySelector('img');
+        if (image && image.src.startsWith('data:image/')) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      return { dialog: true, image: !!(image && image.src.startsWith('data:image/')) };
     })()`);
     assert('image viewer opened a real path', viewer.dialog && viewer.image, viewer);
 

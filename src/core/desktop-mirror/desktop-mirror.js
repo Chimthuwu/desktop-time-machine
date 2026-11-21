@@ -386,6 +386,8 @@
     const skinId = opts.skinId;
     const isMac = skinId === 'macos8' || skinId === 'macosx';
     const win = el(doc, 'div', 'window dtm-window');
+    win.dataset.app = opts.app || 'explorer';
+    win.dataset.icon = opts.icon || (isMac ? '📁' : '🗂️');
     win.style.width = (opts.width || 520) + 'px';
     win.style.height = (opts.height || 360) + 'px';
     const n = doc.querySelectorAll('.dtm-window').length;
@@ -1481,28 +1483,32 @@
 
     function showContextMenu(x, y, item, icon) {
       closeMenus();
+      const profiles = window.DTMContextMenus;
+      const labels = profiles.itemLabels(profiles.profileFor(skinId));
       const m = el(doc, 'div', 'dtm-context');
-      menuAdd(m, 'Open', () => openDesktopItem(item));
-      menuAdd(m, 'Explore', () => {
+      menuAdd(m, labels.open, () => openDesktopItem(item));
+      menuAdd(m, labels.explore, () => {
         const target = item.isDirectory ? item.path : (parentPathOf(item.path) || item.path);
         const ex = buildExplorer({ doc, DTM, skinId, desktop, path: target });
-        openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, content: ex.wrap });
+        openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, app: 'explorer', icon: '📁', content: ex.wrap });
       });
-      menuAdd(m, 'Find...', null, true);
+      if (labels.find) menuAdd(m, labels.find, null, true);
       menuSep(m);
-      menuAdd(m, 'Cut', () => { clipboard = { mode: 'cut', path: item.path, name: item.name }; });
-      menuAdd(m, 'Copy', () => { clipboard = { mode: 'copy', path: item.path, name: item.name }; });
-      menuAdd(m, 'Create Shortcut', null, true);
-      menuAdd(m, 'Delete', () => deleteItem(item));
-      menuAdd(m, 'Rename', () => startRename(item, icon));
+      menuAdd(m, labels.cut, () => { clipboard = { mode: 'cut', path: item.path, name: item.name }; });
+      menuAdd(m, labels.copy, () => { clipboard = { mode: 'copy', path: item.path, name: item.name }; });
+      if (labels.alias) menuAdd(m, labels.alias, null, true);
+      menuAdd(m, labels.delete, () => deleteItem(item));
+      menuAdd(m, labels.rename, () => startRename(item, icon));
+      if (labels.sendTo) {
+        menuSep(m);
+        menuSub(m, labels.sendTo, (sub) => {
+          menuAdd(sub, 'Desktop (create shortcut)', null, true);
+          menuAdd(sub, 'Mail Recipient', null, true);
+          menuAdd(sub, 'My Documents', null, true);
+        });
+      }
       menuSep(m);
-      menuSub(m, 'Send To', (sub) => {
-        menuAdd(sub, 'Desktop (create shortcut)', null, true);
-        menuAdd(sub, 'Mail Recipient', null, true);
-        menuAdd(sub, 'My Documents', null, true);
-      });
-      menuSep(m);
-      menuAdd(m, 'Properties', () => showProperties(item));
+      menuAdd(m, labels.properties, () => showProperties(item));
       m.style.left = Math.min(x, view.innerWidth - 210) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 300) + 'px';
       doc.body.appendChild(m);
@@ -1601,9 +1607,11 @@
     // Right-click on empty desktop space — Windows 95 menu structure.
     function showDesktopMenu(x, y) {
       closeMenus();
+      const profiles = window.DTMContextMenus;
+      const options = profiles.desktopOptions(profiles.profileFor(skinId), skinId);
       const m = el(doc, 'div', 'dtm-context');
 
-      menuSub(m, 'Arrange Icons', (sub) => {
+      if (options.arrange) menuSub(m, options.arrange, (sub) => {
         const addSort = (label, mode) => menuAdd(sub, (arrangeMode === mode ? '✓ ' : '   ') + label, () => {
           arrangeMode = mode; autoArrange = false; store.clear(); render(true);
         });
@@ -1619,13 +1627,13 @@
           render(true);
         });
       });
-      menuAdd(m, 'Line up Icons', () => {
+      if (options.arrange) menuAdd(m, 'Line up Icons', () => {
         store.clear();
         if (!arrangeMode) arrangeMode = 'name';
         render(true);
       });
       menuSep(m);
-      menuAdd(m, 'Refresh', () => {
+      menuAdd(m, options.refresh, () => {
         // Re-read the artwork too, so a shortcut whose icon changed while the
         // app was open is redrawn by this menu item alone.
         invalidateArtwork(null, state.items);
@@ -1636,19 +1644,20 @@
       });
       menuSep(m);
       menuAdd(m, 'Paste', pasteIntoDesktop, !clipboard);
-      menuAdd(m, 'Paste Shortcut', null, true);
+      if (options.pasteShortcut) menuAdd(m, 'Paste Shortcut', null, true);
       menuSub(m, 'New', (sub) => {
         menuAdd(sub, 'Folder', newFolder);
-        menuAdd(sub, 'Shortcut', null, true);
+        if (profiles.profileFor(skinId) === 'windows') menuAdd(sub, 'Shortcut', null, true);
         menuAdd(sub, 'Text Document', newTextDocument);
       });
+      if (options.terminal) {
+        menuSep(m);
+        menuAdd(m, options.terminal, openCommandPromptHere);
+      }
       menuSep(m);
-      menuAdd(m, 'Command Prompt Here', openCommandPromptHere);
-      menuAdd(m, 'Open in Windows Terminal', openTerminalHere);
-      menuSep(m);
-      menuAdd(m, 'Properties', () => {
+      menuAdd(m, options.properties, () => {
         const skinWin = doc.defaultView;
-        if (skinWin && typeof skinWin.openApp === 'function') skinWin.openApp('display');
+        if (skinWin && typeof skinWin.openApp === 'function') skinWin.openApp(options.propertiesApp);
       });
       m.style.left = Math.min(x, view.innerWidth - 230) + 'px';
       m.style.top = Math.min(y, view.innerHeight - 330) + 'px';

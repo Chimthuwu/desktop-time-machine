@@ -51,6 +51,60 @@
   // over Safari's content area; the skin sends rect updates as the Safari
   // window moves/resizes, so the page appears to render inside Safari itself.
   let safariWeb = null;
+  let safariTabs = new Map();
+  let safariActiveTab = null;
+  let safariTabSeq = 0;
+
+  function safariTabState() {
+    return Array.from(safariTabs, ([id, tab]) => ({ id, title: tab.title, url: tab.url, active: id === safariActiveTab }));
+  }
+
+  function postSafariTabs() {
+    postToSkin({ type: 'dtm:safari-tabs', tabs: safariTabState() });
+  }
+
+  function showSafariTab(id) {
+    safariActiveTab = id;
+    safariTabs.forEach((tab, tabId) => {
+      tab.webview.style.display = tabId === id ? 'flex' : 'none';
+    });
+    const tab = safariTabs.get(id);
+    if (tab) {
+      postToSkin({ type: 'dtm:safari-url', url: tab.url });
+      postToSkin({ type: 'dtm:safari-title', title: tab.title });
+    }
+    postSafariTabs();
+  }
+
+  function makeSafariTab(url) {
+    const id = 'st' + (++safariTabSeq);
+    const webview = document.createElement('webview');
+    webview.className = 'dtmshell-web';
+    webview.setAttribute('partition', PARTITION);
+    webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/10.1 Safari/605.1.15');
+    webview.setAttribute('src', normalizeUrl(url));
+    webview.style.display = 'none';
+    const tab = { webview, title: 'New Tab', url: normalizeUrl(url) };
+    safariTabs.set(id, tab);
+    safariWeb.appendChild(webview);
+
+    webview.addEventListener('did-navigate', (e) => {
+      tab.url = e.url;
+      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-url', url: e.url });
+      postSafariTabs();
+    });
+    webview.addEventListener('did-navigate-in-page', (e) => {
+      tab.url = e.url;
+      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-url', url: e.url });
+    });
+    webview.addEventListener('page-title-updated', (e) => {
+      if (!e.title) return;
+      tab.title = e.title;
+      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-title', title: e.title });
+      postSafariTabs();
+    });
+    return id;
+  }
 
   function applySafariRect(rect) {
     if (!safariWeb || !rect) return;
@@ -69,34 +123,47 @@
     if (!safariWeb) return;
     safariWeb.remove();
     safariWeb = null;
+    safariTabs = new Map();
+    safariActiveTab = null;
   }
 
-  function openSafariWeb(url, rect) {
+  function openSafariWeb(url, rect, options = {}) {
     if (!safariWeb) {
       safariWeb = document.createElement('div');
       safariWeb.className = 'dtmshell-safari-web';
-      const webview = document.createElement('webview');
-      webview.className = 'dtmshell-web';
-      webview.setAttribute('partition', PARTITION);
-      webview.setAttribute('useragent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/10.1 Safari/605.1.15');
-      webview.setAttribute('src', normalizeUrl(url));
-      safariWeb.appendChild(webview);
       layer.appendChild(safariWeb);
-
-      webview.addEventListener('did-navigate', (e) => postToSkin({ type: 'dtm:safari-url', url: e.url }));
-      webview.addEventListener('did-navigate-in-page', (e) => postToSkin({ type: 'dtm:safari-url', url: e.url }));
-      webview.addEventListener('page-title-updated', (e) => {
-        if (e.title) postToSkin({ type: 'dtm:safari-title', title: e.title });
-      });
-    } else {
-      try { safariWeb.querySelector('webview').loadURL(normalizeUrl(url)); } catch (e) {}
+    }
+    if (options.newTab || safariTabs.size === 0) {
+      const id = makeSafariTab(url || 'https://www.google.com/');
+      showSafariTab(id);
+    } else if (options.tabId && safariTabs.has(options.tabId)) {
+      const tab = safariTabs.get(options.tabId);
+      try { tab.webview.loadURL(normalizeUrl(url)); } catch (e) {}
+      showSafariTab(options.tabId);
+    } else if (safariActiveTab && safariTabs.has(safariActiveTab)) {
+      const tab = safariTabs.get(safariActiveTab);
+      try { tab.webview.loadURL(normalizeUrl(url)); } catch (e) {}
     }
     applySafariRect(rect);
   }
 
-  function safariAction(action, url) {
-    if (!safariWeb) return;
-    const webview = safariWeb.querySelector('webview');
+  function safariAction(action, data = {}) {
+    const url = data.url;
+    if (action === 'newTab') { openSafariWeb(url || 'https://www.google.com/', null, { newTab: true }); return; }
+    if (action === 'switchTab') { if (safariTabs.has(data.tabId)) showSafariTab(data.tabId); return; }
+    if (action === 'closeTab') {
+      if (!safariTabs.has(data.tabId)) return;
+      const tab = safariTabs.get(data.tabId);
+      try { tab.webview.stop(); } catch (e) {}
+      tab.webview.remove();
+      safariTabs.delete(data.tabId);
+      if (safariTabs.size === 0) closeSafariWeb();
+      else if (safariActiveTab === data.tabId) showSafariTab(Array.from(safariTabs.keys())[0]);
+      else postSafariTabs();
+      return;
+    }
+    const tab = safariTabs.get(safariActiveTab);
+    const webview = tab && tab.webview;
     if (!webview) return;
     try {
       if (action === 'back') webview.goBack();
@@ -1491,11 +1558,11 @@ async function syncTabsFromBridge(entry) {
     } else if (data.type === 'dtm:webapp-close') {
       closeWindow(data.app);
     } else if (data.type === 'dtm:safari-navigate') {
-      openSafariWeb(data.url, data.rect);
+      openSafariWeb(data.url, data.rect, { newTab: data.newTab, tabId: data.tabId });
     } else if (data.type === 'dtm:safari-sync') {
       applySafariRect(data.rect);
     } else if (data.type === 'dtm:safari-action') {
-      safariAction(data.action, data.url);
+      safariAction(data.action, data);
     } else if (data.type === 'dtm:safari-close') {
       closeSafariWeb();
     }

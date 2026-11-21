@@ -32,8 +32,38 @@
     postToShell({ type: 'dtm:safari-sync', rect: safariContentRect(activeSafariEntry) });
   }
 
-  function safariAction(action, url) {
-    postToShell({ type: 'dtm:safari-action', action, url });
+  function safariAction(action, data) {
+    const payload = typeof data === 'object' && data ? Object.assign({ action }, data) : { action, url: data };
+    postToShell(Object.assign({ type: 'dtm:safari-action' }, payload));
+  }
+
+  function renderSafariTabs(tabs) {
+    if (!activeSafariEntry || !Array.isArray(tabs)) return;
+    const bar = activeSafariEntry.body.querySelector('.safari-tabs');
+    if (!bar) return;
+    bar.querySelectorAll('.safari-tab').forEach((node) => node.remove());
+    const add = bar.querySelector('.safari-tab-add');
+    tabs.forEach((tab) => {
+      const node = document.createElement('div');
+      node.className = 'safari-tab' + (tab.active ? ' active' : '');
+      node.title = tab.title || 'Tab';
+      node.dataset.tabId = tab.id;
+      const label = document.createElement('span');
+      label.className = 'safari-tab-title';
+      label.textContent = tab.title || 'New Tab';
+      const close = document.createElement('button');
+      close.className = 'safari-tab-close';
+      close.type = 'button';
+      close.textContent = '×';
+      close.title = 'Close Tab';
+      close.addEventListener('click', (event) => {
+        event.stopPropagation();
+        safariAction('closeTab', { tabId: tab.id });
+      });
+      node.addEventListener('click', () => safariAction('switchTab', { tabId: tab.id }));
+      node.append(label, close);
+      bar.insertBefore(node, add);
+    });
   }
 
   function stopSafariWeb(entry) {
@@ -53,6 +83,8 @@
     } else if (data.type === 'dtm:safari-title') {
       const title = activeSafariEntry.win.querySelector('.title-text');
       if (title && data.title) title.textContent = data.title;
+    } else if (data.type === 'dtm:safari-tabs') {
+      renderSafariTabs(data.tabs);
     }
   });
 
@@ -223,6 +255,7 @@
           <input class="safari-url" value="https://www.apple.com/" aria-label="Web address">
           <button class="aqua-btn safari-go">Go</button>
         </div>
+        <div class="safari-tabs"><button class="safari-tab-add" type="button" title="New Tab">+</button></div>
         <div class="safari-bookmarks"><span data-url="https://www.apple.com/">Apple</span><span data-url="https://en.wikipedia.org/">Wikipedia</span><span data-url="https://archive.org/">Internet Archive</span></div>
         <div class="safari-start">
           <h1><span>Safari</span></h1>
@@ -253,6 +286,13 @@
     entry.body.querySelector('.safari-go').addEventListener('click', () => go());
     entry.body.querySelector('.safari-launch').addEventListener('click', () => go(search.value || address.value));
     entry.body.querySelector('.safari-search button').addEventListener('click', () => go(search.value));
+    entry.body.querySelector('.safari-tab-add').addEventListener('click', () => {
+      activeSafariEntry = entry;
+      entry.safariActive = true;
+      safariAction('newTab', { url: 'https://www.google.com/' });
+      if (!safariSyncTimer) safariSyncTimer = setInterval(syncSafariWeb, 120);
+      postToShell({ type: 'dtm:safari-sync', rect: safariContentRect(entry) });
+    });
     entry.body.querySelector('.safari-back').addEventListener('click', () => safariAction('back'));
     entry.body.querySelector('.safari-forward').addEventListener('click', () => safariAction('forward'));
     entry.body.querySelector('.safari-reload').addEventListener('click', () => safariAction('reload'));
