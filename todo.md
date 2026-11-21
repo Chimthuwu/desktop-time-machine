@@ -1,0 +1,46 @@
+# SkinsOS — Project Status
+
+## Completed foundations
+
+- [x] Shared filesystem service in the Electron main process with validated IPC: list/stat/read/write/mkdir/rename/copy/move/remove/drives/special folders.
+- [x] `engine.fs` namespace plus an in-memory mock for browser development.
+- [x] `permissions.js`: device namespace, UNC, short-name, reserved-name, junction and sensitive-path checks; protected-path levels; pinned executable allowlist.
+- [x] Real desktop mirror across all registered skins with per-skin icon positions and live filesystem update handling.
+- [x] Mac OS X Aqua skin (`desktop.js`, `apps.js`, `finder.js`, `desktop.css`), registered and tested.
+- [x] All eight skins registered: Windows 95, Windows 98, Windows XP, Mac OS 8, Mac OS X, Amiga Workbench, BeOS, TempleOS.
+- [x] Verification suites: `npm test`, `security-regressions.js`, `phase4-security.js`, `phase4-skins.js`, `mirror-smoke.js`, `capture-gallery.js`.
+- [x] Documentation corrected: current OS list, relative links, accurate API and security descriptions.
+
+## Phase 4 focus (reliability and security)
+
+- [x] Least-privilege permission policy; no automatic camera/mic/location/clipboard/display-capture grants; OS picker for screen sharing.
+- [x] IPC sender authorization limited to the application's own `file://` origin.
+- [x] Terminal commands restricted to an allowlisted, shell-free implementation.
+- [x] Browser engine URL validation restricted to http(s).
+- [x] Mirror listener cleanup on unmount; startup failure recovery UI.
+- [x] Manifest validation improvements and fallback-registry consistency checks.
+
+## Urgent UX bugs — fix ASAP
+
+- [ ] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`.
+
+## Explicitly out of scope
+
+The product is **one computer, one underlying environment, multiple historical presentations**. These are not roadmap items and must not be introduced:
+
+- Separate virtual disks, per-OS filesystems, duplicated home directories or virtual user accounts.
+- A host/virtual storage-mode selector or any second concept of "where the computer's files live".
+- Artificial separation of desktop content between skins.
+
+Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; user files and application data remain shared through the real host filesystem.
+
+## Deferred engine APIs (planned, not implemented)
+
+- `process`, `windows`, `notify`, `clipboard` and `onSkinUnload` described in `docs/SKIN_API_REFERENCE.md`.
+
+## Architectural decisions
+
+- Filesystem backend is shared by all skins through `engine.fs`; skins keep their own visual language.
+- Destructive operations are blocked at service level on drive roots, system directories and profile roots.
+- Hidden-file detection uses the pinned `%SystemRoot%\System32\attrib.exe` helper (no shell).
+- `engine.fs.list()` returns `{ path, parentPath, items, truncated }` so skins can navigate upward.
