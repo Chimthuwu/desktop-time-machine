@@ -154,17 +154,17 @@ button,input,textarea{font:inherit}
   }
   function shell(){
     const cli=document.createElement('div');cli.className='amiga-terminal';
-    const output=document.createElement('div');output.className='cli-output';output.textContent='AmigaDOS 3.1\\nWorkbench Shell\\nType HELP for commands.\\n\\n';
+    const output=document.createElement('div');output.className='cli-output';output.textContent='AmigaDOS 3.1\nWorkbench Shell\nType HELP for commands.\n\n';
     const form=document.createElement('form');form.className='cli-form';
     const prompt=document.createElement('span');prompt.textContent='1>';
     const input=document.createElement('input');input.setAttribute('aria-label','AmigaShell command');
     form.append(prompt,input);cli.append(output,form);
-    form.addEventListener('submit',(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='1>'+cmd+'\\n';
-      if(/^help$/i.test(cmd))output.textContent+='DIR  LIST  DATE  VERSION  ENDCLI\\n';
-      else if(/^(dir|list)$/i.test(cmd))output.textContent+='SYS:  RAM:  Utilities/  Trashcan/\\n';
-      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\\n';
-      else if(/^version$/i.test(cmd))output.textContent+='Workbench 3.1  Kickstart 40.63\\n';
-      else if(cmd&&!/^endcli$/i.test(cmd))output.textContent+='Unknown command. Type HELP.\\n';
+    form.addEventListener('submit',(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='1>'+cmd+'\n';
+      if(/^help$/i.test(cmd))output.textContent+='DIR  LIST  DATE  VERSION  ENDCLI\n';
+      else if(/^(dir|list)$/i.test(cmd))output.textContent+='SYS:  RAM:  Utilities/  Trashcan/\n';
+      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\n';
+      else if(/^version$/i.test(cmd))output.textContent+='Workbench 3.1  Kickstart 40.63\n';
+      else if(cmd&&!/^endcli$/i.test(cmd))output.textContent+='Unknown command. Type HELP.\n';
       output.scrollTop=output.scrollHeight;
     });
     createWindow('Shell',cli,570,330);input.focus();

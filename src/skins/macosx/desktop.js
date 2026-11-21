@@ -31,7 +31,21 @@
       activeApp = entry.app;
       updateMenus(entry.app);
     }
-    renderDock();
+    updateDockDots();
+  }
+
+  function updateDockDots() {
+    const dock = document.getElementById('dock');
+    if (!dock) return;
+    dock.querySelectorAll('.dock-icon[data-app]').forEach((icon) => {
+      const id = icon.dataset.app;
+      const dot = icon.querySelector('.running-dot');
+      if (!dot) return;
+      const isRunning = sharedWindows.length
+        ? sharedWindows.some((state) => !state.minimized && (state.app === id || (id === 'trash' && state.app === 'trash')))
+        : [...windows.values()].some((entry) => entry.app === id);
+      dot.style.display = isRunning ? '' : 'none';
+    });
   }
 
   let sharedWindows = [];
@@ -39,14 +53,16 @@
     const data = event.data;
     if (data && data.type === 'dtm:windows-state') {
       sharedWindows = data.windows || [];
-      renderDock();
+      updateDockDots();
     }
   });
 
   function renderDock() {
     const dock = document.getElementById('dock');
     if (!dock) return;
-    const definitions = Object.entries(apps).filter(([, app]) => app.dock !== false);
+    // Trash is appended explicitly below the separator; skip the registered
+    // copy so the Dock does not show two identical Trash icons.
+    const definitions = Object.entries(apps).filter(([id, app]) => app.dock !== false && id !== 'trash');
     dock.replaceChildren();
     definitions.forEach(([id, app]) => {
       const icon = document.createElement('div');
@@ -256,7 +272,7 @@
 
     const entry = { id, app: appId, appDef, win, bar, body, title, maximized: false, previousRect: null };
     windows.set(id, entry);
-    close.addEventListener('click', (event) => { event.stopPropagation(); closeWindow(win); });
+    close.addEventListener('click', (event) => { event.stopPropagation(); window.requestCloseWindow(win); });
     minimize.addEventListener('click', (event) => {
       event.stopPropagation();
       win.style.display = 'none';
@@ -398,6 +414,52 @@
     });
   }
 
+  function hostConfirm3(title, message, choices) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'sheet-overlay';
+      const sheet = document.createElement('div');
+      sheet.className = 'sheet';
+      const heading = document.createElement('h3');
+      heading.textContent = title;
+      const description = document.createElement('p');
+      description.textContent = message;
+      const actions = document.createElement('div');
+      actions.className = 'sheet-actions';
+      let settled = false;
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        overlay.remove();
+        resolve(value);
+      };
+      choices.forEach((choice, index) => {
+        const button = document.createElement('button');
+        button.className = 'aqua-btn' + (choice.primary ? '' : ' gray');
+        button.textContent = choice.label;
+        button.addEventListener('click', () => done(choice.id));
+        actions.appendChild(button);
+        if (index === choices.length - 1) button.focus();
+      });
+      sheet.append(heading, description, actions);
+      overlay.appendChild(sheet);
+      document.body.appendChild(overlay);
+    });
+  }
+
+  // Reusable dirty-state guard: apps register an async handler for their
+  // window; close controls call requestCloseWindow and honour a false result.
+  const closeGuards = new WeakMap();
+  window.registerCloseGuard = (win, handler) => closeGuards.set(win, handler);
+  window.requestCloseWindow = async (win) => {
+    const guard = win && closeGuards.get(win);
+    if (guard) {
+      try { if (await guard() === false) return false; } catch (e) { console.warn('[Mac OS X] close guard failed:', e); }
+    }
+    closeWindow(win);
+    return true;
+  };
+
   function shutDown() {
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay';
@@ -513,7 +575,7 @@
       window.parent.postMessage('dtm:open-switcher', '*');
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w') {
       event.preventDefault();
-      closeActiveWindow();
+      if (activeWindow) window.requestCloseWindow(activeWindow);
     }
   });
 
@@ -549,8 +611,29 @@
   window.updateMenus = updateMenus;
   window.showContextMenu = showContextMenu;
   window.hostPrompt = hostPrompt;
+  window.hostConfirm3 = hostConfirm3;
   window.shutDown = shutDown;
-  window.playChime = window.playChime || (() => {});
+  window.playChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const audio = new AudioCtx();
+      [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequency;
+        const start = audio.currentTime + index * 0.16;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(start);
+        osc.stop(start + 0.55);
+      });
+      setTimeout(() => audio.close(), 1500);
+    } catch (e) { /* audio is optional */ }
+  };
   window.macWindowEntries = windows;
   boot();
 })();

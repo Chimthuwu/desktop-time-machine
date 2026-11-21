@@ -133,6 +133,57 @@ app.whenReady().then(async () => {
     assert('active tab is indicated', tabs.active === 1, tabs);
     assert('closing a tab works', tabs.afterClose === tabs.initial - 1, tabs);
 
+    // --- Shared apps: theme contract and taskbar/dock integration ---
+    await loadSkin(win, 'windowsXP', 2000);
+    const sharedInXP = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.DTMApps.open('notepad');
+      await new Promise(r => setTimeout(r, 500));
+      const app = doc.querySelector('.dtm-shared-app[data-app="notepad"]');
+      const button = Array.from(doc.querySelectorAll('#tasks .task')).find((b) => /Notepad/.test(b.textContent));
+      return {
+        theme: app && app.dataset.dtmTheme,
+        themed: app ? getComputedStyle(app).getPropertyValue('--app-surface').trim() : '',
+        taskbarButton: !!button,
+        zIndex: app ? Number(app.style.zIndex) : 0
+      };
+    })()`);
+    assert('shared app uses the active skin theme contract', sharedInXP.theme === 'xp', sharedInXP);
+    assert('shared app themed surface is applied', sharedInXP.themed.length > 0, sharedInXP);
+    assert('shared app appears in XP taskbar', sharedInXP.taskbarButton, sharedInXP);
+
+    await loadSkin(win, 'macosx', 2800);
+    const sharedInMac = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.DTMApps.open('calculator');
+      await new Promise(r => setTimeout(r, 500));
+      const app = doc.querySelector('.dtm-shared-app[data-app="calculator"]');
+      return { theme: app && app.dataset.dtmTheme, runningDots: doc.querySelectorAll('#dock .running-dot').length };
+    })()`);
+    assert('shared app uses Aqua theme contract', sharedInMac.theme === 'aqua', sharedInMac);
+
+    // --- Independent Safari windows ---
+    const twoWindows = await win.webContents.executeJavaScript(`(async () => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.openApp('safari');
+      await new Promise(r => setTimeout(r, 300));
+      w.openApp('safari', { newWindow: true });
+      await new Promise(r => setTimeout(r, 500));
+      const opened = doc.querySelectorAll('.window[data-app="safari"]').length;
+      Array.from(doc.querySelectorAll('.window[data-app="safari"] .safari-tab-add')).forEach((add) => add.click());
+      await new Promise(r => setTimeout(r, 900));
+      const wrappers = document.querySelectorAll('.dtmshell-safari-web').length;
+      const windows = Array.from(doc.querySelectorAll('.window[data-app="safari"]'));
+      if (windows[0]) windows[0].querySelector('.t-close').click();
+      await new Promise(r => setTimeout(r, 600));
+      return { opened, wrappers, afterClose: document.querySelectorAll('.dtmshell-safari-web').length };
+    })()`);
+    assert('two Safari windows own two webview groups', twoWindows.opened >= 2 && twoWindows.wrappers >= 2, twoWindows);
+    assert('closing one Safari window leaves the other running', twoWindows.afterClose === 1, twoWindows);
+
     assert('no unexpected console errors', errors.length === 0, errors);
   } catch (e) {
     results.failed++;

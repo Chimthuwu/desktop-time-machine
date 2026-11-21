@@ -90,25 +90,45 @@
       function markDirty() { dirty = true; updateTitle(); }
 
       async function save(saveAs) {
-        if (!backend) { status(foot, 'Filesystem unavailable'); return; }
-        if (saveAs || !path) {
-          var chosen = await ctx.prompt('Save As', 'Enter a full file path:', path || 'Untitled.txt');
-          if (!chosen) return;
-          path = chosen;
+        if (!backend) { status(foot, 'Filesystem unavailable'); return false; }
+        var target = path;
+        if (saveAs || !target) {
+          var chosen = await ctx.prompt('Save As', 'Enter a full file path:', target || 'Untitled.txt');
+          if (!chosen) return false;
+          target = chosen;
         }
         try {
-          var result = await backend.write(path, area.value);
+          var result = await backend.write(target, area.value);
+          // Only commit the path and clear dirty after a successful write.
+          path = (result && result.path) || target;
           dirty = false;
           updateTitle();
-          status(foot, 'Saved ' + (result.path || path));
-        } catch (error) { status(foot, 'Save failed: ' + error.message); }
+          status(foot, 'Saved ' + path);
+          return true;
+        } catch (error) {
+          status(foot, 'Save failed: ' + error.message);
+          return false;
+        }
+      }
+      async function canDiscard() {
+        if (!dirty) return true;
+        var choice = await ctx.confirmDirty('Save changes to this document?');
+        if (choice === 'cancel' || choice === null) return false;
+        if (choice === 'save') return save(false);
+        return true;
+      }
+      async function newDocument() {
+        if (!await canDiscard()) return;
+        area.value = ''; path = ''; dirty = false; updateTitle(); status(foot, '');
       }
       async function open() {
+        if (!await canDiscard()) return;
         if (!backend) { status(foot, 'Filesystem unavailable'); return; }
         var chosen = await ctx.prompt('Open', 'Enter a full file path:', path);
         if (!chosen) return;
         try {
-          area.value = await backend.read(chosen);
+          var content = await backend.read(chosen);
+          area.value = content;
           path = chosen;
           dirty = false;
           updateTitle();
@@ -117,7 +137,7 @@
       }
 
       bar.append(
-        button('New', function () { area.value = ''; path = ''; dirty = false; updateTitle(); status(foot, ''); }),
+        button('New', newDocument),
         button('Open…', open),
         button('Save', function () { save(false); }),
         button('Save As…', function () { save(true); })
@@ -131,6 +151,7 @@
       });
       status(foot, 'Ready');
       return {
+        beforeClose: canDiscard,
         dispose: function () {},
         onKeyDown: function () {}
       };
@@ -371,8 +392,11 @@
       var canvas = el('canvas', 'dtm-app-canvas');
       canvas.width = 560;
       canvas.height = 320;
-      root.append(bar, canvas);
+      var foot = el('div', 'dtm-app-status');
+      root.append(bar, canvas, foot);
       var paint = false;
+      var dirty = false;
+      status(foot, 'Ready');
       function point(event) {
         var rect = canvas.getBoundingClientRect();
         return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
@@ -394,6 +418,7 @@
         ctx2d.lineCap = 'round';
         ctx2d.lineTo(p.x, p.y);
         ctx2d.stroke();
+        dirty = true;
       });
       ['pointerup', 'pointercancel'].forEach(function (type) {
         canvas.addEventListener(type, function () { paint = false; });
@@ -404,9 +429,10 @@
         button('Clear', function () {
           var ctx2d = canvas.getContext('2d');
           ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+          dirty = true;
         }),
         button('Save PNG…', async function () {
-          if (!backend) return;
+          if (!backend) { status(foot, 'Filesystem unavailable'); return; }
           var target = await ctx.prompt('Save Image', 'Enter a .png file path:', 'Drawing.png');
           if (!target) return;
           try {
@@ -415,10 +441,23 @@
             var bytes = new Uint8Array(binary.length);
             for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
             await backend.writeBinary(target, bytes);
-          } catch (error) { console.warn('[DTMApps] Paint save failed:', error); }
+            dirty = false;
+            status(foot, 'Saved ' + target);
+          } catch (error) { status(foot, 'Save failed: ' + error.message); }
         })
       );
-      return { dispose: function () {} };
+      async function canDiscard() {
+        if (!dirty) return true;
+        var choice = await ctx.confirmDirty('Save this drawing?');
+        if (choice === 'cancel' || choice === null) return false;
+        if (choice === 'discard') return true;
+        // Save: reuse the toolbar action, then only discard if it succeeded.
+        var saveButton = Array.from(bar.querySelectorAll('.dtm-app-button')).find(function (b) { return b.textContent === 'Save PNG…'; });
+        if (saveButton) saveButton.click();
+        await new Promise(function (r) { setTimeout(r, 600); });
+        return !dirty;
+      }
+      return { beforeClose: canDiscard, dispose: function () {} };
     }
   });
 

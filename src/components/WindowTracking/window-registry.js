@@ -12,14 +12,22 @@
 
   var layer = document.getElementById('shell-app-layer');
   var viewport = document.getElementById('skin-viewport');
+  var SELECTOR = '.window[data-app], .dtm-window, .win, .be-window, .wb-window, .dtmshell-win, .dtm-shared-app';
   var windows = new Map();
   var idCounter = 0;
+  var zCounter = 100;
+  var activeId = null;
   var observers = [];
   var ids = new WeakMap();
 
   function idFor(node) {
-    if (!ids.has(node)) ids.set(node, 'w' + (++idCounter));
-    return ids.get(node);
+    var id = node.getAttribute('data-window-id');
+    if (!id) {
+      id = 'w' + (++idCounter);
+      node.setAttribute('data-window-id', id);
+      ids.set(node, id);
+    }
+    return id;
   }
 
   function text(node, selectors) {
@@ -37,43 +45,53 @@
     if (layer) docs.push(layer.ownerDocument);
 
     docs.forEach(function (doc) {
-      var nodes = doc.querySelectorAll('.window[data-app], .dtm-window, .win, .be-window, .wb-window, .dtmshell-win');
+      var nodes = doc.querySelectorAll(SELECTOR);
       Array.prototype.forEach.call(nodes, function (node) {
         if (!node.isConnected) return;
         var state = {
           id: idFor(node),
           app: node.dataset.app || (node.classList.contains('dtmshell-win') ? 'shell-app' : 'window'),
           icon: node.dataset.icon || '',
-          title: text(node, ['.dtmshell-title-icon + .dtmshell-title-text', '.dtmshell-title-text', '.title-text', '.win-title', '.title', '.dtm-window-title']),
-          minimized: node.style.display === 'none' || (node.offsetParent === null && node.style.position !== 'fixed'),
-          active: node.classList.contains('active') || node.classList.contains('dtmshell-win'),
+          title: text(node, [
+            '.dtmshell-title-icon + .dtmshell-title-text',
+            '.dtmshell-title-text',
+            '.dtm-app-title-text',
+            '.title-text', '.win-title', '.title', '.dtm-window-title'
+          ]),
+          minimized: node.style.display === 'none' || node.dataset.minimized === 'true',
+          active: state_isActive(node),
           open: true,
           maximized: node.classList.contains('max') || node.classList.contains('maximized')
         };
         if (!state.icon) {
-          var glyph = node.querySelector('.dtmshell-title-icon');
+          var glyph = node.querySelector('.dtmshell-title-icon, .dtm-app-title-icon');
           state.icon = glyph ? glyph.textContent.trim() : '';
         }
+        if (state.minimized) state.active = false;
         found.push(state);
       });
     });
 
-    // A single active window per context is enough for taskbar highlighting.
-    var seenActive = false;
-    found.forEach(function (state) {
-      if (state.active && seenActive) state.active = false;
-      if (state.active) seenActive = true;
-    });
+    if (!found.some(function (state) { return state.active; }) && activeId) {
+      var previous = found.find(function (state) { return state.id === activeId; });
+      if (previous && !previous.minimized) previous.active = true;
+    }
+    if (activeId && !found.some(function (state) { return state.id === activeId && !state.minimized; })) activeId = null;
 
     var changed = found.length !== windows.size;
     var next = new Map();
     found.forEach(function (state) {
       next.set(state.id, state);
-      var previous = windows.get(state.id);
-      if (!previous || JSON.stringify(previous) !== JSON.stringify(state)) changed = true;
+      var earlier = windows.get(state.id);
+      if (!earlier || JSON.stringify(earlier) !== JSON.stringify(state)) changed = true;
     });
     windows = next;
     if (changed) broadcast();
+  }
+
+  function state_isActive(node) {
+    if (activeId) return node.getAttribute('data-window-id') === activeId;
+    return node.classList.contains('active') || node.classList.contains('dtmshell-win');
   }
 
   function post(data) {
@@ -85,15 +103,28 @@
     post({ type: 'dtm:windows-state', windows: Array.from(windows.values()) });
   }
 
-  function find(id) {
+  function allNodes() {
     var docs = [];
     if (viewport && viewport.contentDocument) docs.push(viewport.contentDocument);
     if (layer) docs.push(layer.ownerDocument);
-    for (var i = 0; i < docs.length; i++) {
-      var nodes = docs[i].querySelectorAll('.window[data-app], .dtm-window, .win, .be-window, .wb-window, .dtmshell-win');
-      for (var j = 0; j < nodes.length; j++) if (idFor(nodes[j]) === id) return nodes[j];
-    }
-    return null;
+    var result = [];
+    docs.forEach(function (doc) {
+      Array.prototype.forEach.call(doc.querySelectorAll(SELECTOR), function (node) { result.push(node); });
+    });
+    return result;
+  }
+
+  function find(id) {
+    return allNodes().find(function (node) { return idFor(node) === id; }) || null;
+  }
+
+  function deactivateOthers(node) {
+    allNodes().forEach(function (other) {
+      if (other !== node) {
+        other.classList.remove('active');
+        other.dataset.minimized = 'false';
+      }
+    });
   }
 
   function control(data) {
@@ -104,22 +135,35 @@
     }
     if (data.action === 'minimize') {
       node.style.display = 'none';
+      node.dataset.minimized = 'true';
+      node.classList.remove('active');
+      if (activeId === data.id) activeId = null;
     } else if (data.action === 'activate') {
+      deactivateOthers(node);
+      node.dataset.minimized = 'false';
       node.style.display = '';
       node.classList.add('active');
-      node.style.zIndex = String(Date.now() % 100000);
+      node.style.zIndex = String(++zCounter);
+      activeId = data.id;
       try { node.dispatchEvent(new (node.ownerDocument.defaultView.Event)('pointerdown', { bubbles: true })); } catch (e) {}
     } else if (data.action === 'close') {
       var close = node.querySelector('.t-close, .dtmshell-buttons .close, .close, .dtm-window-close, .wb-close');
       if (close) close.click();
     }
-    setTimeout(collect, 40);
+    collect();
   }
 
   window.addEventListener('message', function (event) {
     var data = event.data;
     if (!data || typeof data !== 'object') return;
+    // Only accept control messages from our own window or its skin iframe.
+    var trusted = event.source === window || (viewport && event.source === viewport.contentWindow);
+    if (!trusted) return;
     if (data.type === 'dtm:window-action') control(data);
+    if (data.type === 'dtm:window-activated' && data.id) {
+      var node = find(data.id);
+      if (node) { deactivateOthers(node); activeId = data.id; node.style.zIndex = String(++zCounter); collect(); }
+    }
   });
 
   function watch(doc) {
@@ -134,15 +178,27 @@
 
   if (viewport) {
     viewport.addEventListener('load', function () {
-      setTimeout(function () { watch(viewport.contentDocument); }, 300);
+      setTimeout(function () { watch(viewport.contentDocument); }, 200);
     });
   }
   if (layer && layer.ownerDocument) {
     var shellObserver = new MutationObserver(function () { collect(); });
     shellObserver.observe(layer, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
   }
+
+  // Re-publish the current shared state whenever a new skin finishes loading.
+  if (window.dtmEngine && typeof window.dtmEngine.on === 'function') {
+    window.dtmEngine.on('dtm:skin-changed', function () {
+      activeId = null;
+      setTimeout(function () {
+        watch(viewport && viewport.contentDocument);
+        broadcast();
+      }, 400);
+    });
+  }
+
   window.setInterval(collect, 700);
-  setTimeout(collect, 1500);
+  setTimeout(collect, 1000);
 
   window.dtmWindows = {
     list: function () { return Array.from(windows.values()); },

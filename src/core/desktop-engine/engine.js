@@ -14,6 +14,7 @@ class DesktopEngine {
     this._desktopCache = null;
     this._desktopCacheAt = 0;
     this._desktopRequest = null;
+    this._desktopGeneration = 0;
     this._desktopApi = null;
   }
 
@@ -135,7 +136,8 @@ class DesktopEngine {
     if (!opts.forceRefresh && this._desktopCache && (now - this._desktopCacheAt) < ttl) {
       return Promise.resolve(this._desktopCache);
     }
-    if (this._desktopRequest) return this._desktopRequest;
+    if (!opts.forceRefresh && this._desktopRequest) return this._desktopRequest;
+    const generation = ++this._desktopGeneration;
 
     const request = this.fs.getDesktop().then((data) => {
       const normalised = {
@@ -143,8 +145,11 @@ class DesktopEngine {
         items: Array.isArray(data.items) ? data.items : [],
         errors: Array.isArray(data.errors) ? data.errors : []
       };
-      this._desktopCache = normalised;
-      this._desktopCacheAt = Date.now();
+      // A newer refresh may have started while this request was in flight.
+      if (generation === this._desktopGeneration) {
+        this._desktopCache = normalised;
+        this._desktopCacheAt = Date.now();
+      }
       return normalised;
     });
     // Never leave a skin waiting forever if a host shell call stalls.
@@ -157,12 +162,13 @@ class DesktopEngine {
         timedOut: true
       }), 10000))
     ]).finally(() => {
-      this._desktopRequest = null;
+      if (generation === this._desktopGeneration) this._desktopRequest = null;
     });
     return this._desktopRequest;
   }
 
   invalidateDesktop() {
+    this._desktopGeneration++;
     this._desktopCache = null;
     this._desktopCacheAt = 0;
     this._desktopRequest = null;

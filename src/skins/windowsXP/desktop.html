@@ -16,11 +16,11 @@ button,input,textarea{font:inherit}
 .desktop-icon{width:82px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:4px;color:#fff;text-align:center;text-shadow:1px 1px 2px #123;cursor:default;border:1px solid transparent;border-radius:3px}
 .desktop-icon:hover,.desktop-icon.selected{background:rgba(30,96,190,.42);border-color:rgba(255,255,255,.5)}
 .desktop-icon .glyph{font-size:34px;line-height:40px;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.4))}
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:38px;z-index:9000;display:flex;align-items:center;padding:3px 5px;background:linear-gradient(#3289ee 0%,#1860c4 42%,#1247a3 43%,#286fcb 100%);border-top:1px solid #87baff;box-shadow:0 -1px 4px rgba(0,0,0,.3)}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:38px;z-index:9000;display:flex;align-items:center;padding:3px 5px;background:linear-gradient(var(--blue-light) 0%,var(--blue) 42%,var(--blue-dark) 43%,var(--blue) 100%);border-top:1px solid #87baff;box-shadow:0 -1px 4px rgba(0,0,0,.3)}
 #start{height:32px;min-width:112px;border:1px solid #68ad43;border-radius:0 15px 15px 0;margin-left:-5px;padding:0 16px 0 12px;color:#fff;font-weight:bold;font-style:italic;text-shadow:1px 2px 2px #244;background:linear-gradient(#83d64e,#43a41f 48%,#297811);box-shadow:inset 1px 1px 2px #b2ed81;cursor:pointer}
 #start:hover{filter:brightness(1.08)}
 #tasks{display:flex;align-items:center;gap:4px;flex:1;min-width:0;padding:0 8px}
-.task{max-width:190px;min-width:54px;flex:0 1 168px;height:28px;display:flex;align-items:center;gap:5px;overflow:hidden;padding:2px 7px;color:#fff;border:1px solid #3d78bb;border-radius:3px;background:linear-gradient(#4a97e2 0%,#2a6bb8 48%,#1d56a0 52%,#2873c6 100%);box-shadow:inset 1px 1px rgba(255,255,255,.45),0 1px 1px rgba(0,0,0,.25);cursor:pointer;text-align:left}
+.task{max-width:190px;min-width:54px;flex:0 1 168px;height:28px;display:flex;align-items:center;gap:5px;overflow:hidden;padding:2px 7px;color:#fff;border:1px solid #3d78bb;border-radius:3px;background:linear-gradient(var(--blue-light) 0%,var(--blue) 48%,var(--blue-dark) 52%,var(--blue) 100%);box-shadow:inset 1px 1px rgba(255,255,255,.45),0 1px 1px rgba(0,0,0,.25);cursor:pointer;text-align:left}
 .task:hover{background:linear-gradient(#63a9ee,#2f74c2 52%,#245fa8 52%,#3a84d2)}
 .task.active{background:linear-gradient(#1a549b,#2f77c4 48%,#134382 52%,#2565ad);box-shadow:inset 1px 1px 4px #0b2f63;border-color:#154583;font-weight:bold}
 .task.minimized{opacity:.82;font-weight:normal}
@@ -30,7 +30,7 @@ button,input,textarea{font:inherit}
 #clock{text-align:center;min-width:66px;line-height:15px}
 #start-menu{position:fixed;bottom:38px;left:0;width:410px;z-index:9100;display:none;border:1px solid #0b3f8f;border-radius:9px 9px 0 0;overflow:hidden;background:#eaf2fb;box-shadow:3px 3px 16px rgba(8,35,80,.55)}
 #start-menu.open{display:block}
-.start-head{height:60px;display:flex;align-items:center;gap:12px;padding:6px 14px;color:#fff;font-size:17px;font-weight:bold;text-shadow:1px 2px 3px #0a3a78;background:linear-gradient(#5ba9ee 0%,#2b72c8 48%,#1a5cb0 52%,#13499b 100%);border-top:3px solid #7db8f0;border-bottom:2px solid #0b3f8f}
+.start-head{height:60px;display:flex;align-items:center;gap:12px;padding:6px 14px;color:#fff;font-size:17px;font-weight:bold;text-shadow:1px 2px 3px #0a3a78;background:linear-gradient(var(--blue-light) 0%,var(--blue) 48%,var(--blue-dark) 52%,var(--blue) 100%);border-top:3px solid #7db8f0;border-bottom:2px solid #0b3f8f}
 .avatar{width:46px;height:46px;border:2px solid #fff;border-radius:6px;background:linear-gradient(135deg,#fff1c9 0%,#e0b984 38%,#6a9fd0 100%);display:grid;place-items:center;font-size:28px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
 .start-cols{display:grid;grid-template-columns:1.08fr .92fr;min-height:320px}
 .start-left{padding:8px;background:#fff;border-right:1px solid #c3d4e6}
@@ -46,7 +46,7 @@ button,input,textarea{font:inherit}
 .start-foot button:hover{filter:brightness(1.08)}
 .win{position:absolute;z-index:10;left:140px;top:65px;width:560px;height:390px;min-width:320px;min-height:200px;display:flex;flex-direction:column;border:1px solid #124b96;border-radius:7px 7px 4px 4px;background:#edf4fc;box-shadow:3px 5px 14px rgba(0,0,0,.45);overflow:hidden}
 .win.max{left:0!important;top:0!important;width:100%!important;height:calc(100% + 38px)!important}
-.titlebar{height:30px;flex:none;display:flex;align-items:center;gap:7px;padding:0 5px 0 9px;color:#fff;font-weight:bold;background:linear-gradient(#5ea7f3 0%,#2876d0 45%,#165bb3 46%,#4a94e3 100%);text-shadow:1px 1px #164479;cursor:move}
+.titlebar{height:30px;flex:none;display:flex;align-items:center;gap:7px;padding:0 5px 0 9px;color:#fff;font-weight:bold;background:linear-gradient(var(--blue-light) 0%,var(--blue) 45%,var(--blue-dark) 46%,var(--blue) 100%);text-shadow:1px 1px #164479;cursor:move}
 .titlebar .title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .controls{display:flex;gap:2px}
 .controls button{width:22px;height:21px;padding:0;border:1px solid #e9f5ff;border-radius:4px;color:#fff;font:bold 13px Tahoma;background:linear-gradient(#74b8f5,#2873c9);box-shadow:inset 1px 1px rgba(255,255,255,.55);cursor:pointer}
@@ -127,7 +127,7 @@ button,input,textarea{font:inherit}
         var DTM = window.parent && window.parent.DTM;
         var desktop = document.getElementById('desktop');
         if (DTM && DTM.mountDesktop && desktop) {
-          DTM.mountDesktop({ desktop: desktop, skinId: 'windowsXP' });
+          window.dtmMirrorHandle = DTM.mountDesktop({ desktop: desktop, skinId: 'windowsXP' });
         }
       } catch (e) { console.warn('[DTM] windowsXP mirror mount failed:', e); }
     })();
@@ -287,11 +287,11 @@ button,input,textarea{font:inherit}
   }
   function openTerminal() {
     const terminal=document.createElement('div'); terminal.className='terminal';
-    const out=document.createElement('div'); out.className='term-output'; out.textContent='Microsoft Windows XP [Version 5.1.2600]\\nType HELP for available commands.\\n\\n';
+    const out=document.createElement('div'); out.className='term-output'; out.textContent='Microsoft Windows XP [Version 5.1.2600]\nType HELP for available commands.\n\n';
     const row=document.createElement('form'); row.className='term-row';
     const prompt=document.createElement('span'); prompt.textContent='C:\\\\>';
     const input=document.createElement('input'); input.setAttribute('aria-label','Command Prompt'); row.append(prompt,input); terminal.append(out,row);
-    row.addEventListener('submit',(e)=>{e.preventDefault(); const cmd=input.value.trim(); input.value=''; out.textContent+='C:\\\\>'+cmd+'\\n'; if(/^help$/i.test(cmd)) out.textContent+='DIR  CLS  DATE  VER  EXIT\\n'; else if(/^dir$/i.test(cmd)) out.textContent+=' Volume in drive C has no label.\\n Directory of C:\\\\Documents and Settings\\n\\n'; else if(/^cls$/i.test(cmd)) out.textContent=''; else if(/^date$/i.test(cmd)) out.textContent+=new Date().toLocaleString()+'\\n'; else if(/^ver$/i.test(cmd)) out.textContent+='Microsoft Windows XP [Version 5.1.2600]\\n'; else if(cmd && !/^exit$/i.test(cmd)) out.textContent+='Command not found. Type HELP.\\n'; out.scrollTop=out.scrollHeight;});
+    row.addEventListener('submit',(e)=>{e.preventDefault(); const cmd=input.value.trim(); input.value=''; out.textContent+='C:\\\\>'+cmd+'\n'; if(/^help$/i.test(cmd)) out.textContent+='DIR  CLS  DATE  VER  EXIT\n'; else if(/^dir$/i.test(cmd)) out.textContent+=' Volume in drive C has no label.\n Directory of C:\\\\Documents and Settings\n\n'; else if(/^cls$/i.test(cmd)) out.textContent=''; else if(/^date$/i.test(cmd)) out.textContent+=new Date().toLocaleString()+'\n'; else if(/^ver$/i.test(cmd)) out.textContent+='Microsoft Windows XP [Version 5.1.2600]\n'; else if(cmd && !/^exit$/i.test(cmd)) out.textContent+='Command not found. Type HELP.\n'; out.scrollTop=out.scrollHeight;});
     createWindow('Command Prompt',terminal,{width:560,height:330}); input.focus();
   }
   async function openExplorer(startPath='') {
@@ -324,7 +324,28 @@ button,input,textarea{font:inherit}
     await load(current);
     win.querySelector('.title').textContent='My Computer';
   }
-  function openRecycle(){const c=document.createElement('div');c.className='xp-content';c.innerHTML='<h3>Recycle Bin</h3><p>The Recycle Bin is empty.</p>';createWindow('Recycle Bin',c,{width:420,height:260});}
+  async function openRecycle(){
+    const c=document.createElement('div');c.className='xp-content';
+    c.innerHTML='<h3>Recycle Bin</h3><p>Reading…</p>';
+    const {win}=createWindow('Recycle Bin',c,{width:460,height:300});
+    try{
+      const items=(DTM&&DTM.fs&&DTM.fs.recycleList)?await DTM.fs.recycleList():[];
+      c.replaceChildren();
+      const head=document.createElement('h3');head.textContent='Recycle Bin';c.appendChild(head);
+      if(!items.length){c.appendChild(document.createElement('p')).textContent='The Recycle Bin is empty.';}
+      else{
+        const list=document.createElement('div');list.className='file-list';
+        items.forEach((item)=>{
+          const row=document.createElement('div');row.className='file-item';
+          row.innerHTML='<span class="glyph">🗑️</span><span></span>';
+          row.querySelectorAll('span')[1].textContent=item.name||item.path;
+          row.title=item.path||'';list.appendChild(row);
+        });
+        c.appendChild(list);
+      }
+      void win;
+    }catch(e){c.textContent='Could not read the Recycle Bin: '+e.message;}
+  }
   function openAllPrograms() {
     const list=document.createElement('div');list.className='xp-content';
     [['🌐 Internet','browser'],['📝 Notepad','editor'],['🧮 Calculator','calculator'],['⌨️ Command Prompt','terminal'],['📁 Windows Explorer','computer']].forEach(([label,key])=>{
@@ -342,7 +363,18 @@ button,input,textarea{font:inherit}
       const dialog=document.createElement('div');dialog.className='dialog';dialog.innerHTML='<h3>Display Properties</h3><p>Choose a Luna desktop color:</p>';
       [['Default blue','#245edb'],['Olive green','#678b2f'],['Silver','#8b929a']].forEach(([label,color])=>{
         const button=document.createElement('button');button.className='xp-button';button.style.margin='4px';button.textContent=label;
-        button.onclick=()=>{document.documentElement.style.setProperty('--blue',color);dialog.remove();};dialog.appendChild(button);
+        button.onclick=()=>{
+          const shade=(hex,amount)=>{
+            const n=parseInt(hex.slice(1),16);
+            const mix=(v)=>Math.max(0,Math.min(255,Math.round(amount>0?v+(255-v)*amount:v*(1+amount))));
+            return '#'+[16,8,0].map(shift=>mix((n>>shift)&255).toString(16).padStart(2,'0')).join('');
+          };
+          const root=document.documentElement;
+          root.style.setProperty('--blue',color);
+          root.style.setProperty('--blue-light',shade(color,.38));
+          root.style.setProperty('--blue-dark',shade(color,-.40));
+          dialog.remove();
+        };dialog.appendChild(button);
       });
       panel.appendChild(dialog);
     };
@@ -381,7 +413,7 @@ button,input,textarea{font:inherit}
   const context=document.getElementById('context-menu');
   root.addEventListener('contextmenu',(e)=>{e.preventDefault();context.style.left=Math.min(e.clientX,innerWidth-190)+'px';context.style.top=Math.min(e.clientY,innerHeight-120)+'px';context.classList.add('open');});
   document.addEventListener('pointerdown',(e)=>{if(!context.contains(e.target))context.classList.remove('open');});
-  context.addEventListener('click',(e)=>{const action=e.target.dataset.action;context.classList.remove('open');if(action==='explorer')openExplorer('');if(action==='calculator')openCalculator();if(action==='switch')switchEra();});
+  context.addEventListener('click',(e)=>{const action=e.target.dataset.action;context.classList.remove('open');if(action==='explorer')openExplorer('');if(action==='calculator')openCalculator();if(action==='switch')switchEra();if(action==='refresh'){if(window.dtmMirrorHandle&&window.dtmMirrorHandle.refresh)window.dtmMirrorHandle.refresh();if(DTM&&DTM.desktop&&DTM.desktop.invalidate)DTM.desktop.invalidate();}});
   document.addEventListener('keydown',(e)=>{
     if(e.key==='F8'||(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='t')){e.preventDefault();switchEra();}
     else if(e.ctrlKey&&e.key==='F5'){e.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}

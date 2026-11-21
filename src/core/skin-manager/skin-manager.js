@@ -10,6 +10,9 @@ class SkinManager {
     this.loadedSkinId = null;
     this.isSwitching = false;
     this.skins = new Map();
+    // Immutable recovery registry. Installed manifests may override the main
+    // registry but can never destroy this known-good fallback.
+    this.recoverySkins = new Map();
     this.fallbackSkins = [
       {
         id: 'windows95',
@@ -131,19 +134,31 @@ class SkinManager {
   }
 
   async init() {
-    // Populate fallback skins first
-    this.fallbackSkins.forEach(skin => this.skins.set(skin.id, skin));
+    // Populate fallback skins first, keeping a separate recovery copy.
+    this.fallbackSkins.forEach(skin => {
+      const copy = Object.assign({}, skin);
+      this.skins.set(skin.id, copy);
+      this.recoverySkins.set(skin.id, Object.assign({}, copy));
+    });
 
     // Discover installed skins through IPC
     try {
       const installedSkins = await this.engine.preload.getAvailableSkins();
       if (Array.isArray(installedSkins) && installedSkins.length > 0) {
         installedSkins.forEach(skin => {
+          if (skin.folder !== skin.id) {
+            console.warn(`[SkinManager] Skin "${skin.id}" folder mismatch (${skin.folder}); ignoring.`);
+            return;
+          }
+          const invalid = skin._manifestValid === false;
+          if (invalid) {
+            console.warn(`[SkinManager] Skin "${skin.id}" has manifest errors:`, skin._manifestErrors);
+          }
           const entryPath = `./skins/${skin.folder}/${skin.entry || 'desktop.html'}`;
           this.skins.set(skin.id, {
             ...skin,
             entry: entryPath,
-            status: skin.status || 'ready'
+            status: invalid ? 'roadmap' : (skin.status || 'ready')
           });
         });
       }
@@ -248,7 +263,7 @@ class SkinManager {
     } catch (error) {
       console.error(`[SkinManager] Failed to mount startup skin "${skin.name}":`, error);
       if (skin.id === 'windows95') return false;
-      const fallback = this.getSkin('windows95');
+      const fallback = this.recoverySkins.get('windows95');
       if (!fallback || !this.isLoadable(fallback)) return false;
       this.activeSkinId = 'windows95';
       this.loadedSkinId = null;
@@ -305,6 +320,11 @@ class SkinManager {
       await this.loadSkinDocument(skin, viewport);
     } catch (error) {
       console.error(`[SkinManager] Failed to load "${skin.name}" (${skin.entry}):`, error);
+      // The failed iframe may already have mounted its mirror; release it
+      // before restoring so watchers/listeners do not accumulate.
+      try { this.engine.desktop.unmount(skin.id); } catch (cleanupError) {
+        console.warn('[DTM] Failed skin cleanup error:', cleanupError);
+      }
       // Do not strand the user on a broken era: restore the previous skin.
       this.activeSkinId = previousId;
       this.loadedSkinId = null;
@@ -315,6 +335,17 @@ class SkinManager {
           localStorage.setItem('dtm_active_skin', previousSkin.id);
         } catch (restoreError) {
           console.error(`[SkinManager] Could not restore previous skin "${previousSkin.name}":`, restoreError);
+          const recovery = this.recoverySkins.get(previousId) || this.recoverySkins.get('windows95');
+          if (recovery && this.isLoadable(recovery)) {
+            try {
+              await this.loadSkinDocument(recovery, viewport);
+              this.activeSkinId = recovery.id;
+              this.loadedSkinId = recovery.id;
+              localStorage.setItem('dtm_active_skin', recovery.id);
+            } catch (recoveryError) {
+              console.error('[SkinManager] Recovery skin also failed:', recoveryError);
+            }
+          }
         }
       }
       return false;

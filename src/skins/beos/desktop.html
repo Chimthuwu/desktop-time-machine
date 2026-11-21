@@ -170,16 +170,16 @@ button,input,textarea{font:inherit}
   }
   function terminal(){
     const pane=document.createElement('div');pane.className='be-terminal';
-    const output=document.createElement('div');output.className='term-out';output.textContent='BeOS R5 Terminal\\nType help for commands.\\n\\n';
+    const output=document.createElement('div');output.className='term-out';output.textContent='BeOS R5 Terminal\nType help for commands.\n\n';
     const form=document.createElement('form');form.className='term-input';const prompt=document.createElement('span');prompt.textContent='~ $';
     const input=document.createElement('input');input.setAttribute('aria-label','BeOS Terminal command');form.append(prompt,input);pane.append(output,form);
-    form.onsubmit=(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='~ $ '+cmd+'\\n';
-      if(/^help$/i.test(cmd))output.textContent+='help  ls  date  clear  about\\n';
-      else if(/^ls$/i.test(cmd))output.textContent+='Desktop/  Home/  system/  apps/\\n';
-      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\\n';
-      else if(/^about$/i.test(cmd))output.textContent+='BeOS R5 — Release 5.0.3\\n';
+    form.onsubmit=(e)=>{e.preventDefault();const cmd=input.value.trim();input.value='';output.textContent+='~ $ '+cmd+'\n';
+      if(/^help$/i.test(cmd))output.textContent+='help  ls  date  clear  about\n';
+      else if(/^ls$/i.test(cmd))output.textContent+='Desktop/  Home/  system/  apps/\n';
+      else if(/^date$/i.test(cmd))output.textContent+=new Date().toString()+'\n';
+      else if(/^about$/i.test(cmd))output.textContent+='BeOS R5 — Release 5.0.3\n';
       else if(/^clear$/i.test(cmd))output.textContent='';
-      else if(cmd)output.textContent+='command not found\\n';
+      else if(cmd)output.textContent+='command not found\n';
       output.scrollTop=output.scrollHeight;
     };
     createWindow('Terminal',pane,570,340);input.focus();

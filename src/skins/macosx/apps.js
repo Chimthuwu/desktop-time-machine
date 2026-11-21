@@ -11,10 +11,10 @@
   }
 
   // Safari's chrome is drawn here, but its pages need the shell's real
-  // <webview>. The shell parks a borderless webview over Safari's content
-  // area, so keep it fed with the latest rectangle as the window moves,
-  // resizes, minimizes or zooms.
-  let activeSafariEntry = null;
+  // <webview>. Each Safari window owns an independent shell webview group so
+  // closing one window can never blank another.
+  const safariEntries = new Map();
+  let safariSeq = 0;
   let safariSyncTimer = null;
 
   function safariContentRect(entry) {
@@ -28,18 +28,22 @@
   }
 
   function syncSafariWeb() {
-    if (!activeSafariEntry || !activeSafariEntry.safariActive) return;
-    postToShell({ type: 'dtm:safari-sync', rect: safariContentRect(activeSafariEntry) });
+    safariEntries.forEach((entry) => {
+      if (entry.safariActive) {
+        postToShell({ type: 'dtm:safari-sync', windowId: entry.safariWindowId, rect: safariContentRect(entry) });
+      }
+    });
   }
 
-  function safariAction(action, data) {
+  function safariAction(entry, action, data) {
     const payload = typeof data === 'object' && data ? Object.assign({ action }, data) : { action, url: data };
-    postToShell(Object.assign({ type: 'dtm:safari-action' }, payload));
+    postToShell(Object.assign({ type: 'dtm:safari-action', windowId: entry.safariWindowId }, payload));
   }
 
-  function renderSafariTabs(tabs) {
-    if (!activeSafariEntry || !Array.isArray(tabs)) return;
-    const bar = activeSafariEntry.body.querySelector('.safari-tabs');
+  function renderSafariTabs(windowId, tabs) {
+    const entry = safariEntries.get(windowId || 'default');
+    if (!entry || !Array.isArray(tabs)) return;
+    const bar = entry.body.querySelector('.safari-tabs');
     if (!bar) return;
     bar.querySelectorAll('.safari-tab').forEach((node) => node.remove());
     const add = bar.querySelector('.safari-tab-add');
@@ -58,33 +62,35 @@
       close.title = 'Close Tab';
       close.addEventListener('click', (event) => {
         event.stopPropagation();
-        safariAction('closeTab', { tabId: tab.id });
+        safariAction(entry, 'closeTab', { tabId: tab.id });
       });
-      node.addEventListener('click', () => safariAction('switchTab', { tabId: tab.id }));
+      node.addEventListener('click', () => safariAction(entry, 'switchTab', { tabId: tab.id }));
       node.append(label, close);
       bar.insertBefore(node, add);
     });
   }
 
   function stopSafariWeb(entry) {
-    if (!entry || entry !== activeSafariEntry) return;
+    if (!entry) return;
     entry.safariActive = false;
-    activeSafariEntry = null;
-    if (safariSyncTimer) { clearInterval(safariSyncTimer); safariSyncTimer = null; }
-    postToShell({ type: 'dtm:safari-close' });
+    safariEntries.delete(entry.safariWindowId);
+    postToShell({ type: 'dtm:safari-close', windowId: entry.safariWindowId });
+    if (safariEntries.size === 0 && safariSyncTimer) { clearInterval(safariSyncTimer); safariSyncTimer = null; }
   }
 
   window.addEventListener('message', (event) => {
     const data = event.data;
-    if (!data || !activeSafariEntry) return;
+    if (!data) return;
+    const entry = safariEntries.get(data.windowId || 'default');
+    if (!entry) return;
     if (data.type === 'dtm:safari-url') {
-      const address = activeSafariEntry.body.querySelector('.safari-url');
+      const address = entry.body.querySelector('.safari-url');
       if (address && document.activeElement !== address && data.url) address.value = data.url;
     } else if (data.type === 'dtm:safari-title') {
-      const title = activeSafariEntry.win.querySelector('.title-text');
+      const title = entry.win.querySelector('.title-text');
       if (title && data.title) title.textContent = data.title;
     } else if (data.type === 'dtm:safari-tabs') {
-      renderSafariTabs(data.tabs);
+      renderSafariTabs(data.windowId, data.tabs);
     }
   });
 
@@ -127,19 +133,34 @@
       button.classList.toggle('active');
     }));
     async function saveDocument(saveAs = false) {
-      if (!DTM || !DTM.fs) { status.textContent = 'File system unavailable'; return; }
+      if (!DTM || !DTM.fs) { status.textContent = 'File system unavailable'; return false; }
       let target = doc.path;
       if (saveAs || !target) target = await window.hostPrompt('Save SimpleText Document', 'Save to a full file path:', target || 'Untitled.txt');
-      if (!target) return;
+      if (!target) return false;
       try {
         await DTM.fs.write(target, area.value);
+        // Commit the path only after the write succeeds.
         doc.path = target;
         doc.dirty = false;
         status.textContent = target;
-      } catch (error) { status.textContent = error.message; }
+        return true;
+      } catch (error) { status.textContent = 'Save failed: ' + error.message; return false; }
     }
+    async function canDiscard() {
+      if (!doc.dirty) return true;
+      const choice = await window.hostConfirm3('Save changes to this document?', 'Your changes will be lost if you don’t save them.', [
+        { id: 'save', label: 'Save', primary: true },
+        { id: 'discard', label: 'Don’t Save' },
+        { id: 'cancel', label: 'Cancel' }
+      ]);
+      if (choice === 'cancel' || choice === null) return false;
+      if (choice === 'save') return saveDocument(!doc.path);
+      return true;
+    }
+    if (window.registerCloseGuard) window.registerCloseGuard(entry.win, canDiscard);
     save.addEventListener('click', () => saveDocument(!doc.path));
     open.addEventListener('click', async () => {
+      if (!await canDiscard()) return;
       const path = await window.hostPrompt('Open SimpleText Document', 'Enter a full file path:');
       if (!path || !DTM || !DTM.fs) return;
       try {
@@ -269,16 +290,21 @@
   function mountSafari(entry) {
     const address = entry.body.querySelector('.safari-url');
     const search = entry.body.querySelector('.safari-search input');
+    entry.safariWindowId = 'sw' + (++safariSeq);
+    entry.safariActive = false;
+    safariEntries.set(entry.safariWindowId, entry);
+    function activate() {
+      entry.safariActive = true;
+      if (!safariSyncTimer) safariSyncTimer = setInterval(syncSafariWeb, 120);
+    }
     const go = (value) => {
       const text = String(value || address.value || '').trim();
       if (!text) return;
       const url = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : (/^[\w.-]+\.[a-z]{2,}/i.test(text) ? 'https://' + text : 'https://www.google.com/search?q=' + encodeURIComponent(text));
       address.value = url;
       if (window.parent) {
-        activeSafariEntry = entry;
-        entry.safariActive = true;
-        postToShell({ type: 'dtm:safari-navigate', url, rect: safariContentRect(entry) });
-        if (!safariSyncTimer) safariSyncTimer = setInterval(syncSafariWeb, 120);
+        activate();
+        postToShell({ type: 'dtm:safari-navigate', windowId: entry.safariWindowId, url, rect: safariContentRect(entry) });
       } else if (DTM && DTM.system && DTM.system.openExternalUrl) {
         DTM.system.openExternalUrl(url);
       }
@@ -287,15 +313,13 @@
     entry.body.querySelector('.safari-launch').addEventListener('click', () => go(search.value || address.value));
     entry.body.querySelector('.safari-search button').addEventListener('click', () => go(search.value));
     entry.body.querySelector('.safari-tab-add').addEventListener('click', () => {
-      activeSafariEntry = entry;
-      entry.safariActive = true;
-      safariAction('newTab', { url: 'https://www.google.com/' });
-      if (!safariSyncTimer) safariSyncTimer = setInterval(syncSafariWeb, 120);
-      postToShell({ type: 'dtm:safari-sync', rect: safariContentRect(entry) });
+      activate();
+      safariAction(entry, 'newTab', { url: 'https://www.google.com/' });
+      postToShell({ type: 'dtm:safari-sync', windowId: entry.safariWindowId, rect: safariContentRect(entry) });
     });
-    entry.body.querySelector('.safari-back').addEventListener('click', () => safariAction('back'));
-    entry.body.querySelector('.safari-forward').addEventListener('click', () => safariAction('forward'));
-    entry.body.querySelector('.safari-reload').addEventListener('click', () => safariAction('reload'));
+    entry.body.querySelector('.safari-back').addEventListener('click', () => safariAction(entry, 'back'));
+    entry.body.querySelector('.safari-forward').addEventListener('click', () => safariAction(entry, 'forward'));
+    entry.body.querySelector('.safari-reload').addEventListener('click', () => safariAction(entry, 'reload'));
     address.addEventListener('keydown', (event) => { if (event.key === 'Enter') go(); });
     search.addEventListener('keydown', (event) => { if (event.key === 'Enter') go(search.value); });
     entry.body.querySelectorAll('.safari-bookmarks span').forEach((bookmark) => bookmark.addEventListener('click', () => go(bookmark.dataset.url)));
@@ -388,6 +412,10 @@
     };
     draw();
     entry.timer = window.setInterval(draw, 750);
+    entry.win.dtmSetFrequency = (ms) => {
+      window.clearInterval(entry.timer);
+      entry.timer = window.setInterval(draw, ms);
+    };
   }
 
   function aboutBody() {
@@ -414,7 +442,9 @@
   }
 
   function mountPreferences(entry) {
-    entry.body.querySelectorAll('[data-wallpaper]').forEach((button) => button.addEventListener('click', () => {
+    const buttons = entry.body.querySelectorAll('[data-wallpaper]');
+    entry.win.dtmShowAll = () => { if (buttons[0]) buttons[0].click(); };
+    buttons.forEach((button) => button.addEventListener('click', () => {
       const colors = { aqua: ['#7fb7f0', '#17457c'], graphite: ['#aaa', '#444'], blue: ['#397bd3', '#072a57'] };
       const pair = colors[button.dataset.wallpaper];
       document.getElementById('desktop').style.background = `radial-gradient(ellipse at 28% 18%,rgba(255,255,255,.30),transparent 55%),linear-gradient(135deg,${pair[0]},${pair[1]})`;
@@ -447,7 +477,7 @@
   window.registerMacApp('calculator', {
     name: 'Calculator', title: 'Calculator', icon: '🔢', width: 300, height: 350,
     body: calculatorBody, mount: mountCalculator,
-    menus: { View: [{ label: 'Basic', action: () => {} }], Help: [{ label: 'Calculator Help', action: () => window.openApp('help') }] }
+    menus: { Help: [{ label: 'Calculator Help', action: () => window.openApp('help') }] }
   });
   window.registerMacApp('stickies', {
     name: 'Stickies', title: 'Stickies', icon: '🗒️', width: 420, height: 320,
@@ -476,12 +506,15 @@
   window.registerMacApp('activity', {
     name: 'Activity Monitor', title: 'Activity Monitor', icon: '📈', width: 620, height: 420,
     body: activityBody, mount: mountActivity, onClose: (entry) => window.clearInterval(entry.timer),
-    menus: { View: [{ label: 'Update Frequency', action: () => {} }] }
+    menus: { View: [
+      { label: 'Update Frequently', action: () => activeWindow('activity')?.dtmSetFrequency?.(250) },
+      { label: 'Update Normally', action: () => activeWindow('activity')?.dtmSetFrequency?.(750) }
+    ] }
   });
   window.registerMacApp('preferences', {
     name: 'System Preferences', title: 'System Preferences', icon: '⚙️', width: 480, height: 330,
     body: preferencesBody, mount: mountPreferences,
-    menus: { View: [{ label: 'Show All Preferences', action: () => {} }] }
+    menus: { View: [{ label: 'Reset Appearance', action: () => activeWindow('preferences')?.dtmShowAll?.() }] }
   });
   window.registerMacApp('about', {
     name: 'About This Mac', title: 'About This Mac', icon: '', width: 370, height: 330,

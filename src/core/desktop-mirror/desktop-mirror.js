@@ -657,7 +657,13 @@
     });
 
     load(current);
-    return { wrap, refresh: () => load(current) };
+    return {
+      wrap,
+      refresh: () => load(current),
+      dispose: () => {
+        ['pointerup', 'pointercancel'].forEach((type) => doc.removeEventListener(type, stopBand));
+      }
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -687,7 +693,7 @@
         if (d.totalBytes) { const c = el(doc, 'div', null, Math.round(d.freeBytes / 1073741824) + ' GB free of ' + Math.round(d.totalBytes / 1073741824) + ' GB'); c.style.fontSize = '10px'; c.style.color = '#555'; item.appendChild(c); }
         item.addEventListener('click', () => {
           const ex = buildExplorer({ doc, DTM, skinId, desktop: opts.desktop, path: d.path });
-          openWindow({ doc, skinId, desktop: opts.desktop, title: d.label || d.letter + ':', width: 620, height: 440, content: ex.wrap });
+          openWindow({ doc, skinId, desktop: opts.desktop, title: d.label || d.letter + ':', width: 620, height: 440, content: ex.wrap, onClose: ex.dispose });
         });
         grid.appendChild(item);
       });
@@ -708,7 +714,7 @@
         item.innerHTML = '<div style="font-size:28px">📁</div><div>' + lbl + '</div>';
         item.addEventListener('click', () => {
           const ex = buildExplorer({ doc, DTM, skinId, desktop: opts.desktop, path: p });
-          openWindow({ doc, skinId, desktop: opts.desktop, title: lbl, width: 620, height: 440, content: ex.wrap });
+          openWindow({ doc, skinId, desktop: opts.desktop, title: lbl, width: 620, height: 440, content: ex.wrap, onClose: ex.dispose });
         });
         fg.appendChild(item);
       });
@@ -784,7 +790,7 @@
     function openPathHere(target) {
       if (!target) return;
       const ex = buildExplorer({ doc, DTM, skinId, desktop: opts.desktop, path: target });
-      openWindow({ doc, skinId, desktop: opts.desktop, title: target, width: 640, height: 440, content: ex.wrap });
+      openWindow({ doc, skinId, desktop: opts.desktop, title: target, width: 640, height: 440, content: ex.wrap, onClose: ex.dispose });
     }
 
     function addItem(container, label, subtitle, iconPath, target) {
@@ -1107,7 +1113,11 @@
         if (!dragged) return;
         // The click that follows a drag would otherwise clear the selection.
         icon._skipClick = true;
+        // A refresh may have replaced the layer mid-drag. Detached nodes
+        // report (0,0); never persist those coordinates.
+        if (!icon.isConnected) return;
         group.forEach((entry) => {
+          if (!entry.node.isConnected) return;
           store.set(iconKey(entry.node), {
             x: entry.node.offsetLeft, y: entry.node.offsetTop
           });
@@ -1250,7 +1260,7 @@
         if (await openRetroShortcut(DTM, doc, item)) return;
         if (item.isDirectory) {
           const ex = buildExplorer({ doc, DTM, skinId, desktop, path: item.path });
-          openWindow({ doc, skinId, desktop, title: item.name, width: 620, height: 440, content: ex.wrap });
+          openWindow({ doc, skinId, desktop, title: item.name, width: 620, height: 440, content: ex.wrap, onClose: ex.dispose });
           return;
         }
         // Both regular files and .lnk/.url shortcuts are handed to the shell so
@@ -1483,14 +1493,18 @@
 
     function showContextMenu(x, y, item, icon) {
       closeMenus();
-      const profiles = window.DTMContextMenus;
+      const profiles = window.DTMContextMenus || {
+        profileFor: () => 'generic',
+        itemLabels: () => ({ open: 'Open', explore: 'Browse', cut: 'Cut', copy: 'Copy', delete: 'Delete', rename: 'Rename', properties: 'Properties' }),
+        desktopOptions: () => ({ refresh: 'Refresh', properties: 'Properties', propertiesApp: 'about' })
+      };
       const labels = profiles.itemLabels(profiles.profileFor(skinId));
       const m = el(doc, 'div', 'dtm-context');
       menuAdd(m, labels.open, () => openDesktopItem(item));
       menuAdd(m, labels.explore, () => {
         const target = item.isDirectory ? item.path : (parentPathOf(item.path) || item.path);
         const ex = buildExplorer({ doc, DTM, skinId, desktop, path: target });
-        openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, app: 'explorer', icon: '📁', content: ex.wrap });
+        openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, app: 'explorer', icon: '📁', content: ex.wrap, onClose: ex.dispose });
       });
       if (labels.find) menuAdd(m, labels.find, null, true);
       menuSep(m);
@@ -1607,7 +1621,11 @@
     // Right-click on empty desktop space — Windows 95 menu structure.
     function showDesktopMenu(x, y) {
       closeMenus();
-      const profiles = window.DTMContextMenus;
+      const profiles = window.DTMContextMenus || {
+        profileFor: () => 'generic',
+        itemLabels: () => ({ open: 'Open', explore: 'Browse', cut: 'Cut', copy: 'Copy', delete: 'Delete', rename: 'Rename', properties: 'Properties' }),
+        desktopOptions: () => ({ refresh: 'Refresh', properties: 'Properties', propertiesApp: 'about' })
+      };
       const options = profiles.desktopOptions(profiles.profileFor(skinId), skinId);
       const m = el(doc, 'div', 'dtm-context');
 

@@ -90,7 +90,7 @@ app.whenReady().then(async () => {
       const skin = document.getElementById('skin-viewport').contentWindow;
       skin.DTMApps.open('launcher');
       const node = skin.document.querySelector('.dtm-shared-app[data-app="launcher"]');
-      return { exists: !!node, theme: node && node.dataset.theme, items: node ? node.querySelectorAll('.dtm-app-launcher-item').length : 0 };
+      return { exists: !!node, theme: node && node.dataset.dtmTheme, items: node ? node.querySelectorAll('.dtm-app-launcher-item').length : 0 };
     })()`);
     assert('launcher window opens', launcher.exists, launcher);
     assert('launcher uses active era theme', launcher.theme === 'win95', launcher);
@@ -185,12 +185,33 @@ app.whenReady().then(async () => {
     })()`);
     assert('image viewer opened a real path', viewer.dialog && viewer.image, viewer);
 
+    // --- Dirty-state protection ---
+    const dirty = await win.webContents.executeJavaScript(`(async () => {
+      const skin = document.getElementById('skin-viewport').contentWindow;
+      const doc = skin.document;
+      skin.DTMApps.open('notepad');
+      const el = doc.querySelector('.dtm-shared-app[data-app="notepad"]');
+      const area = el.querySelector('.dtm-app-editor');
+      area.value = 'do not lose me';
+      area.dispatchEvent(new skin.Event('input', { bubbles: true }));
+      Array.from(el.querySelectorAll('.dtm-app-button')).find(b => b.textContent === 'New').click();
+      await new Promise(r => setTimeout(r, 200));
+      const dialog = doc.querySelector('.dtm-app-dialog');
+      const labels = dialog ? Array.from(dialog.querySelectorAll('button')).map(b => b.textContent) : [];
+      const cancel = dialog && Array.from(dialog.querySelectorAll('button')).find(b => b.textContent === 'Cancel');
+      if (cancel) cancel.click();
+      await new Promise(r => setTimeout(r, 200));
+      return { dialog: !!dialog, labels, kept: area.value === 'do not lose me' };
+    })()`);
+    assert('dirty document prompts before New', dirty.dialog && dirty.labels.includes('Don’t Save'), dirty);
+    assert('Cancel keeps unsaved text', dirty.kept, dirty);
+
     // --- Closing an app removes its window and disposes resources ---
-    const closed = await win.webContents.executeJavaScript(`(() => {
+    const closed = await win.webContents.executeJavaScript(`(async () => {
       const skin = document.getElementById('skin-viewport').contentWindow;
       skin.DTMApps.open('calendar');
       const opened = !!skin.document.querySelector('.dtm-shared-app[data-app="calendar"]');
-      skin.DTMApps.close('calendar');
+      await skin.DTMApps.close('calendar');
       return { opened, closed: !skin.document.querySelector('.dtm-shared-app[data-app="calendar"]') };
     })()`);
     assert('app opens and closes cleanly', closed.opened && closed.closed, closed);

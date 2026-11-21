@@ -12,6 +12,7 @@
     "test:apps": "electron test/shared-apps.js",
     "test:desktop": "electron test/phase4-desktop.js",
     "capture:desktop": "electron test/capture-phase4.js",
+    "capture:fixes": "electron test/capture-fixes.js",
     "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps && npm run test:desktop",
     "screenshots": "electron test/capture-gallery.js"
   },

@@ -39,7 +39,7 @@
     }
   }
 
-  function promptModal(title, message, defaultValue, kind) {
+  function promptModal(title, message, defaultValue, kind, choices) {
     return new Promise(function (resolve) {
       var shade = el('div', 'dtm-app-modal-shade');
       var dialog = el('div', 'dtm-app-dialog');
@@ -49,16 +49,30 @@
       var body = el('div', 'dtm-app-dialog-body');
       body.appendChild(el('p', '', message));
       var input = null;
-      if (kind !== 'confirm') {
+      if (kind !== 'confirm' && kind !== 'choice') {
         input = el('input', 'dtm-app-input');
         input.type = 'text';
         input.value = defaultValue == null ? '' : String(defaultValue);
         body.appendChild(input);
       }
       var actions = el('div', 'dtm-app-dialog-actions');
-      var cancel = el('button', 'dtm-app-button', 'Cancel');
-      var ok = el('button', 'dtm-app-button primary', kind === 'confirm' ? 'OK' : 'Save');
-      actions.append(cancel, ok);
+      var buttons = [];
+      if (kind === 'choice') {
+        (choices || []).forEach(function (choice) {
+          var button = el('button', 'dtm-app-button' + (choice.primary ? ' primary' : ''), choice.label);
+          button.dataset.choice = choice.id;
+          button.addEventListener('click', function () { done(choice.id); });
+          buttons.push(button);
+          actions.appendChild(button);
+        });
+      } else {
+        var cancel = el('button', 'dtm-app-button', 'Cancel');
+        var ok = el('button', 'dtm-app-button primary', kind === 'confirm' ? 'OK' : 'Save');
+        cancel.addEventListener('click', function () { done(null); });
+        ok.addEventListener('click', function () { done(input ? input.value : true); });
+        buttons = [cancel, ok];
+        actions.append(cancel, ok);
+      }
       dialog.append(heading, body, actions);
       shade.appendChild(dialog);
       document.body.appendChild(shade);
@@ -72,14 +86,21 @@
         resolve(value);
       }
       function onKey(event) {
-        if (event.key === 'Escape') { event.preventDefault(); done(null); }
-        else if (event.key === 'Enter') { event.preventDefault(); done(input ? input.value : true); }
+        if (event.key === 'Escape') { event.preventDefault(); done(kind === 'choice' ? 'cancel' : null); }
+        else if (event.key === 'Enter') {
+          event.preventDefault();
+          // Respect the focused action: Enter on Cancel must never confirm.
+          var focused = document.activeElement;
+          if (focused && focused.dataset && focused.dataset.choice) { done(focused.dataset.choice); return; }
+          if (focused === buttons[0] && kind !== 'choice') { done(null); return; }
+          if (kind === 'choice') done((choices[choices.length - 1] || { id: 'cancel' }).id);
+          else done(input ? input.value : true);
+        }
       }
-      cancel.addEventListener('click', function () { done(null); });
-      ok.addEventListener('click', function () { done(input ? input.value : true); });
-      shade.addEventListener('pointerdown', function (event) { if (event.target === shade) done(null); });
+      shade.addEventListener('pointerdown', function (event) { if (event.target === shade) done(kind === 'choice' ? 'cancel' : null); });
       document.addEventListener('keydown', onKey, true);
-      if (input) { input.focus(); input.select(); } else { ok.focus(); }
+      if (input) { input.focus(); input.select(); }
+      else if (buttons.length) buttons[buttons.length - 1].focus();
     });
   }
 
@@ -87,7 +108,7 @@
     var def = instance.definition;
     var win = el('section', 'dtm-shared-app');
     win.dataset.app = def.id;
-    win.dataset.theme = config.theme;
+    win.dataset.dtmTheme = config.theme;
     win.style.width = (def.width || 520) + 'px';
     win.style.height = (def.height || 380) + 'px';
     var count = instances.size;
@@ -169,10 +190,20 @@
   function closeApp(appId) {
     var instance = instances.get(appId);
     if (!instance) return false;
-    try { if (instance.app && instance.app.dispose) instance.app.dispose(); } catch (e) {}
-    try { if (instance.win) instance.win.remove(); } catch (e) {}
-    instances.delete(appId);
-    return true;
+    return Promise.resolve()
+      .then(function () { return instance.app && instance.app.beforeClose ? instance.app.beforeClose() : true; })
+      .then(function (allowed) {
+        if (allowed === false) return false;
+        if (instances.get(appId) !== instance) return false;
+        try { if (instance.app && instance.app.dispose) instance.app.dispose(); } catch (e) {}
+        try { if (instance.win) instance.win.remove(); } catch (e) {}
+        instances.delete(appId);
+        return true;
+      })
+      .catch(function (error) {
+        console.warn('[DTMApps] close failed:', error);
+        return false;
+      });
   }
 
   function openApp(appId, options) {
@@ -198,6 +229,16 @@
         DTM: window.DTM || (window.parent && window.parent.DTM) || null,
         prompt: function (title, message, defaultValue) {
           return promptModal(title, message, defaultValue, 'prompt');
+        },
+        choice: function (title, message, choices) {
+          return promptModal(title, message, null, 'choice', choices);
+        },
+        confirmDirty: function (title) {
+          return promptModal(title || 'Save changes?', 'This document has unsaved changes.', null, 'choice', [
+            { id: 'save', label: 'Save', primary: true },
+            { id: 'discard', label: 'Don’t Save' },
+            { id: 'cancel', label: 'Cancel' }
+          ]);
         },
         close: function () { closeApp(appId); }
       });
@@ -226,6 +267,14 @@
     openInstances: function () { return Array.from(instances.keys()); },
     prompt: function (title, message, defaultValue) { return promptModal(title, message, defaultValue, 'prompt'); },
     confirm: function (title, message) { return promptModal(title, message, null, 'confirm'); },
+    choice: function (title, message, choices) { return promptModal(title, message, null, 'choice', choices); },
+    confirmDirty: function (title) {
+      return promptModal(title || 'Save changes?', 'This document has unsaved changes.', null, 'choice', [
+        { id: 'save', label: 'Save', primary: true },
+        { id: 'discard', label: 'Don’t Save' },
+        { id: 'cancel', label: 'Cancel' }
+      ]);
+    },
     closeAll: function () { Array.from(instances.keys()).forEach(closeApp); }
   };
 

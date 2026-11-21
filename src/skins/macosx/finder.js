@@ -69,9 +69,15 @@
       </div>`;
   }
 
+  const SPECIAL_PLACES = ['Desktop', 'Documents', 'Pictures'];
   async function listPath(path) {
     if (!DTM || !DTM.system || !DTM.system.listDirectory) throw new Error('Finder cannot reach the file system.');
-    return DTM.system.listDirectory(path);
+    let target = path;
+    if (SPECIAL_PLACES.includes(path) && DTM.fs && DTM.fs.getSpecialFolders) {
+      const folders = await DTM.fs.getSpecialFolders();
+      target = folders[path.toLowerCase()] || folders['public' + path] || path;
+    }
+    return DTM.system.listDirectory(target);
   }
 
   function openItem(item, state, status) {

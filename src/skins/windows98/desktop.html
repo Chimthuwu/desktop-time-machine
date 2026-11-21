@@ -56,6 +56,8 @@ body { background: var(--win98-bg); }
 
 .task-buttons { display: flex; gap: 4px; flex: 1; min-width: 0; }
 .task-button { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; height: 29px; font-weight: bold; }
+.task-button.active { box-shadow: inset 1px 1px 3px #404040; background: #b0b0b0; }
+.task-button.minimized { font-weight: normal; opacity: .85; }
 .tray { height: 29px; border: 2px solid; border-color: #808080 white white #808080; display: flex; align-items: center; padding: 0 9px; gap: 8px; min-width: 78px; }
 .tray-overflow-btn { width: 16px; height: 16px; font-size: 10px; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: #000; }
 .tray-overflow-btn:hover { background: #c0c0c0; }
@@ -354,6 +356,30 @@ const taskButtons = document.getElementById('taskButtons');
 const channelBar = document.getElementById('channelBar');
 let z = 20, active = null, winCount = 0;
 let channelBarOpen = false;
+let sharedWindowState = [];
+const sharedTaskStrip = document.createElement('span');
+sharedTaskStrip.className = 'shared-task-strip';
+sharedTaskStrip.style.display = 'flex';
+sharedTaskStrip.style.gap = '4px';
+taskButtons.appendChild(sharedTaskStrip);
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data && data.type === 'dtm:windows-state') { sharedWindowState = data.windows || []; renderSharedTasks(); }
+});
+function renderSharedTasks() {
+  sharedTaskStrip.replaceChildren();
+  sharedWindowState.forEach((state) => {
+    if (desktop.querySelector('.window[data-window-id="' + state.id + '"]')) return;
+    const button = document.createElement('button');
+    button.className = 'win98-button task-button shared-task' + (state.active ? ' active' : '') + (state.minimized ? ' minimized' : '');
+    button.title = state.title;
+    button.textContent = (state.icon ? state.icon + ' ' : '') + state.title;
+    button.addEventListener('click', () => {
+      window.parent.postMessage({ type: 'dtm:window-action', id: state.id, app: state.app, action: state.minimized || !state.active ? 'activate' : 'minimize' }, '*');
+    });
+    sharedTaskStrip.appendChild(button);
+  });
+}
 
 // FORWARD HOTKEYS TO PARENT SHELL
 window.addEventListener('keydown', (e) => {
@@ -1411,8 +1437,8 @@ const apps = {
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="computer">
         <div class="computer-item" onclick="openApp('explorer')"><span class="glyph">💽</span>(C:) Local Disk</div>
-        <div class="computer-item" onclick="alert('3½ Floppy (A:)\\nDevice not ready.')"><span class="glyph">💾</span>3½ Floppy (A:)</div>
-        <div class="computer-item" onclick="alert('CD-ROM (D:)\\nDrive empty.')"><span class="glyph">💿</span>CD-ROM (D:)</div>
+        <div class="computer-item" onclick="alert('3½ Floppy (A:)\nDevice not ready.')"><span class="glyph">💾</span>3½ Floppy (A:)</div>
+        <div class="computer-item" onclick="alert('CD-ROM (D:)\nDrive empty.')"><span class="glyph">💿</span>CD-ROM (D:)</div>
         <div class="computer-item" onclick="openApp('control')"><span class="glyph">🖥️</span>Control Panel</div>
         <div class="computer-item" onclick="openApp('printers')"><span class="glyph">🖨️</span>Printers</div>
         <div class="computer-item" onclick="openApp('dialup')"><span class="glyph">📞</span>Dial-Up Networking</div>
@@ -1443,8 +1469,8 @@ const apps = {
     body: () => `
       <div class="menu-row"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="computer" style="padding:16px;">
-        <div class="computer-item" onclick="alert('Entire Network\\nBrowse all available networks.')"><span class="glyph">🌐</span>Entire Network</div>
-        <div class="computer-item" onclick="alert('Computers Near Me\\nView nearby computers.')"><span class="glyph">💻</span>Computers Near Me</div>
+        <div class="computer-item" onclick="alert('Entire Network\nBrowse all available networks.')"><span class="glyph">🌐</span>Entire Network</div>
+        <div class="computer-item" onclick="alert('Computers Near Me\nView nearby computers.')"><span class="glyph">💻</span>Computers Near Me</div>
         <div class="computer-item" onclick="openApp('dialup')"><span class="glyph">📞</span>Dial-Up Networking</div>
         <div class="computer-item" onclick="openApp('network-connections')"><span class="glyph">🔗</span>Network Connections</div>
       </div>

@@ -28,7 +28,7 @@
   if (window.dtmEngine) {
     window.dtmEngine.on('dtm:skin-changed', (skin) => {
       activeSkinId = skin.id;
-      if (skin.id !== 'macosx' && safariWeb) closeSafariWeb();
+      if (skin.id !== 'macosx') Array.from(safariWindows.keys()).forEach(closeSafariWeb);
     });
   }
 
@@ -50,33 +50,43 @@
   // only works in this top-level document. Keep a borderless webview parked
   // over Safari's content area; the skin sends rect updates as the Safari
   // window moves/resizes, so the page appears to render inside Safari itself.
-  let safariWeb = null;
-  let safariTabs = new Map();
-  let safariActiveTab = null;
+  // Safari windows are keyed by the skin window that owns them. Each has its
+  // own wrapper and its own tab webviews so one window can never blank another.
+  const safariWindows = new Map();
   let safariTabSeq = 0;
 
-  function safariTabState() {
-    return Array.from(safariTabs, ([id, tab]) => ({ id, title: tab.title, url: tab.url, active: id === safariActiveTab }));
-  }
-
-  function postSafariTabs() {
-    postToSkin({ type: 'dtm:safari-tabs', tabs: safariTabState() });
-  }
-
-  function showSafariTab(id) {
-    safariActiveTab = id;
-    safariTabs.forEach((tab, tabId) => {
-      tab.webview.style.display = tabId === id ? 'flex' : 'none';
-    });
-    const tab = safariTabs.get(id);
-    if (tab) {
-      postToSkin({ type: 'dtm:safari-url', url: tab.url });
-      postToSkin({ type: 'dtm:safari-title', title: tab.title });
+  function safariWindow(windowId) {
+    const id = windowId || 'default';
+    let entry = safariWindows.get(id);
+    if (!entry) {
+      entry = { wrapper: null, tabs: new Map(), activeTab: null };
+      safariWindows.set(id, entry);
     }
-    postSafariTabs();
+    return entry;
   }
 
-  function makeSafariTab(url) {
+  function postSafari(windowId, data) {
+    postToSkin(Object.assign({ windowId: windowId || 'default' }, data));
+  }
+
+  function postSafariTabs(windowId, entry) {
+    const tabs = Array.from(entry.tabs, ([id, tab]) => ({ id, title: tab.title, url: tab.url, active: id === entry.activeTab }));
+    postSafari(windowId, { type: 'dtm:safari-tabs', tabs });
+  }
+
+  function showSafariTab(windowId, id) {
+    const entry = safariWindow(windowId);
+    if (!entry.tabs.has(id)) return;
+    entry.activeTab = id;
+    entry.tabs.forEach((tab, tabId) => { tab.webview.style.display = tabId === id ? 'flex' : 'none'; });
+    const tab = entry.tabs.get(id);
+    postSafari(windowId, { type: 'dtm:safari-url', url: tab.url });
+    postSafari(windowId, { type: 'dtm:safari-title', title: tab.title });
+    postSafariTabs(windowId, entry);
+  }
+
+  function makeSafariTab(windowId, url) {
+    const entry = safariWindow(windowId);
     const id = 'st' + (++safariTabSeq);
     const webview = document.createElement('webview');
     webview.className = 'dtmshell-web';
@@ -85,84 +95,90 @@
     webview.setAttribute('src', normalizeUrl(url));
     webview.style.display = 'none';
     const tab = { webview, title: 'New Tab', url: normalizeUrl(url) };
-    safariTabs.set(id, tab);
-    safariWeb.appendChild(webview);
+    entry.tabs.set(id, tab);
+    if (entry.wrapper) entry.wrapper.appendChild(webview);
 
     webview.addEventListener('did-navigate', (e) => {
       tab.url = e.url;
-      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-url', url: e.url });
-      postSafariTabs();
+      if (entry.activeTab === id) postSafari(windowId, { type: 'dtm:safari-url', url: e.url });
+      postSafariTabs(windowId, entry);
     });
     webview.addEventListener('did-navigate-in-page', (e) => {
       tab.url = e.url;
-      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-url', url: e.url });
+      if (entry.activeTab === id) postSafari(windowId, { type: 'dtm:safari-url', url: e.url });
     });
     webview.addEventListener('page-title-updated', (e) => {
       if (!e.title) return;
       tab.title = e.title;
-      if (safariActiveTab === id) postToSkin({ type: 'dtm:safari-title', title: e.title });
-      postSafariTabs();
+      if (entry.activeTab === id) postSafari(windowId, { type: 'dtm:safari-title', title: e.title });
+      postSafariTabs(windowId, entry);
     });
     return id;
   }
 
-  function applySafariRect(rect) {
-    if (!safariWeb || !rect) return;
+  function applySafariRect(windowId, rect) {
+    const entry = safariWindow(windowId);
+    if (!entry.wrapper || !rect) return;
     const visible = rect.visible !== false &&
       Number.isFinite(rect.width) && rect.width > 0 &&
       Number.isFinite(rect.height) && rect.height > 0;
-    safariWeb.style.display = visible ? 'flex' : 'none';
+    entry.wrapper.style.display = visible ? 'flex' : 'none';
     if (!visible) return;
-    safariWeb.style.left = rect.left + 'px';
-    safariWeb.style.top = rect.top + 'px';
-    safariWeb.style.width = rect.width + 'px';
-    safariWeb.style.height = rect.height + 'px';
+    entry.wrapper.style.left = rect.left + 'px';
+    entry.wrapper.style.top = rect.top + 'px';
+    entry.wrapper.style.width = rect.width + 'px';
+    entry.wrapper.style.height = rect.height + 'px';
   }
 
-  function closeSafariWeb() {
-    if (!safariWeb) return;
-    safariWeb.remove();
-    safariWeb = null;
-    safariTabs = new Map();
-    safariActiveTab = null;
+  function closeSafariWeb(windowId) {
+    const entry = safariWindows.get(windowId || 'default');
+    if (!entry) return;
+    entry.tabs.forEach((tab) => { try { tab.webview.stop(); } catch (e) {} });
+    if (entry.wrapper) entry.wrapper.remove();
+    safariWindows.delete(windowId || 'default');
+    // Always publish the empty state so the skin removes the last tab.
+    postSafari(windowId, { type: 'dtm:safari-tabs', tabs: [] });
   }
 
-  function openSafariWeb(url, rect, options = {}) {
-    if (!safariWeb) {
-      safariWeb = document.createElement('div');
-      safariWeb.className = 'dtmshell-safari-web';
-      layer.appendChild(safariWeb);
+  function openSafariWeb(windowId, url, rect, options = {}) {
+    const entry = safariWindow(windowId);
+    if (!entry.wrapper) {
+      entry.wrapper = document.createElement('div');
+      entry.wrapper.className = 'dtmshell-safari-web';
+      entry.wrapper.dataset.safariWindow = windowId || 'default';
+      layer.appendChild(entry.wrapper);
+      entry.tabs.forEach((tab) => entry.wrapper.appendChild(tab.webview));
     }
-    if (options.newTab || safariTabs.size === 0) {
-      const id = makeSafariTab(url || 'https://www.google.com/');
-      showSafariTab(id);
-    } else if (options.tabId && safariTabs.has(options.tabId)) {
-      const tab = safariTabs.get(options.tabId);
+    if (options.newTab || entry.tabs.size === 0) {
+      showSafariTab(windowId, makeSafariTab(windowId, url || 'https://www.google.com/'));
+    } else if (options.tabId && entry.tabs.has(options.tabId)) {
+      const tab = entry.tabs.get(options.tabId);
       try { tab.webview.loadURL(normalizeUrl(url)); } catch (e) {}
-      showSafariTab(options.tabId);
-    } else if (safariActiveTab && safariTabs.has(safariActiveTab)) {
-      const tab = safariTabs.get(safariActiveTab);
+      showSafariTab(windowId, options.tabId);
+    } else if (entry.activeTab && entry.tabs.has(entry.activeTab)) {
+      const tab = entry.tabs.get(entry.activeTab);
       try { tab.webview.loadURL(normalizeUrl(url)); } catch (e) {}
     }
-    applySafariRect(rect);
+    applySafariRect(windowId, rect);
   }
 
-  function safariAction(action, data = {}) {
+  function safariAction(windowId, action, data = {}) {
+    const entry = safariWindow(windowId);
     const url = data.url;
-    if (action === 'newTab') { openSafariWeb(url || 'https://www.google.com/', null, { newTab: true }); return; }
-    if (action === 'switchTab') { if (safariTabs.has(data.tabId)) showSafariTab(data.tabId); return; }
+    if (action === 'newTab') { openSafariWeb(windowId, url || 'https://www.google.com/', null, { newTab: true }); return; }
+    if (action === 'switchTab') { showSafariTab(windowId, data.tabId); return; }
     if (action === 'closeTab') {
-      if (!safariTabs.has(data.tabId)) return;
-      const tab = safariTabs.get(data.tabId);
+      const tab = entry.tabs.get(data.tabId);
+      if (!tab) return;
       try { tab.webview.stop(); } catch (e) {}
       tab.webview.remove();
-      safariTabs.delete(data.tabId);
-      if (safariTabs.size === 0) closeSafariWeb();
-      else if (safariActiveTab === data.tabId) showSafariTab(Array.from(safariTabs.keys())[0]);
-      else postSafariTabs();
+      entry.tabs.delete(data.tabId);
+      if (entry.tabs.size === 0) closeSafariWeb(windowId);
+      else if (entry.activeTab === data.tabId) showSafariTab(windowId, Array.from(entry.tabs.keys())[0]);
+      else postSafariTabs(windowId, entry);
       return;
     }
-    const tab = safariTabs.get(safariActiveTab);
+    const tab = entry.tabs.get(entry.activeTab);
     const webview = tab && tab.webview;
     if (!webview) return;
     try {
@@ -1558,13 +1574,13 @@ async function syncTabsFromBridge(entry) {
     } else if (data.type === 'dtm:webapp-close') {
       closeWindow(data.app);
     } else if (data.type === 'dtm:safari-navigate') {
-      openSafariWeb(data.url, data.rect, { newTab: data.newTab, tabId: data.tabId });
+      openSafariWeb(data.windowId, data.url, data.rect, { newTab: data.newTab, tabId: data.tabId });
     } else if (data.type === 'dtm:safari-sync') {
-      applySafariRect(data.rect);
+      applySafariRect(data.windowId, data.rect);
     } else if (data.type === 'dtm:safari-action') {
-      safariAction(data.action, data);
+      safariAction(data.windowId, data.action, data);
     } else if (data.type === 'dtm:safari-close') {
-      closeSafariWeb();
+      closeSafariWeb(data.windowId);
     }
   });
 
