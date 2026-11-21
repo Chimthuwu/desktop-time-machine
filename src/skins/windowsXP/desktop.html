@@ -16,8 +16,9 @@ button,input,textarea{font:inherit}
 .desktop-icon{width:82px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:4px;color:#fff;text-align:center;text-shadow:1px 1px 2px #123;cursor:default;border:1px solid transparent;border-radius:3px}
 .desktop-icon:hover,.desktop-icon.selected{background:rgba(30,96,190,.42);border-color:rgba(255,255,255,.5)}
 .desktop-icon .glyph{font-size:34px;line-height:40px;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.4))}
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:38px;z-index:9000;display:flex;align-items:center;padding:3px 5px;background:linear-gradient(var(--blue-light) 0%,var(--blue) 42%,var(--blue-dark) 43%,var(--blue) 100%);border-top:1px solid #87baff;box-shadow:0 -1px 4px rgba(0,0,0,.3)}
-#start{height:32px;min-width:112px;border:1px solid #68ad43;border-radius:0 15px 15px 0;margin-left:-5px;padding:0 16px 0 12px;color:#fff;font-weight:bold;font-style:italic;text-shadow:1px 2px 2px #244;background:linear-gradient(#83d64e,#43a41f 48%,#297811);box-shadow:inset 1px 1px 2px #b2ed81;cursor:pointer}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:40px;z-index:9000;display:flex;align-items:center;padding:4px 6px;background:linear-gradient(#3f9af0 0%,#236fc8 38%,#1554a8 39%,#2f79c8 41%,#1d5bab 70%,#174c98 100%);border-top:1px solid #a7d2ff;box-shadow:0 -2px 6px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.35)}
+#start{height:34px;min-width:118px;border:1px solid #64a93f;border-radius:0 16px 16px 0;margin-left:-6px;padding:0 18px 0 12px;color:#fff;font-size:15px;font-weight:bold;font-style:italic;text-shadow:1px 2px 2px #1b5621;background:radial-gradient(ellipse at 30% 0%,rgba(255,255,255,.45),transparent 60%),linear-gradient(#8edb56 0%,#54b52b 42%,#2d8712 43%,#3f9d1b 100%);box-shadow:inset 1px 1px 2px #c9f49a,0 1px 2px rgba(0,0,0,.3);cursor:pointer}
+#start::before{content:"⊞";font-style:normal;margin-right:7px;color:#fff;text-shadow:0 1px 2px #174d1b}
 #start:hover{filter:brightness(1.08)}
 #tasks{display:flex;align-items:center;gap:4px;flex:1;min-width:0;padding:0 8px}
 .task{max-width:190px;min-width:54px;flex:0 1 168px;height:28px;display:flex;align-items:center;gap:5px;overflow:hidden;padding:2px 7px;color:#fff;border:1px solid #3d78bb;border-radius:3px;background:linear-gradient(var(--blue-light) 0%,var(--blue) 48%,var(--blue-dark) 52%,var(--blue) 100%);box-shadow:inset 1px 1px rgba(255,255,255,.45),0 1px 1px rgba(0,0,0,.25);cursor:pointer;text-align:left}
@@ -28,6 +29,17 @@ button,input,textarea{font:inherit}
 .task .task-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #tray{height:30px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#fff;border-left:1px solid #104895;box-shadow:-1px 0 #478ade}
 #clock{text-align:center;min-width:66px;line-height:15px}
+.real-pinned{display:flex;align-items:center;gap:3px;padding:0 6px;border-left:1px solid rgba(0,0,0,.25);border-right:1px solid rgba(255,255,255,.35);height:30px}
+.real-pin{width:22px;height:22px;padding:2px;border:1px solid transparent;border-radius:3px;background:none;cursor:pointer;display:grid;place-items:center}
+.real-pin:hover{border-color:#9ec4ef;background:rgba(255,255,255,.18)}
+.real-pin img{width:18px;height:18px;object-fit:contain}
+.real-tray{display:flex;align-items:center;gap:6px;padding:0 6px;height:28px}
+.real-tray-item{padding:0;border:0;background:none;color:#fff;font-size:12px;cursor:pointer;line-height:1}
+.real-tray-item:hover{background:rgba(255,255,255,.18)}
+.tray-overflow{height:24px;padding:0 5px;border:1px solid #4d83bd;border-radius:3px;background:linear-gradient(#4d93d8,#1b5ba3);color:#fff;font-size:10px;cursor:pointer}
+.tray-quick{font-size:13px}
+.task.real-task{max-width:150px}
+.task.real-task .task-icon{max-width:16px;max-height:16px;object-fit:contain}
 #start-menu{position:fixed;bottom:38px;left:0;width:410px;z-index:9100;display:none;border:1px solid #0b3f8f;border-radius:9px 9px 0 0;overflow:hidden;background:#eaf2fb;box-shadow:3px 3px 16px rgba(8,35,80,.55)}
 #start-menu.open{display:block}
 .start-head{height:60px;display:flex;align-items:center;gap:12px;padding:6px 14px;color:#fff;font-size:17px;font-weight:bold;text-shadow:1px 2px 3px #0a3a78;background:linear-gradient(var(--blue-light) 0%,var(--blue) 48%,var(--blue-dark) 52%,var(--blue) 100%);border-top:3px solid #7db8f0;border-bottom:2px solid #0b3f8f}
@@ -134,9 +146,17 @@ button,input,textarea{font:inherit}
   </div>
 </main>
 <footer id="taskbar">
-  <button id="start">◉ start</button><div id="tasks"></div>
-  <div id="tray" title="Double click (or Ctrl+F5) to toggle fullscreen"><span>🔊</span><span>🛡️</span><span id="clock"></span></div>
+  <button id="start">◉ start</button>
+  <div id="realPinned" class="real-pinned" title="Pinned in your real Windows taskbar"></div>
+  <div id="tasks"></div>
+  <div id="tray" title="Double click (or Ctrl+F5) to toggle fullscreen">
+    <span class="tray-quick">🔊</span><span class="tray-quick">🛡️</span>
+    <div id="realTray" class="real-tray"></div>
+    <button id="trayOverflow" class="tray-overflow" title="Show hidden icons">▲</button>
+    <span id="clock"></span>
+  </div>
 </footer>
+<script src="../../components/RealTaskbar/real-taskbar.js"></script>
 <script>
     // Desktop Time Machine — mount the REAL Windows desktop mirror.
     (function () {
@@ -159,6 +179,7 @@ button,input,textarea{font:inherit}
   const startMenu = document.getElementById('start-menu');
   const wins = new Map();
   let sharedWindows = [];
+  let hostWindows = [];
   let z = 10, count = 0, calcValue = '0', calcPending = '', calcFirst = null;
   window.addEventListener('message', (event) => {
     const data = event.data;
@@ -169,6 +190,7 @@ button,input,textarea{font:inherit}
     document.getElementById('clock').innerHTML = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) + '<br>' + new Date().toLocaleDateString([], {month:'numeric',day:'numeric',year:'2-digit'});
   }
   updateClock(); setInterval(updateClock, 15000);
+  setupHostTaskbar();
   (async () => {
     try {
       const info = await DTM.system.getInfo();
@@ -177,6 +199,51 @@ button,input,textarea{font:inherit}
     } catch (e) {}
   })();
   function switchEra() { window.parent.postMessage('dtm:open-switcher', '*'); }
+
+  // Real Windows taskbar mirror — pinned apps, running windows and tray items.
+  function setupHostTaskbar() {
+    const pinnedEl = document.getElementById('realPinned');
+    const trayEl = document.getElementById('realTray');
+    if (!pinnedEl || !trayEl || !window.DTMRealTaskbar) return;
+    window.DTMRealTaskbar.start((data) => {
+      pinnedEl.replaceChildren();
+      (data.pinned || []).forEach((item) => {
+        const button = document.createElement('button');
+        button.className = 'real-pin';
+        button.title = (item.name || 'Pinned app') + ' — real Windows taskbar';
+        if (item.icon) {
+          const image = document.createElement('img');
+          image.src = item.icon; image.alt = '';
+          button.appendChild(image);
+        } else button.textContent = (item.name || '?').charAt(0).toUpperCase();
+        button.addEventListener('click', () => window.DTMRealTaskbar.openPinned(item));
+        pinnedEl.appendChild(button);
+      });
+
+      hostWindows = (data.windows || []).filter((item, index, list) =>
+        item.title && list.findIndex((other) => other.pid === item.pid) === index);
+      renderTasks();
+
+      trayEl.replaceChildren();
+      const traySeen = new Set();
+      (data.tray || []).forEach((item) => {
+        const key = item.icon || item.name;
+        if (traySeen.has(key)) return;
+        traySeen.add(key);
+        const button = document.createElement('button');
+        button.className = 'real-tray-item';
+        button.title = (item.name || 'Tray item') + ' — click to open in Windows';
+        if (item.icon) {
+          const image = document.createElement('img');
+          image.src = item.icon; image.alt = '';
+          image.style.cssText = 'width:14px;height:14px;object-fit:contain';
+          button.appendChild(image);
+        } else button.textContent = window.DTMRealTaskbar.glyphFor(item.name);
+        button.addEventListener('click', () => window.DTMRealTaskbar.invokeTray(item));
+        trayEl.appendChild(button);
+      });
+    });
+  }
   function renderTasks() {
     taskList.replaceChildren();
     const items = sharedWindows.length ? sharedWindows : Array.from(wins, ([id, entry]) => ({
@@ -207,6 +274,23 @@ button,input,textarea{font:inherit}
           action: state.minimized || !state.active ? 'activate' : 'minimize'
         }, '*');
       });
+      taskList.appendChild(btn);
+    }
+    for (const host of hostWindows) {
+      const btn = document.createElement('button');
+      btn.className = 'task real-task';
+      btn.title = host.title + (host.processName ? ' (' + host.processName + ')' : '') + ' — real Windows window';
+      if (host.icon) {
+        const image = document.createElement('img');
+        image.className = 'task-icon';
+        image.src = host.icon; image.alt = '';
+        btn.appendChild(image);
+      }
+      const label = document.createElement('span');
+      label.className = 'task-label';
+      label.textContent = host.title;
+      btn.appendChild(label);
+      btn.addEventListener('click', () => window.DTMRealTaskbar.activateWindow(host));
       taskList.appendChild(btn);
     }
   }

@@ -415,6 +415,9 @@ Loading Adam...
     } else if (event.key === 'F8') {
       event.preventDefault();
       window.parent.postMessage('dtm:open-switcher', '*');
+    } else if (event.ctrlKey && event.key === 'F5') {
+      event.preventDefault();
+      if (DTM && DTM.system && DTM.system.toggleFullScreen) DTM.system.toggleFullScreen();
     }
   });
   document.querySelectorAll('[data-command]').forEach((button) => {

@@ -119,6 +119,61 @@ app.whenReady().then(async () => {
     })()`);
     assert('Ctrl+F5 works in Mac OS X', fsKey, fsKey);
 
+    // --- Real host taskbar state in XP and Mac OS X ---
+    await loadSkin(win, 'windowsXP', 2000);
+    const xpHost = await win.webContents.executeJavaScript(`(() => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.DTMRealTaskbar.emit({
+        pinned: [{ name: 'Calc', path: 'C:\\\\Windows\\\\System32\\\\calc.exe', icon: 'data:image/png;base64,AA==' }],
+        windows: [{ pid: 42, title: 'Notepad - real', processName: 'notepad.exe', icon: 'data:image/png;base64,AA==' }],
+        tray: [{ name: 'Volume', icon: 'data:image/png;base64,AA==' }]
+      });
+      return {
+        pinned: doc.querySelectorAll('#realPinned .real-pin').length,
+        task: doc.querySelectorAll('#tasks .real-task').length,
+        taskTitle: (doc.querySelector('#tasks .real-task') || {}).title || '',
+        tray: doc.querySelectorAll('#realTray .real-tray-item').length
+      };
+    })()`);
+    assert('XP mirrors real pinned apps', xpHost.pinned === 1, xpHost);
+    assert('XP mirrors real running windows', xpHost.task === 1 && /real/.test(xpHost.taskTitle), xpHost);
+    assert('XP mirrors real tray items', xpHost.tray === 1, xpHost);
+
+    await loadSkin(win, 'macosx', 2800);
+    const macHost = await win.webContents.executeJavaScript(`(() => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      const doc = w.document;
+      w.DTMRealTaskbar.emit({
+        pinned: [],
+        windows: [{ pid: 7, title: 'Word - real', processName: 'WINWORD.EXE', icon: 'data:image/png;base64,AA==' }],
+        tray: [{ name: 'Volume', icon: 'data:image/png;base64,AA==' }]
+      });
+      const icons = Array.from(doc.querySelectorAll('#dock .dock-icon'));
+      return {
+        hostDock: doc.querySelectorAll('#dock .dock-host-app').length,
+        tray: doc.querySelectorAll('#mb-extra .mb-tray-item').length,
+        emptyTitles: icons.filter((i) => !i.title).length,
+        aboutIcon: (w.macOSApps && w.macOSApps.about && w.macOSApps.about.icon) || ''
+      };
+    })()`);
+    assert('Mac Dock mirrors real windows', macHost.hostDock >= 1, macHost);
+    assert('Mac menu bar mirrors real tray items', macHost.tray === 1, macHost);
+    assert('every Dock icon has a label', macHost.emptyTitles === 0, macHost);
+    assert('About This Mac has a visible icon', macHost.aboutIcon === '🍎', macHost);
+
+    // --- Ctrl+F5 in remaining skins ---
+    for (const skin of ['amiga-workbench', 'beos', 'templeos']) {
+      await loadSkin(win, skin, 1600);
+      const handled = await win.webContents.executeJavaScript(`(() => {
+        const w = document.getElementById('skin-viewport').contentWindow;
+        const event = new w.KeyboardEvent('keydown', { key: 'F5', ctrlKey: true, bubbles: true, cancelable: true });
+        w.document.dispatchEvent(event);
+        return event.defaultPrevented;
+      })()`);
+      assert('Ctrl+F5 handled in ' + skin, handled, handled);
+    }
+
     assert('no unexpected console errors', errors.length === 0, errors);
   } catch (e) {
     results.failed++;

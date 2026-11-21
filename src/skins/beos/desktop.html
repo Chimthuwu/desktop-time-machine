@@ -23,6 +23,9 @@ button,input,textarea{font:inherit}
 #deskbar-menu{display:none;padding:4px}
 #deskbar.open #deskbar-menu{display:block}
 .desk-item{display:block;width:100%;padding:5px 7px;text-align:left;border:1px solid transparent;background:transparent;cursor:pointer}
+.be-running{display:flex;flex-wrap:wrap;gap:3px;padding:4px 6px;border-bottom:1px solid #888}
+.be-running-item{min-width:24px;height:24px;padding:2px;border:1px solid #777;background:#ddd;cursor:pointer}
+.be-running-item.active{background:#ffdc00;border-color:#000}
 .desk-item:hover{background:#bdd8e7;border-color:#7fa8bf}
 #desk-clock{text-align:right;padding:4px 8px;border-top:1px solid #aaa;color:#333}
 #workspace-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:4px}
@@ -78,6 +81,7 @@ button,input,textarea{font:inherit}
   <section id="window-layer"></section>
   <aside id="deskbar">
     <header id="deskbar-head"><span id="leaf"><span>◈</span></span><b>Deskbar</b><span style="margin-left:auto">▾</span></header>
+    <div id="beRunning" class="be-running"></div>
     <div id="deskbar-menu">
       <button class="desk-item" data-app="tracker">Tracker</button>
       <button class="desk-item" data-app="terminal">Terminal</button>
@@ -238,6 +242,20 @@ button,input,textarea{font:inherit}
     actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
   }
   const apps={tracker:()=>fileWindow(''),terminal,editor,calculator,media,about,shutdown,sharedapps:()=>{if(window.DTMApps)window.DTMApps.open('launcher');}};
+  window.addEventListener('message',(event)=>{
+    const data=event.data;
+    if(!data||data.type!=='dtm:windows-state')return;
+    const strip=document.getElementById('beRunning');if(!strip)return;
+    strip.replaceChildren();
+    (data.windows||[]).forEach((state)=>{
+      const button=document.createElement('button');
+      button.className='be-running-item'+(state.active?' active':'');
+      button.title=state.title+(state.minimized?' (minimized)':'');
+      button.textContent=state.icon||'◈';
+      button.addEventListener('click',()=>window.parent.postMessage({type:'dtm:window-action',id:state.id,app:state.app,action:state.minimized||!state.active?'activate':'minimize'},'*'));
+      strip.appendChild(button);
+    });
+  });
   document.querySelectorAll('.be-icon').forEach(icon=>{
     icon.addEventListener('click',()=>document.querySelectorAll('.be-icon').forEach(other=>other.classList.toggle('selected',other===icon)));
     icon.addEventListener('dblclick',()=>apps[icon.dataset.app]&&apps[icon.dataset.app]());
@@ -247,7 +265,11 @@ button,input,textarea{font:inherit}
   }));
   document.getElementById('deskbar-head').addEventListener('click',()=>deskbar.classList.toggle('open'));
   document.addEventListener('pointerdown',(e)=>{if(!deskbar.contains(e.target))deskbar.classList.remove('open');});
-  document.addEventListener('keydown',(e)=>{if(e.key==='F8'){e.preventDefault();switchEra();}if(e.key==='Escape')deskbar.classList.remove('open');});
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='F8'){e.preventDefault();switchEra();}
+    if(e.ctrlKey&&e.key==='F5'){e.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
+    if(e.key==='Escape')deskbar.classList.remove('open');
+  });
 })();
 </script>
 <script>

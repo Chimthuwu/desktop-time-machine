@@ -1032,10 +1032,39 @@ function setupDisplayProps(w) {
   w.querySelector('#wpOk').addEventListener('click', () => { commit(); close(w); });
   w.querySelector('#wpCancel').addEventListener('click', () => close(w));
 
-  // Screensaver preview
-  w.querySelector('#ssPreview').addEventListener('click', () => {
-    startScreensaver(w.querySelector('#ssSelect').value);
+  // Screensaver settings are persisted and drive a real idle timer.
+  const SS_KEY = 'dtm.screensaver.win98';
+  const ssSelect = w.querySelector('#ssSelect');
+  const ssWait = w.querySelector('#ssWait');
+  const ssPassword = w.querySelector('#ssPassword');
+  try {
+    const saved = JSON.parse(localStorage.getItem(SS_KEY) || '{}');
+    if (saved.type && ssSelect.querySelector('option[value="' + saved.type + '"]')) ssSelect.value = saved.type;
+    if (saved.wait) ssWait.value = saved.wait;
+    ssPassword.checked = !!saved.password;
+  } catch (e) {}
+  function saveSaver() {
+    try { localStorage.setItem(SS_KEY, JSON.stringify({ type: ssSelect.value, wait: Number(ssWait.value) || 5, password: ssPassword.checked })); } catch (e) {}
+  }
+  [ssSelect, ssWait, ssPassword].forEach((control) => control.addEventListener('change', saveSaver));
+  w.querySelector('#ssPreview').addEventListener('click', () => startScreensaver(ssSelect.value));
+
+  let lastActivity = Date.now();
+  let saverWasActive = false;
+  ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach((type) => {
+    document.addEventListener(type, () => { lastActivity = Date.now(); }, { passive: true });
   });
+  window.setInterval(() => {
+    if (!window.DTMSaver || window.DTMSaver.active()) { saverWasActive = true; return; }
+    if (saverWasActive && JSON.parse(localStorage.getItem(SS_KEY) || '{}').password) {
+      saverWasActive = false;
+      hostPrompt('Windows 98', 'The computer is locked. Enter anything to continue.', '').then(() => {});
+    }
+    const settings = JSON.parse(localStorage.getItem(SS_KEY) || '{}');
+    if (!settings.type || settings.type === 'none') return;
+    const wait = Number(settings.wait) || 5;
+    if (Date.now() - lastActivity >= wait * 60000) startScreensaver(settings.type);
+  }, 15000);
 }
 
 // RUN DIALOG
@@ -1637,7 +1666,7 @@ const apps = {
             </div>
             <div style="display:flex;align-items:center;gap:5px;margin:10px 0;">
               <span>Wait:</span>
-              <input type="number" value="5" min="1" max="99" style="width:50px;border:2px inset #fff;padding:2px;">
+              <input type="number" id="ssWait" value="5" min="1" max="99" style="width:50px;border:2px inset #fff;padding:2px;">
               <span>minutes</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">

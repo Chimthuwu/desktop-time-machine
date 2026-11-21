@@ -517,7 +517,7 @@
     menus: { View: [{ label: 'Reset Appearance', action: () => activeWindow('preferences')?.dtmShowAll?.() }] }
   });
   window.registerMacApp('about', {
-    name: 'About This Mac', title: 'About This Mac', icon: '', width: 370, height: 330,
+    name: 'About This Mac', title: 'About This Mac', icon: '🍎', width: 370, height: 330,
     body: aboutBody,
     mount: (entry) => entry.body.querySelector('.about-more').addEventListener('click', () => window.openApp('activity'))
   });

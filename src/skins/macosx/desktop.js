@@ -34,6 +34,28 @@
     updateDockDots();
   }
 
+  function renderHostTray(items) {
+    const extra = document.getElementById('mb-extra');
+    if (!extra) return;
+    extra.replaceChildren();
+    const seen = new Set();
+    items.forEach((item) => {
+      const key = item.icon || item.name;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const button = document.createElement('button');
+      button.className = 'mb-tray-item';
+      button.title = (item.name || 'Tray item') + ' — click to open in Windows';
+      if (item.icon) {
+        const image = document.createElement('img');
+        image.src = item.icon; image.alt = '';
+        button.appendChild(image);
+      } else button.textContent = window.DTMRealTaskbar.glyphFor(item.name);
+      button.addEventListener('click', () => window.DTMRealTaskbar.invokeTray(item));
+      extra.appendChild(button);
+    });
+  }
+
   function updateDockDots() {
     const dock = document.getElementById('dock');
     if (!dock) return;
@@ -49,11 +71,16 @@
   }
 
   let sharedWindows = [];
+  let hostWindows = [];
   window.addEventListener('message', (event) => {
     const data = event.data;
     if (data && data.type === 'dtm:windows-state') {
       sharedWindows = data.windows || [];
       updateDockDots();
+    }
+    if (data && data.type === 'dtm:host-taskbar') {
+      hostWindows = (data.windows || []);
+      renderHostTray(data.tray || []);
     }
   });
 
@@ -104,6 +131,27 @@
       });
       dock.appendChild(icon);
     });
+    (hostWindows || []).forEach((item) => {
+      const icon = document.createElement('div');
+      icon.className = 'dock-icon dock-host-app';
+      icon.title = item.title + (item.processName ? ' (' + item.processName + ')' : '') + ' — real Windows application';
+      const glyph = document.createElement('span');
+      glyph.className = 'dock-glyph';
+      if (item.icon) {
+        const image = document.createElement('img');
+        image.src = item.icon; image.alt = '';
+        image.style.cssText = 'width:100%;height:100%;object-fit:contain';
+        glyph.appendChild(image);
+      } else glyph.textContent = '🪟';
+      const gloss = document.createElement('span');
+      gloss.className = 'dock-gloss';
+      const dot = document.createElement('span');
+      dot.className = 'running-dot';
+      icon.append(glyph, gloss, dot);
+      icon.addEventListener('click', () => window.DTMRealTaskbar.activateWindow(item));
+      dock.appendChild(icon);
+    });
+
     sharedWindows.filter((state) => state.minimized).forEach((state) => {
       const item = document.createElement('div');
       item.className = 'dock-icon dock-minimized';
@@ -588,6 +636,15 @@
   }
 
   function boot() {
+    if (window.DTMRealTaskbar) {
+      let lastSignature = '';
+      window.DTMRealTaskbar.start((data) => {
+        hostWindows = data.windows || [];
+        renderHostTray(data.tray || []);
+        const signature = hostWindows.map((w) => w.pid || w.title).join('|');
+        if (signature !== lastSignature) { lastSignature = signature; renderDock(); }
+      }, 8000);
+    }
     renderDesktopIcons();
     bindMenus();
     updateMenus('finder');

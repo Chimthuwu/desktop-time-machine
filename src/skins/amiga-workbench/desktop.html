@@ -14,6 +14,9 @@ button,input,textarea{font:inherit}
 #screenbar strong{font-weight:bold}
 #screenbar .screen-title{margin:auto;font-weight:bold}
 #screenbar .clock{margin-left:auto}
+.wb-running{display:flex;gap:3px}
+.wb-running-item{min-width:20px;height:19px;padding:0 3px;border:1px solid #555;background:#ddd;cursor:pointer;font-size:11px}
+.wb-running-item.active{background:#0055aa;color:#fff}
 .menu-button{padding:3px 8px;border:1px solid transparent;background:transparent;cursor:pointer}
 .menu-button:hover{border-color:#fff #555 #555 #fff;background:#aaa}
 #menu-popup{position:absolute;top:24px;left:8px;z-index:999;display:none;min-width:160px;padding:3px;background:#ccc;border:2px solid;border-color:#fff #555 #555 #fff;box-shadow:2px 2px #222}
@@ -67,6 +70,7 @@ button,input,textarea{font:inherit}
     <button class="menu-button" data-menu="Window">Window</button>
     <button class="menu-button" data-menu="Tools">Tools</button>
     <strong class="screen-title">Workbench 3.1</strong>
+    <span id="wbRunning" class="wb-running"></span>
     <span>DF0: [ ]</span><span>RAM: 2M</span><span class="clock" id="clock"></span>
   </header>
   <div id="menu-popup"></div>
@@ -204,6 +208,20 @@ button,input,textarea{font:inherit}
     const off=document.createElement('button');off.className='wb-button';off.textContent='Shut Down';off.onclick=()=>DTM&&DTM.system&&DTM.system.exit&&DTM.system.exit();
     actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
   }
+  window.addEventListener('message',(event)=>{
+    const data=event.data;
+    if(!data||data.type!=='dtm:windows-state')return;
+    const strip=document.getElementById('wbRunning');if(!strip)return;
+    strip.replaceChildren();
+    (data.windows||[]).forEach((state)=>{
+      const button=document.createElement('button');
+      button.className='wb-running-item'+(state.active?' active':'');
+      button.title=state.title+(state.minimized?' (minimized)':'');
+      button.textContent=state.icon||'🪟';
+      button.addEventListener('click',()=>window.parent.postMessage({type:'dtm:window-action',id:state.id,app:state.app,action:state.minimized||!state.active?'activate':'minimize'},'*'));
+      strip.appendChild(button);
+    });
+  });
   function launch(name){
     if(name==='sharedapps'){if(window.DTMApps)window.DTMApps.open('launcher');return;}
     if(name==='sys'||name==='ram')fileWindow(name==='sys'?'':'');
@@ -223,7 +241,11 @@ button,input,textarea{font:inherit}
     popup.style.left=Math.max(0,button.offsetLeft)+'px';popup.classList.add('open');event.stopPropagation();
   }));
   document.addEventListener('pointerdown',(event)=>{if(!popup.contains(event.target)&&!event.target.closest('[data-menu]')){popup.classList.remove('open');activeMenu=null;}});
-  document.addEventListener('keydown',(event)=>{if(event.key==='F8'){event.preventDefault();switchEra();}if(event.key==='Escape')popup.classList.remove('open');});
+  document.addEventListener('keydown',(event)=>{
+    if(event.key==='F8'){event.preventDefault();switchEra();}
+    if(event.ctrlKey&&event.key==='F5'){event.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
+    if(event.key==='Escape')popup.classList.remove('open');
+  });
 })();
 </script>
 <script>

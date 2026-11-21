@@ -64,6 +64,14 @@ app.whenReady().then(async () => {
       if (wins[0]) { wins[0].style.left = '610px'; wins[0].style.top = '120px'; }
       if (wins[1]) { wins[1].style.left = '120px'; wins[1].style.top = '160px'; }
     })()`);
+    await win.webContents.executeJavaScript(`(() => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      w.DTMRealTaskbar.emit({
+        pinned: [{ name: 'Paint.NET', path: 'C:\\\\Program Files\\\\paint.net', icon: null }],
+        windows: [{ pid: 12, title: 'General | Trust - Disc…', processName: 'msedge.exe', icon: null }],
+        tray: [{ name: 'Volume', icon: null }, { name: 'Shield', icon: null }]
+      });
+    })()`);
     await wait(600);
     await capture(win, 'userfixes-xp-desktop.png');
 
@@ -112,6 +120,14 @@ app.whenReady().then(async () => {
       const notes = doc.querySelector('.window[data-app="stickies"]');
       if (calc) { calc.style.left = '700px'; calc.style.top = '80px'; }
       if (notes) { notes.style.left = '170px'; notes.style.top = '120px'; }
+    })()`);
+    await win.webContents.executeJavaScript(`(() => {
+      const w = document.getElementById('skin-viewport').contentWindow;
+      w.DTMRealTaskbar.emit({
+        pinned: [],
+        windows: [{ pid: 21, title: 'Microsoft Word', processName: 'WINWORD.EXE', icon: null }],
+        tray: [{ name: 'Volume', icon: null }]
+      });
     })()`);
     await wait(700);
     await capture(win, 'userfixes-mac-desktop.png');
