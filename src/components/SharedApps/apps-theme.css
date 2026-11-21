@@ -1,0 +1,260 @@
+/**
+ * Desktop Time Machine — shared application presentation.
+ *
+ * Structure is defined once. Each historical era supplies only a theme
+ * variant; application behaviour never branches on the skin.
+ */
+
+.dtm-shared-app {
+  --app-surface: #c0c0c0;
+  --app-title: #000080;
+  --app-title-text: #fff;
+  --app-border-light: #fff;
+  --app-border-dark: #404040;
+  --app-font: Tahoma, Arial, sans-serif;
+  --app-body: #fff;
+  --app-button: #c0c0c0;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  min-height: 180px;
+  background: var(--app-surface);
+  border: 2px solid;
+  border-color: var(--app-border-light) var(--app-border-dark) var(--app-border-dark) var(--app-border-light);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .5);
+  font: 12px var(--app-font);
+  color: #111;
+  z-index: 50000;
+  user-select: none;
+}
+
+.dtm-shared-app.maximized { inset: 4px !important; width: auto !important; height: auto !important; }
+
+.dtm-app-titlebar {
+  flex: none;
+  height: 24px;
+  margin: 2px 2px 0;
+  padding: 2px 3px 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--app-title);
+  color: var(--app-title-text);
+  font-weight: bold;
+  cursor: move;
+}
+.dtm-app-title-icon { font-size: 13px; }
+.dtm-app-title-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dtm-app-controls { display: flex; gap: 2px; }
+.dtm-app-control {
+  width: 18px;
+  height: 17px;
+  padding: 0;
+  line-height: 14px;
+  font: bold 11px var(--app-font);
+  border: 1px solid;
+  border-color: var(--app-border-light) var(--app-border-dark) var(--app-border-dark) var(--app-border-light);
+  background: var(--app-surface);
+  color: #111;
+  cursor: pointer;
+}
+.dtm-app-control.close { color: #a00; }
+
+.dtm-app-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px;
+  padding: 6px;
+  background: var(--app-body);
+  border: 2px solid;
+  border-color: var(--app-border-dark) var(--app-border-light) var(--app-border-light) var(--app-border-dark);
+  overflow: auto;
+}
+
+.dtm-app-toolbar { display: flex; align-items: center; gap: 5px; flex: none; flex-wrap: wrap; }
+.dtm-app-button {
+  min-height: 24px;
+  padding: 3px 10px;
+  font: 12px var(--app-font);
+  border: 2px solid;
+  border-color: var(--app-border-light) var(--app-border-dark) var(--app-border-dark) var(--app-border-light);
+  background: var(--app-button);
+  color: #111;
+  cursor: pointer;
+}
+.dtm-app-button:active { border-color: var(--app-border-dark) var(--app-border-light) var(--app-border-light) var(--app-border-dark); }
+.dtm-app-button.primary { font-weight: bold; }
+.dtm-app-input, .dtm-app-select, .dtm-app-display, .dtm-app-color {
+  min-height: 24px;
+  padding: 3px 6px;
+  font: 12px var(--app-font);
+  border: 2px inset var(--app-surface);
+  background: var(--app-body);
+  color: #111;
+}
+.dtm-app-editor {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: 2px inset var(--app-surface);
+  padding: 6px;
+  font: 13px "Courier New", monospace;
+  background: var(--app-body);
+  color: #111;
+  user-select: text;
+}
+.dtm-app-status { flex: none; padding: 3px 4px; border: 1px solid var(--app-border-dark); background: var(--app-surface); }
+
+.dtm-app-calc-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.dtm-app-calc-grid .calc-key { min-width: 0; }
+.dtm-app-display { text-align: right; font-weight: bold; font-size: 15px; }
+
+.dtm-app-properties, .dtm-app-info { display: flex; flex-direction: column; gap: 7px; }
+.dtm-app-property-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; word-break: break-word; }
+.dtm-app-property-label { font-weight: bold; }
+
+.dtm-app-image-stage, .dtm-app-media-stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #eee;
+  color: #444;
+  overflow: hidden;
+}
+.dtm-app-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dtm-app-media { max-width: 100%; max-height: 100%; }
+
+.dtm-app-canvas { flex: 1; min-height: 0; border: 1px solid #888; background: #fff; touch-action: none; cursor: crosshair; }
+
+.dtm-app-clock { white-space: pre-line; text-align: center; font-size: 18px; font-weight: bold; padding: 6px; }
+.dtm-app-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.dtm-app-calendar-head { font-weight: bold; background: var(--app-surface); }
+.dtm-app-calendar-day { padding: 3px; }
+.dtm-app-calendar-day.today { background: var(--app-title); color: var(--app-title-text); }
+
+.dtm-app-launcher { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: auto; }
+.dtm-app-launcher-hint { margin: 0 0 4px; color: #555; }
+.dtm-app-launcher-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  text-align: left;
+  font: 12px var(--app-font);
+  border: 1px solid var(--app-border-dark);
+  background: var(--app-surface);
+  color: #111;
+  cursor: pointer;
+}
+.dtm-app-launcher-item:hover { background: var(--app-title); color: var(--app-title-text); }
+.dtm-app-launcher-icon { font-size: 18px; }
+
+.dtm-app-error { padding: 12px; color: #900; }
+
+.dtm-app-modal-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 60000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, .35);
+}
+.dtm-app-dialog {
+  width: min(420px, 90vw);
+  padding: 14px;
+  background: var(--app-surface, #c0c0c0);
+  border: 2px solid;
+  border-color: #fff #404040 #404040 #fff;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .4);
+  font: 12px Tahoma, Arial, sans-serif;
+}
+.dtm-app-dialog-title { margin: 0 0 8px; font-size: 14px; }
+.dtm-app-dialog-body .dtm-app-input { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.dtm-app-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ---- Historical themes. Skins choose one by name; no logic branches. ---- */
+.dtm-shared-app[data-dtm-theme="win95"] { --app-surface: #c0c0c0; --app-title: #000080; --app-font: Tahoma, Arial, sans-serif; }
+
+.dtm-shared-app[data-dtm-theme="win98"] {
+  --app-surface: #c0c0c0;
+  --app-title: linear-gradient(90deg, #000080, #1084d0);
+  --app-title-text: #fff;
+  --app-font: Tahoma, Arial, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="win98"] .dtm-app-titlebar { background: linear-gradient(90deg, #000080, #1084d0); }
+
+.dtm-shared-app[data-dtm-theme="xp"] {
+  --app-surface: #edf4fc;
+  --app-title: #3a7fd5;
+  --app-title-text: #fff;
+  --app-border-light: #dce9f7;
+  --app-border-dark: #7d9db5;
+  --app-body: #f6f8fb;
+  --app-font: Tahoma, Arial, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="xp"] .dtm-app-titlebar { border-radius: 7px 7px 0 0; background: linear-gradient(#5ea7f3, #165bb3); text-shadow: 1px 1px #164479; }
+.dtm-shared-app[data-dtm-theme="xp"] .dtm-app-button { border-radius: 3px; background: linear-gradient(#fff, #dce8f5); border: 1px solid #9fb4cb; }
+
+.dtm-shared-app[data-dtm-theme="mac8"] {
+  --app-surface: #dddddd;
+  --app-title: #dddddd;
+  --app-title-text: #000;
+  --app-border-light: #fff;
+  --app-border-dark: #888;
+  --app-body: #fff;
+  --app-font: Geneva, Charcoal, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="mac8"] .dtm-app-titlebar { border-bottom: 1px solid #888; text-align: center; }
+.dtm-shared-app[data-dtm-theme="mac8"] .dtm-app-title-icon { display: none; }
+.dtm-shared-app[data-dtm-theme="mac8"] .dtm-app-controls { flex-direction: row-reverse; }
+
+.dtm-shared-app[data-dtm-theme="aqua"] {
+  --app-surface: #e8e8e8;
+  --app-title: #e8e8e8;
+  --app-title-text: #222;
+  --app-border-light: #fff;
+  --app-border-dark: #999;
+  --app-body: #fff;
+  --app-font: "Lucida Grande", Geneva, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="aqua"] .dtm-app-titlebar { background: linear-gradient(#f6f6f6, #dcdcdc); border-bottom: 1px solid #aaa; text-align: center; border-radius: 8px 8px 0 0; }
+.dtm-shared-app[data-dtm-theme="aqua"] .dtm-app-controls { flex-direction: row-reverse; }
+.dtm-shared-app[data-dtm-theme="aqua"] .dtm-app-control { border-radius: 999px; border: 1px solid #999; }
+
+.dtm-shared-app[data-dtm-theme="beos"] {
+  --app-surface: #d8d8d8;
+  --app-title: #ffdc00;
+  --app-title-text: #000;
+  --app-border-light: #fff;
+  --app-border-dark: #555;
+  --app-font: "Sans Serif", Arial, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="beos"] .dtm-app-titlebar { border-bottom: 2px solid #000; }
+
+.dtm-shared-app[data-dtm-theme="amiga"] {
+  --app-surface: #c0c0c0;
+  --app-title: #0055aa;
+  --app-title-text: #fff;
+  --app-border-light: #dfdfdf;
+  --app-border-dark: #444;
+  --app-font: "Topaz", Tahoma, sans-serif;
+}
+.dtm-shared-app[data-dtm-theme="amiga"] .dtm-app-titlebar { border-bottom: 2px solid #fff; }
+
+.dtm-shared-app[data-dtm-theme="temple"] {
+  --app-surface: #000;
+  --app-title: #5f5;
+  --app-title-text: #000;
+  --app-border-light: #5f5;
+  --app-border-dark: #5f5;
+  --app-body: #000;
+  --app-font: "Courier New", monospace;
+}
+.dtm-shared-app[data-dtm-theme="temple"] .dtm-app-body { color: #5f5; }
+.dtm-shared-app[data-dtm-theme="temple"] .dtm-app-button,
+.dtm-shared-app[data-dtm-theme="temple"] .dtm-app-input { color: #5f5; background: #000; }

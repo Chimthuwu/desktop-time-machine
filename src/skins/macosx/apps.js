@@ -424,6 +424,10 @@
     body: safariBody, mount: mountSafari, onClose: stopSafariWeb,
     menus: { File: [{ label: 'New Window', shortcut: '⌘N', action: () => window.openApp('safari', { newWindow: true }) }, { label: 'Close Window', shortcut: '⌘W', action: () => window.closeActiveWindow() }], View: [{ label: 'Reload Page', action: () => activeWindow('safari')?.querySelector('.safari-reload')?.click() }] }
   });
+  window.registerMacApp('sharedapps', {
+    name: 'Applications', title: 'Applications', icon: '🧰', width: 440, height: 380,
+    launch: () => { if (window.DTMApps) window.DTMApps.open('launcher'); }
+  });
   window.registerMacApp('terminal', {
     name: 'Terminal', title: 'Terminal', icon: '⌨️', width: 620, height: 390,
     body: terminalBody, mount: mountTerminal,

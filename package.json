@@ -9,7 +9,8 @@
     "test:security": "electron test/security-regressions.js && electron test/phase4-security.js",
     "test:skins": "electron test/phase4-skins.js",
     "test:architecture": "electron test/shared-computer.js",
-    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture",
+    "test:apps": "electron test/shared-apps.js",
+    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps",
     "screenshots": "electron test/capture-gallery.js"
   },
   "keywords": [

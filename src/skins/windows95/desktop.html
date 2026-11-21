@@ -153,6 +153,7 @@ button{font:inherit}
 .blink { animation: blink 1s step-start infinite; }
 @media(max-width:600px){.window{width:calc(100vw - 20px)!important;left:10px!important}.icon-grid{grid-template-columns:70px}.desktop-icon{width:68px}.task-button{max-width:100px}}
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <div class="desktop" id="desktop">
@@ -188,7 +189,8 @@ button{font:inherit}
           <div class="start-item" data-launch="paint"><img class="glyph-img" src="../shared/icons/win95/paint.ico" alt="">Paint</div>
           <div class="start-item" data-launch="explorer"><img class="glyph-img" src="../shared/icons/win95/folder.ico" alt="">Windows Explorer</div>
           <div class="start-sep"></div>
-          <div class="start-item" data-launch="doom"><img class="glyph-img" src="../shared/icons/win95/doom.ico" alt="">DOOM</div>
+          <div class="start-item" data-launch="sharedapps"><span class="glyph">🧰</span>Applications</div>
+      <div class="start-item" data-launch="doom"><img class="glyph-img" src="../shared/icons/win95/doom.ico" alt="">DOOM</div>
         </div>
       </div>
       <div class="start-item" data-launch="documents"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">Documents</div>
@@ -1283,6 +1285,7 @@ menu.addEventListener('click',e=>{
   e.stopPropagation(); 
   const key=item.dataset.launch;
   
+  if(key==='sharedapps'){menu.classList.remove('open');if(window.DTMApps)window.DTMApps.open('launcher');return;}
   if(key==='programs') return;
   else if(key==='timemachine') {
     menu.classList.remove('open');
@@ -1744,5 +1747,9 @@ setupRealTaskbar();
       } catch (e) { console.warn('[DTM] win95 mirror mount failed:', e); }
     })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'windows95', theme: 'win95' });</script>
 </body>
 </html>

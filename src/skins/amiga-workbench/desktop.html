@@ -58,6 +58,7 @@ button,input,textarea{font:inherit}
 .dialog{width:300px;padding:14px;background:#ccc;border:2px solid;border-color:#fff #444 #444 #fff;box-shadow:3px 3px #222}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <main id="desktop">
@@ -88,7 +89,7 @@ button,input,textarea{font:inherit}
   const menuItems={
     Workbench:[['About Workbench',()=>about()],['Backdrop',()=>preferences()],['Switch Era…',()=>switchEra()],['Quit',()=>shutdown()]],
     Window:[['New Shell',()=>shell()],['Close Active Window',()=>{const e=[...windows.values()].sort((a,b)=>b.z-a.z)[0];if(e)e.win.querySelector('.gadget').click();}]],
-    Tools:[['Utilities',()=>calculator()],['File Browser',()=>fileWindow('')],['Preferences',()=>preferences()]]
+    Tools:[['Applications',()=>launch('sharedapps')],['Utilities',()=>calculator()],['File Browser',()=>fileWindow('')],['Preferences',()=>preferences()]]
   };
   function switchEra(){window.parent.postMessage('dtm:open-switcher','*');}
   function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
@@ -204,6 +205,7 @@ button,input,textarea{font:inherit}
     actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
   }
   function launch(name){
+    if(name==='sharedapps'){if(window.DTMApps)window.DTMApps.open('launcher');return;}
     if(name==='sys'||name==='ram')fileWindow(name==='sys'?'':'');
     else if(name==='utilities')calculator();
     else if(name==='shell')shell();
@@ -236,5 +238,9 @@ button,input,textarea{font:inherit}
       } catch (e) { console.warn('[DTM] amiga-workbench mirror mount failed:', e); }
     })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'amiga-workbench', theme: 'amiga' });</script>
 </body>
 </html>

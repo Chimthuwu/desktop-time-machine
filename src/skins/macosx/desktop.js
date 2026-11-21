@@ -442,6 +442,17 @@
       apple.innerHTML = appleMark;
       apple.addEventListener('click', openAppleMenu);
     }
+    if (!document.getElementById('appleMenu')) {
+      const appleMenu = document.createElement('div');
+      appleMenu.id = 'appleMenu';
+      appleMenu.className = 'mb-menu';
+      appleMenu.style.cssText = 'position:fixed;left:4px;top:24px;z-index:12000;display:none;flex-direction:column;min-width:190px;padding:4px;background:#f2f2f2;color:#111;border:1px solid #999;box-shadow:2px 2px 6px rgba(0,0,0,.3)';
+      appleMenu.innerHTML = '<div class="am-item" data-app="about" style="padding:5px 9px;cursor:default">About This Mac</div>' +
+        '<div class="am-item" style="padding:5px 9px;cursor:default">Shut Down…</div>' +
+        '<div class="am-item" style="padding:5px 9px;cursor:default">Restart…</div>' +
+        '<div class="am-item" style="padding:5px 9px;cursor:default">Play Startup Chime</div>';
+      document.body.appendChild(appleMenu);
+    }
     document.querySelectorAll('#appleMenu [data-app="about"]').forEach((item) => item.addEventListener('click', () => {
       closeMenus();
       openApp('about');

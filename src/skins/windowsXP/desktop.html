@@ -76,6 +76,7 @@ button,input,textarea{font:inherit}
 .dialog h3{margin:0 0 10px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .prompt-input{padding:5px;border:1px solid #8ba3bc;background:#fff;user-select:text}
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <main id="desktop">
@@ -100,6 +101,7 @@ button,input,textarea{font:inherit}
         <div class="start-item" data-app="calculator"><b>🧮</b>Calculator</div>
         <div class="start-item" data-app="terminal"><b>⌨️</b>Command Prompt</div>
         <div class="start-item" data-app="all-programs"><b>📁</b>All Programs</div>
+        <div class="start-item" data-app="sharedapps"><b>🧰</b>Applications</div>
       </div>
       <div class="start-right">
         <div class="start-item" data-app="documents"><b>📂</b>My Documents</div>
@@ -327,7 +329,8 @@ button,input,textarea{font:inherit}
     calculator:openCalculator, terminal:openTerminal, computer:()=>openExplorer(''),
     documents:()=>openExplorer(''), files:()=>openExplorer(''), recycle:openRecycle,
     control:openControlPanel, about:openAbout, 'all-programs':openAllPrograms,
-    timemachine:switchEra, switch:switchEra
+    timemachine:switchEra, switch:switchEra,
+    sharedapps:()=>{if(window.DTMApps)window.DTMApps.open('launcher');}
   };
   document.querySelectorAll('[data-app]').forEach((item)=>{
     if(item.classList.contains('desktop-icon')){
@@ -361,5 +364,9 @@ button,input,textarea{font:inherit}
   document.getElementById('tray').addEventListener('dblclick',()=>{if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();});
 })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'windowsXP', theme: 'xp' });</script>
 </body>
 </html>

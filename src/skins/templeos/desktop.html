@@ -127,6 +127,7 @@ button, input, textarea { font: inherit; }
 .hidden { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <div id="viewport">
@@ -137,6 +138,7 @@ button, input, textarea { font: inherit; }
       <button type="button" data-command="files;">Files</button>
       <button type="button" data-command="edit;">Edit</button>
       <button type="button" data-command="demo;">Demo</button>
+      <button type="button" data-command="apps;">Apps</button>
       <button type="button" data-command="about;">About</button>
       <span id="clock"></span>
     </header>
@@ -371,6 +373,7 @@ Loading Adam...
     historyIndex = history.length;
     addLine('C:\\> ' + source, 'yellow');
     const cmd = source.replace(/;$/, '').trim().toLowerCase();
+    if (cmd === 'apps') { if (window.DTMApps) window.DTMApps.open('launcher'); return; }
     if (cmd === 'help' || cmd === '?') showHelp();
     else if (cmd === 'dir' || cmd === 'ls') showDirectory(currentPath);
     else if (cmd === 'files' || cmd === 'file') openFiles();
@@ -435,5 +438,9 @@ Loading Adam...
   }, 800);
 })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'templeos', theme: 'temple' });</script>
 </body>
 </html>

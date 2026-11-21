@@ -186,6 +186,7 @@ body {
 .about-mac { padding: 20px; text-align: center; background: #fff; height: 100%; font-size: 12px; }
 .rainbow-apple { font-size: 60px; margin-bottom: 10px; }
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 
@@ -260,6 +261,7 @@ body {
   <div class="cs-icon" onclick="openApp('calculator')" title="Calculator">🔢</div>
   <div class="cs-icon" onclick="openApp('stickies')" title="Stickies">📝</div>
   <div class="cs-icon" onclick="openApp('simpletext')" title="SimpleText">📄</div>
+  <div class="cs-icon" onclick="openApp('sharedapps')" title="Applications">🧰</div>
   <div class="cs-icon" onclick="if(window.parent)window.parent.postMessage('dtm:open-switcher','*');" title="Desktop Time Machine">⏳</div>
   <div class="cs-icon" onclick="alert('Volume: 100%')" title="Volume">🔊</div>
   <div class="cs-icon" onclick="alert('Battery: 100%')" title="Battery">🔋</div>
@@ -780,6 +782,7 @@ function openApp(key) {
   document.querySelectorAll('.menu-dropdown').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.context-menu').forEach(m => m.remove());
   
+  if (key === 'sharedapps') { if (window.DTMApps) window.DTMApps.open('launcher'); return; }
   // Handle browser apps that launch in the shell
   if (key === 'netscape') {
     if (window.parent) window.parent.postMessage({ type: 'dtm:launch-webapp', app: 'browser', url: 'https://home.netscape.com/' }, '*');
@@ -959,5 +962,9 @@ function emptyTrash() {
       } catch (e) { console.warn('[DTM] macos8 mirror mount failed:', e); }
     })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'macos8', theme: 'mac8' });</script>
 </body>
 </html>

@@ -230,6 +230,7 @@ body { background: var(--win98-bg); }
   .start-menu { width: 260px; }
 }
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <div class="desktop" id="desktop">
@@ -270,6 +271,7 @@ body { background: var(--win98-bg); }
             <div class="start-submenu">
               <div class="start-item" data-launch="notepad"><img class="glyph-img" src="../shared/icons/win95/notepad.ico" alt="">Notepad</div>
               <div class="start-item" data-launch="paint"><img class="glyph-img" src="../shared/icons/win95/paint.ico" alt="">Paint</div>
+              <div class="start-item" data-launch="sharedapps"><span class="glyph">🧰</span>Applications</div>
               <div class="start-item" data-launch="calculator"><span class="glyph">🔢</span>Calculator</div>
               <div class="start-item" data-launch="wordpad"><img class="glyph-img" src="../shared/icons/win95/documents.ico" alt="">WordPad</div>
               <div class="start-sep"></div>
@@ -2197,6 +2199,7 @@ menu.addEventListener('click', e => {
   e.stopPropagation();
   const key = item.dataset.launch;
   
+  if (key === 'sharedapps') { menu.classList.remove('open'); if (window.DTMApps) window.DTMApps.open('launcher'); return; }
   if (key === 'programs' || key === 'accessories' || key === 'system-tools' || key === 'settings' || key === 'find') return;
   else if (key === 'windows-update') { menu.classList.remove('open'); if (window.parent) window.parent.postMessage('dtm:open-switcher', '*'); }
   else if (key === 'shutdown') openApp('shutdown');
@@ -2531,5 +2534,9 @@ window.openApp = openApp;
       } catch (e) { console.warn('[DTM] win98 mirror mount failed:', e); }
     })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'windows98', theme: 'win98' });</script>
 </body>
 </html>

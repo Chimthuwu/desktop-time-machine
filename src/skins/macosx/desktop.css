@@ -90,6 +90,10 @@ html, body {
   border-radius: 3px;
 }
 .mb-menu.open, .mb-menu:hover { background: var(--aqua-blue-2); color: #fff; }
+#appleMenu { display: none; }
+#appleMenu.open { display: flex; }
+#appleMenu:hover { background: #f2f2f2; color: #111; }
+#appleMenu .am-item:hover { background: var(--aqua-blue-2); color: #fff; }
 .mb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-right: 4px; }
 .mb-extra { opacity: .8; font-size: 11px; }
 .mb-clock { font-weight: 600; font-size: 11px; }

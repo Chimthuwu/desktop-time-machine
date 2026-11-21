@@ -65,6 +65,7 @@ button,input,textarea{font:inherit}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .prompt-input{width:100%;padding:5px;border:1px solid #888;background:#fff;user-select:text}
 </style>
+<link rel="stylesheet" href="../../components/SharedApps/apps-theme.css">
 </head>
 <body>
 <main id="desktop">
@@ -83,6 +84,7 @@ button,input,textarea{font:inherit}
       <button class="desk-item" data-app="editor">StyledEdit</button>
       <button class="desk-item" data-app="calculator">Calculator</button>
       <button class="desk-item" data-app="media">MediaPlayer</button>
+      <button class="desk-item" data-app="sharedapps">Applications</button>
       <button class="desk-item" data-app="about">About BeOS</button>
       <div id="workspace-grid">
         <button class="workspace active" data-workspace="0">1</button>
@@ -235,7 +237,7 @@ button,input,textarea{font:inherit}
     const off=document.createElement('button');off.className='be-button';off.textContent='Shut Down';off.onclick=()=>DTM&&DTM.system&&DTM.system.exit&&DTM.system.exit();
     actions.append(cancel,off);box.append(actions);shade.append(box);root.append(shade);
   }
-  const apps={tracker:()=>fileWindow(''),terminal,editor,calculator,media,about,shutdown};
+  const apps={tracker:()=>fileWindow(''),terminal,editor,calculator,media,about,shutdown,sharedapps:()=>{if(window.DTMApps)window.DTMApps.open('launcher');}};
   document.querySelectorAll('.be-icon').forEach(icon=>{
     icon.addEventListener('click',()=>document.querySelectorAll('.be-icon').forEach(other=>other.classList.toggle('selected',other===icon)));
     icon.addEventListener('dblclick',()=>apps[icon.dataset.app]&&apps[icon.dataset.app]());
@@ -260,5 +262,9 @@ button,input,textarea{font:inherit}
       } catch (e) { console.warn('[DTM] beos mirror mount failed:', e); }
     })();
 </script>
+<!-- Shared application ecosystem: one implementation, era-specific presentation -->
+<script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/SharedApps/apps-core.js"></script>
+<script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'beos', theme: 'beos' });</script>
 </body>
 </html>
