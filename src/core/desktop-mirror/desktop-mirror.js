@@ -206,6 +206,15 @@
     { app: 'mediaplayer', re: /potplayer/i }
   ];
 
+  // Real Windows programs whose retro counterpart lives in the shared
+  // application framework (components/SharedApps) instead of the shell. These
+  // open inside the active skin rather than raising the real Windows window.
+  const RETRO_SHARED_APP_RULES = [
+    { app: 'notepad', re: /(^|[\\/])notepad(\.exe)?$/i },
+    { app: 'calculator', re: /(^|[\\/])(calc|calculator|calculatorapp)(\.exe)?$/i },
+    { app: 'paint', re: /(^|[\\/])(mspaint|paint)(\.exe)?$/i }
+  ];
+
   // Maps a desktop item, pinned entry or running window to its retro app.
   // Window titles are deliberately ignored so a browser tab titled "Discord"
   // is never hijacked.
@@ -214,6 +223,16 @@
     const probe = [entry.name, entry.processName, entry.path].filter(Boolean).join(' ');
     if (!probe) return null;
     for (const rule of RETRO_APP_RULES) {
+      if (rule.re.test(probe)) return rule.app;
+    }
+    return null;
+  }
+
+  function retroSharedAppForEntry(entry) {
+    if (!entry) return null;
+    const probe = [entry.name, entry.processName, entry.path].filter(Boolean).join(' ');
+    if (!probe) return null;
+    for (const rule of RETRO_SHARED_APP_RULES) {
       if (rule.re.test(probe)) return rule.app;
     }
     return null;
@@ -1055,6 +1074,68 @@
       state.selection.add(iconKey(icon));
     }
 
+    // ---- Trash: drag-and-drop and the Delete key recycle real files ----
+
+    // Any Trash in the skin (the desktop icon, or the Mac Dock) marks itself
+    // with data-dtm-recycle so a drop is recognised wherever the user aims.
+    function dropTargetAt(x, y, dragged) {
+      // elementsFromPoint keeps the Trash visible under the icon being dragged;
+      // the dragged nodes themselves must never count as a drop target.
+      const stack = typeof doc.elementsFromPoint === 'function'
+        ? doc.elementsFromPoint(x, y)
+        : [doc.elementFromPoint(x, y)];
+      for (const node of stack) {
+        if (!node || !node.closest) continue;
+        if (dragged && dragged.some((el) => el === node || el.contains(node))) continue;
+        const target = node.closest('[data-dtm-recycle]');
+        if (target) return target;
+      }
+      return null;
+    }
+
+    async function recycleNodes(nodes) {
+      const paths = (nodes || [])
+        .filter((node) => node && node.dataset.path && !node.dataset.system)
+        .map((node) => node.dataset.path);
+      if (!paths.length) return false;
+      try {
+        for (const path of paths) await DTM.fs.recycle(path);
+        clearSelection();
+        render(true);
+        return true;
+      } catch (error) {
+        alert('Could not delete: ' + error.message);
+        render();
+        return false;
+      }
+    }
+
+    function selectedDesktopNodes() {
+      return Array.from(layer.querySelectorAll('.dtm-icon.selected[data-path]'))
+        .filter((node) => !node.dataset.system);
+    }
+
+    // Delete/Backspace only belongs to the desktop while the desktop was the
+    // last thing touched; otherwise a stale selection could be deleted while
+    // the user works in an Explorer window or a dialog.
+    let desktopWasLastTouched = false;
+    track(doc, 'pointerdown', (e) => { desktopWasLastTouched = false; }, true);
+    track(layer, 'pointerdown', () => { desktopWasLastTouched = true; }, true);
+
+    // Delete/Backspace sends the current selection to the Trash, like Explorer.
+    // Typing in a rename box or dialog input must never delete files.
+    track(doc, 'keydown', (e) => {
+      if (e.defaultPrevented) return;
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (!desktopWasLastTouched) return;
+      const target = e.target;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ''))) return;
+      const nodes = selectedDesktopNodes();
+      if (!nodes.length) return;
+      e.preventDefault();
+      recycleNodes(nodes);
+    });
+
     // Releases that never reach the icon (an ancestor captured the pointer)
     // still end every in-flight drag, so nothing stays glued to the cursor.
     const activeDrags = new Set();
@@ -1068,7 +1149,7 @@
     // arrangement the user picked, and each moved icon keeps its new position.
     function makeIconDraggable(icon, storeKey) {
       const DRAG_THRESHOLD = 3;
-      let down = false, dragged = false, startX = 0, startY = 0, group = [];
+      let down = false, dragged = false, startX = 0, startY = 0, lastX = 0, lastY = 0, group = [];
 
       icon.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
@@ -1093,6 +1174,8 @@
 
       icon.addEventListener('pointermove', (e) => {
         if (!down) return;
+        lastX = e.clientX;
+        lastY = e.clientY;
         // A move only drags while the button is still held. Without this a
         // click whose pointerup lands elsewhere leaves the icon glued to the
         // cursor, so it slides around on a plain hover.
@@ -1107,12 +1190,21 @@
         });
       });
 
-      const stop = () => {
+      const stop = (event) => {
         if (!down) return;
         down = false;
         if (!dragged) return;
         // The click that follows a drag would otherwise clear the selection.
         icon._skipClick = true;
+        const point = (event && typeof event.clientX === 'number')
+          ? event : { clientX: lastX, clientY: lastY };
+        // Dropping the selection on the Trash recycles it where it lands;
+        // its layout position is left untouched.
+        const draggedNodes = group.map((entry) => entry.node);
+        if (dropTargetAt(point.clientX, point.clientY, draggedNodes)) {
+          recycleNodes(draggedNodes);
+          return;
+        }
         // A refresh may have replaced the layer mid-drag. Detached nodes
         // report (0,0); never persist those coordinates.
         if (!icon.isConnected) return;
@@ -1244,6 +1336,7 @@
       icon.addEventListener('dblclick', (e) => { e.stopPropagation(); systemActivate(kind); });
       icon.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showSystemMenu(e.clientX, e.clientY, kind); });
       icon.dataset.systemKind = kind;
+      if (kind === 'recycle') icon.dataset.dtmRecycle = '1';
       makeIconDraggable(icon, 'system:' + kind);
       return icon;
     }
@@ -1970,6 +2063,7 @@
       openRetroShortcut(window.dtmEngine, doc || document, item);
     // Real taskbar entries (running windows / pinned apps) route the same way.
     window.dtmEngine.retroAppForTaskbar = retroAppForEntry;
+    window.dtmEngine.retroSharedAppForTaskbar = retroSharedAppForEntry;
     window.dtmEngine.openRetroApp = (app, doc) => openRetroApp(doc || document, app);
     // Lightweight diagnostics for verification tooling (no UI impact).
     window.dtmEngine.dtmDesktopStats = () => ({

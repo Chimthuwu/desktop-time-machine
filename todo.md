@@ -19,10 +19,12 @@
 - [x] Browser engine URL validation restricted to http(s).
 - [x] Mirror listener cleanup on unmount; startup failure recovery UI.
 - [x] Manifest validation improvements and fallback-registry consistency checks.
+- [x] Mac OS X Dock brings running apps up inside the container: skin windows now park open shell windows, and real Windows windows with a retro counterpart (Discord, Notepad, Calculator, Paint) open it instead of raising the host window.
+- [x] Mac OS X desktop files can be sent to the Trash by dragging them onto the Dock/desktop Trash or by selecting them and pressing Delete.
 
 ## Urgent UX bugs — fix ASAP
 
-- [ ] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`.
+- [x] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`.
 
 ## Explicitly out of scope
 

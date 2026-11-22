@@ -32,6 +32,22 @@
     });
   }
 
+  // A cold start mounts the remembered skin without emitting dtm:skin-changed,
+  // so read the real current skin rather than trusting the initial default.
+  function currentSkinId() {
+    try {
+      const manager = window.dtmEngine && window.dtmEngine.skins;
+      const skin = manager && manager.getCurrentSkin ? manager.getCurrentSkin() : null;
+      if (skin && skin.id) return skin.id;
+    } catch (e) { /* fall back to the tracked id */ }
+    return activeSkinId;
+  }
+
+  function isMacSkin() {
+    const id = currentSkinId();
+    return id === 'macos8' || id === 'macosx';
+  }
+
   // One live window per app, keyed by app id.
   const windows = new Map();
   let zTop = 900;
@@ -352,8 +368,9 @@
       return;
     }
 
+    const isMac = isMacSkin();
     const win = document.createElement('div');
-    win.className = 'dtmshell-win active';
+    win.className = 'dtmshell-win active' + (isMac ? ' mac' : '');
     const offset = windows.size * 26;
     win.style.left = (56 + offset) + 'px';
     win.style.top = (36 + offset) + 'px';
@@ -362,14 +379,14 @@
     win.style.zIndex = String(++zTop);
 
     const titlebar = document.createElement('div');
-    titlebar.className = 'dtmshell-title';
+    titlebar.className = isMac ? 'dtmshell-title mac' : 'dtmshell-title';
     const icon = document.createElement('span');
     icon.className = 'dtmshell-title-icon';
     icon.textContent = config.icon;
     const titleText = document.createElement('span');
     titleText.className = 'dtmshell-title-text';
     titleText.textContent = config.title;
-    titlebar.append(icon, titleText, makeButtons(app));
+    titlebar.append(icon, titleText, makeButtons(app, isMac));
 
     const body = document.createElement('div');
     body.className = 'dtmshell-body';
@@ -378,7 +395,7 @@
 
     {
       const toolbar = document.createElement('div');
-      toolbar.className = 'dtmshell-toolbar';
+      toolbar.className = 'dtmshell-toolbar' + (isMac ? ' mac' : '');
       const reload = document.createElement('button');
       reload.className = 'dtmshell-btn';
       reload.textContent = 'Refresh';
@@ -403,7 +420,7 @@
     const statusLeft = document.createElement('span');
     statusLeft.textContent = 'Loading…';
     const statusRight = document.createElement('span');
-    statusRight.textContent = 'Discord for Windows 95';
+    statusRight.textContent = config.title + (isMac ? ' for Mac OS X' : ' for Windows 95');
     status.append(statusLeft, statusRight);
     body.appendChild(status);
     statusText = statusLeft;
@@ -507,7 +524,7 @@
   }
 
   function browserChrome(startUrl) {
-      const isMac = activeSkinId === 'macos8' || activeSkinId === 'macosx';
+      const isMac = isMacSkin();
       const config = APP_CONFIG.browser;
       const win = document.createElement('div');
       win.className = 'dtmshell-win active' + (isMac ? ' mac' : '');
@@ -1287,6 +1304,22 @@ async function syncTabsFromBridge(entry) {
     deactivateBrowser(entry);
   }, true);
 
+  // Shell windows are drawn in this top-level document, above the whole skin
+  // iframe. Without this, a window opened in the skin (Terminal, Notepad, ...)
+  // would appear behind an open Discord window and look like it never opened.
+  // Touching the retro desktop therefore parks every shell window, exactly as
+  // clicking another window would; its Dock/taskbar entry brings it back.
+  function parkShellWindows() {
+    windows.forEach((entry, app) => {
+      // The retro browser keeps its window on screen and only parks its page.
+      if (app === 'browser' || entry.win.style.display === 'none') return;
+      entry.win.classList.remove('active');
+      entry.win.style.display = 'none';
+      notifySkin(app, true, true);
+    });
+    deactivateBrowser(windows.get('browser'));
+  }
+
   // Dismiss an open menu on any click elsewhere, or on Escape.
   document.addEventListener('pointerdown', (event) => {
     if (!openMenu) return;
@@ -1346,7 +1379,7 @@ async function syncTabsFromBridge(entry) {
     const doc = frame && frame.contentDocument;
     if (!doc || doc === boundSkinDoc) return;
     boundSkinDoc = doc;
-    doc.addEventListener('pointerdown', () => deactivateBrowser(windows.get('browser')), true);
+    doc.addEventListener('pointerdown', () => parkShellWindows(), true);
   }
 
   function formatTime(seconds) {
@@ -1598,6 +1631,8 @@ async function syncTabsFromBridge(entry) {
     if (!data || typeof data !== 'object') return;
     if (data.type === 'dtm:launch-webapp') {
       openWindow(data.app, data.url);
+    } else if (data.type === 'dtm:webapp-park') {
+      parkShellWindows();
     } else if (data.type === 'dtm:webapp-focus') {
       focusWindow(data.app);
     } else if (data.type === 'dtm:webapp-close') {

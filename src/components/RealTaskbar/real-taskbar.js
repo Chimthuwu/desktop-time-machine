@@ -38,6 +38,17 @@
   }
 
   async function activateWindow(desc) {
+    // A real window that has a retro counterpart opens that counterpart inside
+    // the skin, so activating it never pulls a Windows window over the desktop.
+    try {
+      if (DTM.retroSharedAppForTaskbar && window.DTMApps) {
+        const shared = DTM.retroSharedAppForTaskbar({ processName: desc.processName, path: desc.path });
+        if (shared && window.DTMApps.list().some((definition) => definition.id === shared)) {
+          window.DTMApps.open(shared);
+          return true;
+        }
+      }
+    } catch (e) {}
     try {
       if (DTM.retroAppForTaskbar) {
         const app = DTM.retroAppForTaskbar({ processName: desc.processName, path: desc.path });

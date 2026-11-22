@@ -18,7 +18,14 @@
     if (id === activeApp) updateMenus(id);
   }
 
+  // Shell windows (Discord, browser, ...) are drawn above this whole iframe, so
+  // a Mac window can only be seen when the shell parks its own windows first.
+  function parkShellWindows() {
+    if (window.parent) window.parent.postMessage({ type: 'dtm:webapp-park' }, '*');
+  }
+
   function focusWindow(win) {
+    parkShellWindows();
     activeWindow = win;
     windows.forEach((entry) => {
       const active = entry.win === win;
@@ -160,7 +167,17 @@
       const dot = document.createElement('span');
       dot.className = 'running-dot';
       icon.append(glyph, gloss, dot);
-      icon.addEventListener('click', () => window.DTMRealTaskbar.activateWindow(item));
+      icon.addEventListener('click', () => {
+        // A real window that maps to a shell app (Discord) is opened by the
+        // taskbar helper itself; every other route needs the shell to step
+        // aside so the skin's own window is not left hidden behind it.
+        let shellApp = null;
+        try {
+          if (DTM && DTM.retroAppForTaskbar) shellApp = DTM.retroAppForTaskbar({ processName: item.processName, path: item.path });
+        } catch (error) { /* mapping is best-effort */ }
+        if (!shellApp) parkShellWindows();
+        window.DTMRealTaskbar.activateWindow(item);
+      });
       dock.appendChild(icon);
     });
 
@@ -178,7 +195,12 @@
       label.className = 'dock-label';
       label.textContent = state.title || 'Window';
       item.append(glyph, gloss, label);
-      item.addEventListener('click', () => window.parent.postMessage({ type: 'dtm:window-action', id: state.id, app: state.app, action: 'activate' }, '*'));
+      item.addEventListener('click', () => {
+        // Shell windows are already the top layer; only skin-hosted windows
+        // need the shell to park before they can be seen.
+        if (state.app !== 'shell-app') parkShellWindows();
+        window.parent.postMessage({ type: 'dtm:window-action', id: state.id, app: state.app, action: 'activate' }, '*');
+      });
       dock.appendChild(item);
     });
     const separator = document.createElement('span');
@@ -187,6 +209,8 @@
     const trash = document.createElement('div');
     trash.className = 'dock-icon';
     trash.dataset.app = 'trash';
+    // Lets the real desktop mirror treat the Dock as a drop target for files.
+    trash.dataset.dtmRecycle = '1';
     trash.title = 'Trash';
     trash.replaceChildren(dockGlyph('trash', '🗑️'));
     const trashGloss = document.createElement('span');
