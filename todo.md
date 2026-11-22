@@ -24,7 +24,7 @@
 
 ## Urgent UX bugs — fix ASAP
 
-- [x] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`.
+- [x] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`. **FIXED:** Added `emitInitialSkinChanged()` to SkinManager and call it after `mountActiveSkin()` so shell components receive the correct active skin on cold start.
 
 ## Explicitly out of scope
 
