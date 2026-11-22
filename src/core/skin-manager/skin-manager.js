@@ -365,6 +365,12 @@ class SkinManager {
 
     return true;
   }
+
+  /** Emit skin-changed for the initially mounted skin so shell components update. */
+  emitInitialSkinChanged() {
+    const skin = this.getCurrentSkin();
+    if (skin) this.engine.emit('dtm:skin-changed', skin);
+  }
 }
 
 window.dtmSkinManager = new SkinManager(window.dtmEngine);

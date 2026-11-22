@@ -80,6 +80,8 @@
           console.error('[DTM] Startup skin could not be mounted.');
           showStartupFailure('No desktop skin could be loaded. Check the installed skins and try again.');
         }
+        // Ensure shell components (Discord, browser windows) know the active skin for correct chrome
+        window.dtmSkinManager.emitInitialSkinChanged();
       } catch (error) {
         console.error('[DTM] Startup failed:', error);
         showStartupFailure(error && error.message ? error.message : String(error));
