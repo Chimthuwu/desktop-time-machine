@@ -26,6 +26,8 @@
 
 - [x] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`. **FIXED:** Added `emitInitialSkinChanged()` to SkinManager and call it after `mountActiveSkin()` so shell components receive the correct active skin on cold start.
 
+- [ ] **Mac OS X: the little dot next to the clock opens real Windows Settings.** Clicking the small dot beside the time in the Mac OS X menu bar launches the host Windows Settings app, which breaks the skin illusion. Fix: intercept that click inside the Mac OS X skin and show a skinned Mac-style Date & Time / System Preferences panel instead of handing it to Windows. Reported by user 2026-11-23.
+
 ## Explicitly out of scope
 
 The product is **one computer, one underlying environment, multiple historical presentations**. These are not roadmap items and must not be introduced:
