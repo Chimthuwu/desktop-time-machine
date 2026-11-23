@@ -36,6 +36,11 @@ The product is **one computer, one underlying environment, multiple historical p
 
 Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; user files and application data remain shared through the real host filesystem.
 
+## Mac OS X Trash behavior (user-reported 2026-11-23)
+
+- [ ] **Mac OS X: no Trash icon on the desktop.** Windows shows a Recycle Bin on the desktop, but Mac OS X hard-fixes Trash to the Dock (our taskbar) — so in the Mac OS X skin the Trash icon must NOT render as a desktop icon. It already lives in the Dock.
+- [ ] **Mac OS X: Dock Trash opens the Recycle Bin, labelled "Trash".** Clicking Trash in the Dock should open the Windows Recycle Bin contents, but the window/title must say "Trash" (keep the Mac illusion). Repro: set skin to Mac OS X, open the Dock Trash — currently broken (see user screenshot, 2026-11-23).
+
 ## Deferred engine APIs (planned, not implemented)
 
 - `process`, `windows`, `notify`, `clipboard` and `onSkinUnload` described in `docs/SKIN_API_REFERENCE.md`.
