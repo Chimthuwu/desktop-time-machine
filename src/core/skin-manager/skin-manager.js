@@ -129,6 +129,20 @@ class SkinManager {
         icon: '⚡',
         themeColor: '#4c5860',
         capabilities: ['window-management', 'filesystem', 'application-launcher', 'desktop-icons', 'tabbed-windows', 'deskbar', 'workspaces', 'cli', 'multimedia']
+      },
+      {
+        id: 'msnmessenger',
+        name: 'Messenger 7',
+        era: '2003',
+        period: '2003–2006',
+        version: '1.0.0',
+        description: 'A chat-client desktop: a contact-list window, a blue Messenger chrome for live chat windows, and a taskbar. Discord opens as a contact in a Messenger-styled window.',
+        author: 'Desktop Time Machine',
+        entry: './skins/msnmessenger/desktop.html',
+        status: 'ready',
+        icon: '💬',
+        themeColor: '#2a6cc4',
+        capabilities: ['window-management', 'application-launcher', 'desktop-icons', 'taskbar']
       }
     ];
   }

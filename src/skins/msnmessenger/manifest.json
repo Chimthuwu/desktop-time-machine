@@ -1,0 +1,28 @@
+{
+  "id": "msnmessenger",
+  "name": "Messenger 7",
+  "era": "2003",
+  "period": "2003–2006",
+  "version": "1.0.0",
+  "description": "A chat-client desktop: a contact-list window, a blue Messenger chrome for live chat windows, and a taskbar. Discord opens as a contact in a Messenger-styled window.",
+  "author": "Desktop Time Machine",
+  "entry": "desktop.html",
+  "engineCompatibility": "1.0",
+  "status": "ready",
+  "icon": "💬",
+  "themeColor": "#2a6cc4",
+  "previewImage": null,
+  "capabilities": [
+    "window-management",
+    "application-launcher",
+    "desktop-icons",
+    "taskbar"
+  ],
+  "meta": {
+    "developer": "Desktop Time Machine",
+    "releaseDate": "2003-01-01",
+    "successor": "Windows Live Messenger",
+    "kernelFamily": "Windows NT",
+    "historicalNote": "Original retro-style chat client design inspired by early instant-messaging clients. Not affiliated with any vendor; no vendor artwork is used."
+  }
+}

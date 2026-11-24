@@ -933,6 +933,7 @@
     else if (skinId === 'macosx') { layer.style.top = '0'; layer.style.bottom = '74px'; }
     else if (skinId === 'amiga-workbench') { layer.style.top = '25px'; layer.style.bottom = '0'; }
     else if (skinId === 'beos') { layer.style.top = '0'; layer.style.bottom = '0'; }
+    else if (skinId === 'msnmessenger') { layer.style.top = '0'; layer.style.bottom = '34px'; }
     else if (skinId === 'windowsXP') { layer.style.top = '0'; layer.style.bottom = '38px'; }
     else { layer.style.top = '0'; layer.style.bottom = '42px'; }
     desktop.appendChild(layer);

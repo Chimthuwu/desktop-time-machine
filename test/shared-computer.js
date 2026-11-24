@@ -13,7 +13,7 @@ const path = require('path');
 const { registerIpcHandlers } = require('../electron/main/ipc-handlers');
 
 const ROOT = path.resolve(__dirname, '..');
-const SKINS = ['windows95', 'windows98', 'windowsXP', 'macos8', 'macosx', 'amiga-workbench', 'beos', 'templeos'];
+const SKINS = ['windows95', 'windows98', 'windowsXP', 'macos8', 'macosx', 'amiga-workbench', 'beos', 'templeos', 'msnmessenger'];
 const results = { passed: 0, failed: 0, tests: [] };
 
 function assert(name, condition, detail) {

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' file: data:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' data: file:;">
+<title>Messenger 7</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font:12px Tahoma,Arial,sans-serif;color:#102a4c;user-select:none}
+#desktop{position:fixed;inset:0 0 34px 0;background:linear-gradient(160deg,#9cc6ef,#4f8fd6 70%,#2d6bb8)}
+#contacts{position:absolute;left:24px;top:24px;width:260px;height:520px;display:flex;flex-direction:column;background:#eef5fc;border:1px solid #3a6ea5;border-radius:6px 6px 0 0;box-shadow:2px 3px 8px rgba(0,0,0,.35);overflow:hidden}
+#contacts-title{height:30px;display:flex;align-items:center;padding:0 8px;background:linear-gradient(#5b9be0,#2a6cc4 55%,#1f5bb0);color:#fff;font-weight:bold;text-shadow:1px 1px 0 rgba(0,0,0,.35)}
+#contacts-head{padding:10px;border-bottom:1px solid #b8cfe6;background:linear-gradient(#ffffff,#dbe9f8)}
+#contacts-head .me{font-weight:bold;color:#173f73}
+#contacts-head .status{font-size:11px;color:#3d6aa0}
+#contact-list{flex:1;overflow:auto;padding:4px 0}
+.group{padding:4px 10px;font-weight:bold;color:#173f73;background:#dbe9f8;border-top:1px solid #b8cfe6;border-bottom:1px solid #b8cfe6}
+.contact{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer}
+.contact:hover{background:#cfe3f8}
+.contact .glyph{width:22px;height:22px;display:grid;place-items:center;border:1px solid #7f9fc4;border-radius:3px;background:#fff;font-size:14px}
+.contact .name{flex:1}
+.contact .sub{font-size:10px;color:#4a6f9c}
+.contact.open .name{font-weight:bold}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:34px;display:flex;align-items:center;gap:6px;padding:0 6px;background:linear-gradient(#3d86d9,#1f5bb0);border-top:1px solid #0d3b7a}
+#start{height:26px;padding:0 14px;border:1px solid #0d3b7a;border-radius:12px;background:linear-gradient(#7bd46c,#3f9c38);color:#fff;font-weight:bold;cursor:pointer}
+#running{display:flex;gap:4px;flex:1;overflow:hidden}
+.task{height:26px;min-width:120px;max-width:200px;padding:0 8px;display:flex;align-items:center;gap:6px;border:1px solid #0d3b7a;border-radius:4px;background:linear-gradient(#d6e6f7,#9fbfe3);color:#102a4c;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clock{color:#fff;padding:0 8px;text-shadow:1px 1px 0 #0d3b7a}
+#menu{display:none;position:absolute;left:6px;bottom:38px;width:200px;background:#eef5fc;border:1px solid #3a6ea5;box-shadow:2px 3px 8px rgba(0,0,0,.35)}
+#menu.open{display:block}
+#menu div{padding:6px 10px;cursor:pointer}
+#menu div:hover{background:#cfe3f8}
+</style>
+</head>
+<body>
+<div id="desktop">
+  <section id="contacts">
+    <div id="contacts-title">Messenger 7</div>
+    <div id="contacts-head">
+      <div class="me">Time Traveller</div>
+      <div class="status">● Online</div>
+    </div>
+    <div id="contact-list">
+      <div class="group">Friends (2)</div>
+      <div class="contact" data-open="discord">
+        <span class="glyph">💬</span>
+        <span class="name">Discord<div class="sub">Chat rooms and voice</div></span>
+      </div>
+      <div class="contact" data-open="browser">
+        <span class="glyph">🌐</span>
+        <span class="name">Web Browser<div class="sub">Opens the browser window</div></span>
+      </div>
+      <div class="group">Tools (1)</div>
+      <div class="contact" data-open="timemachine">
+        <span class="glyph">⏳</span>
+        <span class="name">Switch Era<div class="sub">Pick another computer</div></span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="menu">
+  <div data-open="discord">Open Discord</div>
+  <div data-open="browser">Open Web Browser</div>
+  <div data-open="timemachine">Switch Era (F8)</div>
+</div>
+
+<div id="taskbar">
+  <button id="start" type="button">Start</button>
+  <div id="running"></div>
+  <div id="clock"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function openApp(key) {
+    document.getElementById('menu').classList.remove('open');
+    if (key === 'timemachine') {
+      if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
+      return;
+    }
+    if (key === 'discord' || key === 'browser') {
+      if (window.parent) window.parent.postMessage({ type: 'dtm:launch-webapp', app: key }, '*');
+    }
+  }
+
+  document.querySelectorAll('[data-open]').forEach((el) => {
+    el.addEventListener('click', () => openApp(el.getAttribute('data-open')));
+  });
+
+  document.getElementById('start').addEventListener('click', () => {
+    document.getElementById('menu').classList.toggle('open');
+  });
+
+  // Running chat windows appear on the taskbar, as reported by the shell.
+  const running = document.getElementById('running');
+  const tasks = new Map();
+  const labels = { discord: 'Discord', browser: 'Web Browser' };
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || d.type !== 'dtm:webapp-state') return;
+    let t = tasks.get(d.app);
+    if (!d.open) {
+      if (t) { t.remove(); tasks.delete(d.app); }
+      markContacts();
+      return;
+    }
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'task';
+      t.addEventListener('click', () => {
+        if (window.parent) window.parent.postMessage({ type: 'dtm:webapp-focus', app: d.app }, '*');
+      });
+      tasks.set(d.app, t);
+      running.appendChild(t);
+    }
+    t.textContent = labels[d.app] || d.title || d.app;
+    markContacts();
+  });
+
+  function markContacts() {
+    document.querySelectorAll('[data-open]').forEach((el) => {
+      const key = el.getAttribute('data-open');
+      el.classList.toggle('open', tasks.has(key));
+    });
+  }
+
+  function tick() {
+    const d = new Date();
+    document.getElementById('clock').textContent =
+      d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 15000);
+})();
+</script>
+<script>
+  // Mount the REAL Windows desktop mirror on the skin's desktop surface.
+  (function () {
+    try {
+      var DTM = window.parent && window.parent.DTM;
+      var desktop = document.getElementById('desktop');
+      if (DTM && DTM.mountDesktop && desktop) {
+        DTM.mountDesktop({ desktop: desktop, skinId: 'msnmessenger' });
+      }
+    } catch (e) { console.warn('[DTM] msnmessenger mirror mount failed:', e); }
+  })();
+</script>
+</body>
+</html>
