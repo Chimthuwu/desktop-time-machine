@@ -457,6 +457,136 @@
   // ---------------------------------------------------------------------------
   // Real file browser (shared by Explorer, My Computer, Recycle Bin).
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Keyboard model shared by the desktop and Explorer windows, with Windows
+  // conventions: F2 rename, Delete, Enter open, Ctrl+A/C/X/V, arrow keys,
+  // Escape to clear, and type-to-select (a letter jumps to the next item whose
+  // name starts with it; repeating a letter cycles through them).
+  // ---------------------------------------------------------------------------
+  // Cut/copy/paste state shared by every surface (desktop and Explorer windows).
+  let fileClipboard = null; // { mode: 'copy' | 'cut', items: [{ path, name }] }
+  // Only the surface the user touched last reacts to keys.
+  let activeFileSurface = null;
+
+  function isTextEntry(target) {
+    return !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ''));
+  }
+
+  // Index of the item to select for the typed text, or -1.
+  function findTypeAhead(names, typed, current) {
+    const n = names.length;
+    if (!n || !typed) return -1;
+    const sameLetter = [...typed].every((c) => c === typed[0]);
+    const needle = sameLetter ? typed[0] : typed;
+    const base = current >= 0 ? current : 0;
+    const skip = sameLetter && current >= 0 ? 1 : 0;
+    for (let step = 0; step < n; step++) {
+      const i = (base + skip + step) % n;
+      if (String(names[i] || '').toLowerCase().startsWith(needle)) return i;
+    }
+    return -1;
+  }
+
+  // Typed characters are combined for about a second, like Explorer.
+  function createTypeAhead() {
+    let typed = '';
+    let timer = null;
+    return function (char, names, current) {
+      clearTimeout(timer);
+      timer = setTimeout(() => { typed = ''; }, 900);
+      typed += char.toLowerCase();
+      return findTypeAhead(names, typed, current);
+    };
+  }
+
+  // Pastes the shared clipboard into a folder. Pasting a copy into the folder
+  // it came from creates "Copy of <name>"; a cut is a move and clears the
+  // clipboard afterwards. Returns true when a paste was attempted.
+  async function pasteClipboard(DTM, dir) {
+    const clip = fileClipboard;
+    if (!clip || !dir) return false;
+    const errors = [];
+    for (const item of clip.items) {
+      const sameFolder = String(parentPathOf(item.path) || '').toLowerCase() === String(dir).toLowerCase();
+      try {
+        if (clip.mode === 'cut') {
+          if (!sameFolder) await DTM.fs.move(item.path, joinPath(dir, item.name));
+        } else {
+          const name = sameFolder ? 'Copy of ' + item.name : item.name;
+          await DTM.fs.copy(item.path, joinPath(dir, name));
+        }
+      } catch (e) { errors.push(item.name + ': ' + e.message); }
+    }
+    if (clip.mode === 'cut') fileClipboard = null;
+    if (errors.length) alert('Could not paste:\n' + errors.join('\n'));
+    return true;
+  }
+
+  // ctx: items(), selected(), select(index), selectAll(), clear(), open(items),
+  // rename(item), remove(items), paste(), up(), typeAhead(), backspace ('remove' | 'up').
+  function handleFileKey(e, ctx) {
+    if (e.defaultPrevented || e.altKey || isTextEntry(e.target)) return false;
+    const key = e.key;
+    const handled = () => { e.preventDefault(); return true; };
+    if (e.ctrlKey || e.metaKey) {
+      const k = key.toLowerCase();
+      if (k === 'a') { ctx.selectAll(); return handled(); }
+      if (k === 'c' || k === 'x') {
+        const sel = ctx.selected();
+        if (!sel.length) return false;
+        fileClipboard = { mode: k === 'x' ? 'cut' : 'copy', items: sel.map((i) => ({ path: i.path, name: i.name })) };
+        return handled();
+      }
+      if (k === 'v') { ctx.paste(); return handled(); }
+      return false;
+    }
+    if (key === 'F2') {
+      const sel = ctx.selected();
+      if (sel.length !== 1) return false;
+      ctx.rename(sel[0]);
+      return handled();
+    }
+    if (key === 'Delete' || (key === 'Backspace' && ctx.backspace === 'remove')) {
+      const sel = ctx.selected();
+      if (!sel.length) return false;
+      ctx.remove(sel);
+      return handled();
+    }
+    if (key === 'Backspace' && ctx.backspace === 'up') { ctx.up(); return handled(); }
+    if (key === 'Enter') {
+      const sel = ctx.selected();
+      if (!sel.length) return false;
+      ctx.open(sel);
+      return handled();
+    }
+    if (key === 'Escape') {
+      if (!ctx.selected().length) return false;
+      ctx.clear();
+      return handled();
+    }
+    if (key === 'ArrowDown' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft') {
+      const items = ctx.items();
+      if (!items.length) return false;
+      const sel = ctx.selected();
+      const cur = items.findIndex((i) => sel.some((s) => s.path === i.path));
+      const forward = key === 'ArrowDown' || key === 'ArrowRight';
+      const next = cur < 0 ? (forward ? 0 : items.length - 1) : Math.min(items.length - 1, Math.max(0, cur + (forward ? 1 : -1)));
+      ctx.select(next);
+      return handled();
+    }
+    if (key.length === 1 && key !== ' ') {
+      const items = ctx.items();
+      if (!items.length) return false;
+      const sel = ctx.selected();
+      const cur = items.findIndex((i) => sel.length > 0 && i.path === sel[0].path);
+      const idx = ctx.typeAhead(key, items.map((i) => i.name), cur);
+      if (idx < 0) return false;
+      ctx.select(idx);
+      return handled();
+    }
+    return false;
+  }
+
   function buildExplorer(opts) {
     const doc = opts.doc;
     const DTM = opts.DTM;
@@ -533,7 +663,7 @@
         selection = [];
         visibleItems = res.items;
         grid.innerHTML = '';
-        if (res.parentPath) addRow({ name: '.. (Up)', path: res.parentPath, isDirectory: true });
+        if (res.parentPath) addRow({ name: '.. (Up)', path: res.parentPath, isDirectory: true, isUp: true });
         res.items.forEach(addRow);
         status.textContent = res.items.length + ' object(s)' + (res.truncated ? ' (truncated)' : '');
       } catch (e) {
@@ -675,12 +805,47 @@
       setSelection([]);
     });
 
+    // Keyboard: act only while this window is the one the user last touched.
+    const explorerToken = {};
+    const onPointer = () => { activeFileSurface = explorerToken; };
+    wrap.addEventListener('pointerdown', onPointer, true);
+    const fileItems = () => Array.from(grid.querySelectorAll('.dtm-explorer-item'))
+      .map((row) => row._item)
+      .filter((item) => item && !item.isUp);
+    const keyContext = {
+      items: fileItems,
+      selected: () => selection.filter((item) => !item.isUp),
+      select: (index) => { const item = fileItems()[index]; if (item) setSelection([item]); },
+      selectAll: () => setSelection(fileItems()),
+      clear: () => setSelection([]),
+      open: (items) => {
+        const first = items[0];
+        if (first.isDirectory) load(first.path);
+        else items.forEach((item) => openItem(item));
+      },
+      // Rename and Delete reuse the toolbar actions, so both behave the same.
+      rename: (item) => { setSelection([item]); rn.click(); },
+      remove: (items) => { setSelection(items); del.click(); },
+      paste: async () => { if (await pasteClipboard(DTM, current)) load(current); },
+      up: () => up.click(),
+      backspace: 'up',
+      typeAhead: createTypeAhead()
+    };
+    const onKey = (e) => {
+      if (activeFileSurface !== explorerToken) return;
+      handleFileKey(e, keyContext);
+    };
+    doc.addEventListener('keydown', onKey);
+
     load(current);
     return {
       wrap,
       refresh: () => load(current),
       dispose: () => {
         ['pointerup', 'pointercancel'].forEach((type) => doc.removeEventListener(type, stopBand));
+        doc.removeEventListener('keydown', onKey);
+        wrap.removeEventListener('pointerdown', onPointer, true);
+        if (activeFileSurface === explorerToken) activeFileSurface = null;
       }
     };
   }
@@ -1116,25 +1281,55 @@
         .filter((node) => !node.dataset.system);
     }
 
-    // Delete/Backspace only belongs to the desktop while the desktop was the
-    // last thing touched; otherwise a stale selection could be deleted while
-    // the user works in an Explorer window or a dialog.
-    let desktopWasLastTouched = false;
-    track(doc, 'pointerdown', (e) => { desktopWasLastTouched = false; }, true);
-    track(layer, 'pointerdown', () => { desktopWasLastTouched = true; }, true);
+    // Keys act only while the desktop is the surface the user touched last.
+    // Keyboard handling is shared with Explorer windows (see handleFileKey).
+    const surfaceToken = {};
+    track(doc, 'pointerdown', () => { activeFileSurface = null; }, true);
+    track(layer, 'pointerdown', () => { activeFileSurface = surfaceToken; }, true);
 
-    // Delete/Backspace sends the current selection to the Trash, like Explorer.
-    // Typing in a rename box or dialog input must never delete files.
+    function desktopEntries() {
+      return Array.from(layer.querySelectorAll('.dtm-icon[data-path]'))
+        .filter((node) => !node.dataset.system)
+        .map((node) => ({
+          node,
+          name: node.dataset.name || '',
+          path: node.dataset.path,
+          isDirectory: node.dataset.dir === '1',
+          isShortcut: node.dataset.shortcut === '1'
+        }))
+        .sort((x, y) => x.name.localeCompare(y.name, undefined, { sensitivity: 'base' }));
+    }
+
+    const desktopKeys = {
+      items: desktopEntries,
+      selected: () => desktopEntries().filter((entry) => entry.node.classList.contains('selected')),
+      select: (index) => {
+        const entry = desktopEntries()[index];
+        if (!entry) return;
+        clearSelection();
+        selectIcon(entry.node, false);
+      },
+      selectAll: () => {
+        clearSelection();
+        desktopEntries().forEach((entry) => selectIcon(entry.node, true));
+      },
+      clear: () => clearSelection(),
+      open: (items) => items.forEach((item) => openDesktopItem(item)),
+      rename: (item) => startRename(item, item.node),
+      remove: (items) => recycleNodes(items.map((item) => item.node)),
+      paste: async () => {
+        const base = desktopBase();
+        if (!base) { alert('Desktop location unknown.'); return; }
+        if (await pasteClipboard(DTM, base)) render(true);
+      },
+      backspace: 'remove',
+      typeAhead: createTypeAhead()
+    };
+
+    // Delete and Backspace send the selection to the Trash, as Explorer does.
     track(doc, 'keydown', (e) => {
-      if (e.defaultPrevented) return;
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      if (!desktopWasLastTouched) return;
-      const target = e.target;
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ''))) return;
-      const nodes = selectedDesktopNodes();
-      if (!nodes.length) return;
-      e.preventDefault();
-      recycleNodes(nodes);
+      if (activeFileSurface !== surfaceToken) return;
+      handleFileKey(e, desktopKeys);
     });
 
     // Releases that never reach the icon (an ancestor captured the pointer)
@@ -1349,10 +1544,19 @@
       else if (kind === 'mediaplayer') openRetroApp(doc, 'mediaplayer');
     }
 
+    // A skin that owns its Explorer (Windows 95 and 98) opens folders there,
+    // so they wear the era's own Explorer window instead of the generic one.
+    function skinOpenFolder(path) {
+      const host = doc.defaultView;
+      if (!host || typeof host.dtmOpenFolder !== 'function') return false;
+      return host.dtmOpenFolder(path) === true;
+    }
+
     async function openDesktopItem(item) {
       try {
         if (await openRetroShortcut(DTM, doc, item)) return;
         if (item.isDirectory) {
+          if (skinOpenFolder(item.path)) return;
           const ex = buildExplorer({ doc, DTM, skinId, desktop, path: item.path });
           openWindow({ doc, skinId, desktop, title: item.name, width: 620, height: 440, content: ex.wrap, onClose: ex.dispose });
           return;
@@ -1364,7 +1568,6 @@
     }
 
     // ---- context menus (Windows 95 structure) ----
-    let clipboard = null;
     let arrangeMode = null;
     let autoArrange = false;
 
@@ -1573,16 +1776,9 @@
     }
 
     async function pasteIntoDesktop() {
-      if (!clipboard) return;
       const base = desktopBase();
       if (!base) { alert('Desktop location unknown.'); return; }
-      const dest = joinPath(base, clipboard.name);
-      try {
-        if (clipboard.mode === 'cut') await DTM.fs.move(clipboard.path, dest);
-        else await DTM.fs.copy(clipboard.path, dest);
-        clipboard = null;
-        render(true);
-      } catch (e) { alert('Could not paste: ' + e.message); }
+      if (await pasteClipboard(DTM, base)) render(true);
     }
 
     function showContextMenu(x, y, item, icon) {
@@ -1596,14 +1792,15 @@
       const m = el(doc, 'div', 'dtm-context');
       menuAdd(m, labels.open, () => openDesktopItem(item));
       menuAdd(m, labels.explore, () => {
+        if (item.isDirectory && skinOpenFolder(item.path)) return;
         const target = item.isDirectory ? item.path : (parentPathOf(item.path) || item.path);
         const ex = buildExplorer({ doc, DTM, skinId, desktop, path: target });
         openWindow({ doc, skinId, desktop, title: 'Exploring - ' + item.name, width: 620, height: 440, app: 'explorer', icon: '📁', content: ex.wrap, onClose: ex.dispose });
       });
       if (labels.find) menuAdd(m, labels.find, null, true);
       menuSep(m);
-      menuAdd(m, labels.cut, () => { clipboard = { mode: 'cut', path: item.path, name: item.name }; });
-      menuAdd(m, labels.copy, () => { clipboard = { mode: 'copy', path: item.path, name: item.name }; });
+      menuAdd(m, labels.cut, () => { fileClipboard = { mode: 'cut', items: [{ path: item.path, name: item.name }] }; });
+      menuAdd(m, labels.copy, () => { fileClipboard = { mode: 'copy', items: [{ path: item.path, name: item.name }] }; });
       if (labels.alias) menuAdd(m, labels.alias, null, true);
       menuAdd(m, labels.delete, () => deleteItem(item));
       menuAdd(m, labels.rename, () => startRename(item, icon));
@@ -1705,7 +1902,9 @@
       const base = desktopBase();
       if (!base) { alert('Desktop location unknown.'); return; }
       const skinWin = doc.defaultView;
-      if (skinWin && typeof skinWin.openApp === 'function') {
+      if (skinWin && typeof skinWin.dtmOpenCommandPrompt === 'function') {
+        skinWin.dtmOpenCommandPrompt(base);
+      } else if (skinWin && typeof skinWin.openApp === 'function') {
         skinWin.openApp('terminal', { cwd: base });
       } else {
         openTerminalHere();
@@ -1755,7 +1954,7 @@
         render(true);
       });
       menuSep(m);
-      menuAdd(m, 'Paste', pasteIntoDesktop, !clipboard);
+      menuAdd(m, 'Paste', pasteIntoDesktop, !fileClipboard);
       if (options.pasteShortcut) menuAdd(m, 'Paste Shortcut', null, true);
       menuSub(m, 'New', (sub) => {
         menuAdd(sub, 'Folder', newFolder);
@@ -2062,6 +2261,7 @@
     // Skins with their own real-taskbar mirror reuse the same shortcut routing.
     window.dtmEngine.openRetroShortcut = (item, doc) =>
       openRetroShortcut(window.dtmEngine, doc || document, item);
+  window.dtmMirrorKeys = { findTypeAhead: findTypeAhead, handleFileKey: handleFileKey, pasteClipboard: pasteClipboard };
     // Real taskbar entries (running windows / pinned apps) route the same way.
     window.dtmEngine.retroAppForTaskbar = retroAppForEntry;
     window.dtmEngine.retroSharedAppForTaskbar = retroSharedAppForEntry;

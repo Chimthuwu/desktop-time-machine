@@ -15,9 +15,10 @@
     "capture:fixes": "electron test/capture-fixes.js",
     "test:user-fixes": "electron test/user-fixes.js",
     "capture:user-fixes": "electron test/capture-user-fixes.js",
-    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps && npm run test:desktop && npm run test:user-fixes && npm run test:msn",
+    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps && npm run test:desktop && npm run test:user-fixes && npm run test:msn && npm run test:keys",
     "screenshots": "electron test/capture-gallery.js",
-    "test:msn": "electron test/msn-skin.js"
+    "test:msn": "electron test/msn-skin.js",
+    "test:keys": "electron test/file-keyboard.js"
   },
   "keywords": [
     "retro",
