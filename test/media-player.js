@@ -43,12 +43,13 @@ app.whenReady().then(async () => {
   try {
     // ---- queue logic (pure) ----
 
+    await win.loadFile(path.join(ROOT, 'src/index.html'));
     // ---- the Windows 98 player with sound ----
     await win.webContents.executeJavaScript(`localStorage.setItem('dtm_active_skin', 'windows98')`);
     await win.webContents.reload();
     await wait(2200);
     const logic = await win.webContents.executeJavaScript(`(() => {
-      const M = window.DTMMediaPlayer;
+      const M = document.getElementById('skin-viewport').contentWindow.DTMMediaPlayer;
       return {
         nextPlain: M.nextIndex({ count: 3, index: 0, shuffle: false, repeat: 'off' }),
         nextEnd: M.nextIndex({ count: 3, index: 2, shuffle: false, repeat: 'off' }),
