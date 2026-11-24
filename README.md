@@ -20,7 +20,7 @@ Screenshots are captured from the real application by `npm run screenshots`.
 
 ## 🌟 Available operating systems
 
-All eight skins are registered and loadable:
+All nine skins are registered and loadable:
 
 - **Windows 95 (1995)** — teal desktop, Start menu, grey 3D bevels, taskbar, Notepad, Paint, Minesweeper, Display Properties, DOOM launcher and a limited Command Prompt.
 - **Windows 98 (1998)** — Active Desktop styling, Quick Launch, Explorer, Paint, Minesweeper and a two-column Start menu.
@@ -30,6 +30,7 @@ All eight skins are registered and loadable:
 - **Amiga Workbench 3.1 (1992)** — screen bar, disk/drawer icons, Intuition-style windows and AmigaShell.
 - **BeOS R5 (2000)** — Deskbar, tabbed windows, Tracker and four workspaces.
 - **TempleOS (2013)** — 640×480 sixteen-colour display and a HolyC-inspired command prompt.
+- **Messenger 7 (2003, experimental)** — a contact-list window and taskbar. Discord opens as a contact in a Messenger-styled window, with an optional "Messenger look" accent toggle. Original styling only; no vendor artwork.
 
 The **Era Switcher** (`F8`) shows the full gallery and remembers the selection between launches. Personal settings such as desktop icon positions are stored per skin.
 

@@ -21,6 +21,27 @@
     mediaplayer: { title: 'Windows Media Player', icon: '🎬' }
   };
 
+  // Optional "Messenger look" for Discord under the MSN skin. It is a user
+  // stylesheet injected into the guest page: it recolours accents only and
+  // never touches Discord's DOM. Discord changes its CSS often, so this can
+  // stop matching; the toggle turns it off.
+  const MSN_STYLE_KEY = 'dtm_msn_discord_style';
+  const MSN_DISCORD_CSS = ':root { --brand-experiment: #2a6cc4 !important; --brand-500: #2a6cc4 !important; --text-link: #1f5bb0 !important; }';
+
+  function msnStyleOn() {
+    try { return localStorage.getItem(MSN_STYLE_KEY) !== 'off'; } catch (e) { return true; }
+  }
+
+  function setMsnStyle(entry, on) {
+    if (!entry || !entry.webview) return;
+    const wv = entry.webview;
+    try {
+      if (entry.msnStyleKey) { wv.removeInsertedCSS(entry.msnStyleKey).catch(() => {}); entry.msnStyleKey = null; }
+      if (on) wv.insertCSS(MSN_DISCORD_CSS).then((key) => { entry.msnStyleKey = key; }).catch(() => {});
+    } catch (e) { /* guest not ready */ }
+    try { localStorage.setItem(MSN_STYLE_KEY, on ? 'on' : 'off'); } catch (e) {}
+  }
+
   // Track active skin for styling
   let activeSkinId = 'windows95';
 
@@ -29,6 +50,15 @@
     window.dtmEngine.on('dtm:skin-changed', (skin) => {
       activeSkinId = skin.id;
       if (skin.id !== 'macosx') Array.from(safariWindows.keys()).forEach(closeSafariWeb);
+      // Chrome is fixed when a window is created, so a Discord/browser window
+      // whose chrome no longer matches the new skin is closed. Its web session
+      // lives in the persistent partition, so reopening it keeps the login.
+      Array.from(windows.keys()).forEach((app) => {
+        if (app !== 'discord' && app !== 'browser') return;
+        const entry = windows.get(app);
+        const current = entry.flavor || (entry.isMac ? 'mac' : 'win');
+        if (current !== chromeFlavor(app, skin.id)) closeWindow(app);
+      });
     });
   }
 
@@ -46,6 +76,15 @@
   function isMacSkin() {
     const id = currentSkinId();
     return id === 'macos8' || id === 'macosx';
+  }
+
+  // Window chrome flavour: 'mac' (Aqua/Platinum), 'msn' (Messenger look, used
+  // only by Discord in the MSN skin) or 'win' (Windows furniture).
+  function chromeFlavor(app, skinId) {
+    const id = skinId || currentSkinId();
+    if (id === 'macos8' || id === 'macosx') return 'mac';
+    if (id === 'msnmessenger' && app === 'discord') return 'msn';
+    return 'win';
   }
 
   // One live window per app, keyed by app id.
@@ -368,9 +407,11 @@
       return;
     }
 
-    const isMac = isMacSkin();
+    const flavor = chromeFlavor(app);
+    const isMac = flavor === 'mac';
+    const isMsn = flavor === 'msn';
     const win = document.createElement('div');
-    win.className = 'dtmshell-win active' + (isMac ? ' mac' : '');
+    win.className = 'dtmshell-win active' + (isMac ? ' mac' : '') + (isMsn ? ' msn' : '');
     const offset = windows.size * 26;
     win.style.left = (56 + offset) + 'px';
     win.style.top = (36 + offset) + 'px';
@@ -379,7 +420,7 @@
     win.style.zIndex = String(++zTop);
 
     const titlebar = document.createElement('div');
-    titlebar.className = isMac ? 'dtmshell-title mac' : 'dtmshell-title';
+    titlebar.className = 'dtmshell-title' + (isMac ? ' mac' : '') + (isMsn ? ' msn' : '');
     const icon = document.createElement('span');
     icon.className = 'dtmshell-title-icon';
     icon.textContent = config.icon;
@@ -395,7 +436,7 @@
 
     {
       const toolbar = document.createElement('div');
-      toolbar.className = 'dtmshell-toolbar' + (isMac ? ' mac' : '');
+      toolbar.className = 'dtmshell-toolbar' + (isMac ? ' mac' : '') + (isMsn ? ' msn' : '');
       const reload = document.createElement('button');
       reload.className = 'dtmshell-btn';
       reload.textContent = 'Refresh';
@@ -405,6 +446,17 @@
       home.textContent = 'Discord Home';
       home.addEventListener('click', () => { try { webview.loadURL(config.url); } catch (e) {} });
       toolbar.append(reload, home);
+      if (isMsn) {
+        const look = document.createElement('button');
+        look.className = 'dtmshell-btn';
+        look.textContent = msnStyleOn() ? 'Messenger look: on' : 'Messenger look: off';
+        look.addEventListener('click', () => {
+          const next = !msnStyleOn();
+          setMsnStyle(windows.get(app), next);
+          look.textContent = next ? 'Messenger look: on' : 'Messenger look: off';
+        });
+        toolbar.append(look);
+      }
       body.appendChild(toolbar);
     }
 
@@ -420,14 +472,14 @@
     const statusLeft = document.createElement('span');
     statusLeft.textContent = 'Loading…';
     const statusRight = document.createElement('span');
-    statusRight.textContent = config.title + (isMac ? ' for Mac OS X' : ' for Windows 95');
+    statusRight.textContent = config.title + (isMac ? ' for Mac OS X' : isMsn ? ' — Messenger' : ' for Windows 95');
     status.append(statusLeft, statusRight);
     body.appendChild(status);
     statusText = statusLeft;
 
     win.append(titlebar, body);
     layer.appendChild(win);
-    windows.set(app, { win, webview, titleText, maximized: false });
+    windows.set(app, { win, webview, titleText, maximized: false, flavor });
     makeDraggable(win, titlebar, app);
 
     win.addEventListener('pointerdown', () => focusWindow(app));
@@ -443,6 +495,10 @@
       titleText.textContent = e.title;
       document.title = e.title;
     });
+    // Injected CSS is per page, so it is re-applied on every fresh load.
+    if (isMsn) {
+      webview.addEventListener('dom-ready', () => setMsnStyle(windows.get(app), msnStyleOn()));
+    }
     if (app === 'discord') {
       webview.addEventListener('did-navigate', (e) => {
         if (/discord\.com\/login|discord\.com\/app/.test(e.url)) statusText.textContent = e.url;

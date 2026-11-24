@@ -1,5 +1,14 @@
 # SkinsOS — Project Status
 
+## Messenger 7 skin (in progress, 2026-11-25)
+
+- [x] A: Shell windows rebuild on live skin switch: Discord/browser windows whose chrome flavour changes are closed (F4 from the 2026-11-22 audit).
+- [x] A: `msnmessenger` skin (contact list, taskbar, desktop mirror) registered and discovered.
+- [x] A: MSN chrome for the Discord window (`.dtmshell-win.msn`, `chromeFlavor()` in `shell-apps.js`).
+- [x] A: `test/msn-skin.js` regression suite (`npm run test:msn`).
+- [ ] B: optional "Messenger look" accent stylesheet injected into the Discord page (first pass in `shell-apps.js`, needs live check).
+- [ ] Verify the Discord page recolours with the toggle on, and check the mirrored icons do not sit under the contact window.
+
 ## Completed foundations
 
 - [x] Shared filesystem service in the Electron main process with validated IPC: list/stat/read/write/mkdir/rename/copy/move/remove/drives/special folders.

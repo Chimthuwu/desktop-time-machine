@@ -540,3 +540,49 @@
 .dtmshell-win.mac .dtmshell-menu-title {
   font: 11px "Geneva", "Charcoal", sans-serif;
 }
+
+/* ---------------------------------------------------------------------------
+   MSN Messenger chrome (Discord window inside the msnmessenger skin).
+   Only applied when chromeFlavor() returns 'msn'. Original styling only:
+   no Microsoft logos or artwork.
+   ------------------------------------------------------------------------- */
+.dtmshell-win.msn {
+  background: #d6e6f7;
+  border: 1px solid #3a6ea5;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.35);
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+}
+.dtmshell-title.msn {
+  height: 28px;
+  margin: 0;
+  padding: 0 6px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(#5b9be0, #2a6cc4 55%, #1f5bb0);
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+.dtmshell-win.msn .dtmshell-title.msn { background: linear-gradient(#5b9be0, #2a6cc4 55%, #1f5bb0); }
+.dtmshell-win.msn:not(.active) .dtmshell-title.msn { background: linear-gradient(#a9c7ea, #7fa6d6); color: #eef4ff; }
+.dtmshell-title.msn .dtmshell-buttons button {
+  background: linear-gradient(#f7fbff, #c9dcf3);
+  border: 1px solid #1f4f8f;
+  border-radius: 3px;
+  color: #1f4f8f;
+}
+.dtmshell-toolbar.msn {
+  background: linear-gradient(#ffffff, #e3eefa);
+  border-bottom: 1px solid #9db9d8;
+}
+.dtmshell-toolbar.msn .dtmshell-btn {
+  background: linear-gradient(#ffffff, #d7e6f7);
+  border: 1px solid #7f9fc4;
+  border-radius: 3px;
+  color: #173f73;
+}
+.dtmshell-win.msn .dtmshell-status {
+  background: #eaf2fc;
+  color: #173f73;
+  border-top: 1px solid #9db9d8;
+}

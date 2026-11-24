@@ -60,7 +60,7 @@ app.whenReady().then(async () => {
       }
       return out;
     })()`);
-    assert('all 8 skins are discovered', manifestCheck.count === 8, manifestCheck);
+    assert('all 9 skins are discovered', manifestCheck.count === 9, manifestCheck);
     assert('every discovered manifest validates', manifestCheck.invalid.length === 0, manifestCheck.invalid);
 
     // --- Fallback registry agrees with manifests (single source of truth) ---
