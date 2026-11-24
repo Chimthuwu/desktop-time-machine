@@ -404,6 +404,24 @@ function registerIpcHandlers() {
     };
   });
 
+  // Several media files at once (the player's playlist).
+  handle('dtm:fs-pick-media-many', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Open Media',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Media Files', extensions: ['mp4', 'm4v', 'webm', 'mov', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths.length) return [];
+    return result.filePaths.map((filePath) => ({
+      path: filePath,
+      name: path.basename(filePath),
+      url: pathToFileURL(filePath).href
+    }));
+  });
+
   // Pick replacement icon art for a shortcut (Properties > Change Icon).
   handle('dtm:fs-pick-icon', async () => {
     const result = await dialog.showOpenDialog({

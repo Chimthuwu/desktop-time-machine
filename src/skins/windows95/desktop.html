@@ -220,7 +220,7 @@ button{font:inherit}
   </div>
   <div class="real-pinned" id="realPinned" title="Apps pinned to your real Windows taskbar"></div>
   <div class="task-buttons" id="taskButtons"></div>
-  <div class="tray" id="trayArea" title="Double click (or Ctrl+F5) to toggle fullscreen">
+  <div class="tray" id="trayArea" title="Double click (or F5) to toggle fullscreen">
     <button class="real-tray-overflow" id="realTrayOverflow" title="Show hidden icons" type="button">▲</button>
     <span class="real-tray" id="realTray" title="Real Windows notification area"></span>
     <span id="trayVol" title="Volume — click to adjust"><img class="tray-vol-icon" src="../shared/icons/win95/volume.ico" alt=""></span>
@@ -272,8 +272,8 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key === 'F8' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't')) {
     e.preventDefault();
     if (window.parent) window.parent.postMessage('dtm:open-switcher', '*');
-  } else if (e.ctrlKey && e.key === 'F5') {
-    // Ctrl+F5 is the fullscreen toggle (and must not reload the desktop).
+  } else if (e.key==='F5') {
+    // F5 is the fullscreen toggle (and must not reload the desktop).
     e.preventDefault();
     if (DTM && DTM.system.toggleFullScreen) DTM.system.toggleFullScreen();
   }
@@ -1813,6 +1813,7 @@ setupRealTaskbar();
 </script>
 <!-- Shared application ecosystem: one implementation, era-specific presentation -->
 <script src="../../components/SharedApps/app-framework.js"></script>
+<script src="../../components/MediaPlayer/media-player.js"></script>
 <script src="../../components/SharedApps/apps-core.js"></script>
 <script>if (window.DTMApps) window.DTMApps.configure({ skinId: 'windows95', theme: 'win95' });</script>
 </body>

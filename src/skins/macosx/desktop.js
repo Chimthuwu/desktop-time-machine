@@ -663,7 +663,7 @@
     if (event.key === 'F8' || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 't')) {
       event.preventDefault();
       window.parent.postMessage('dtm:open-switcher', '*');
-    } else if (event.ctrlKey && event.key === 'F5') {
+    } else if (event.key==='F5') {
       event.preventDefault();
       const engine = window.DTM || (window.parent && window.parent.DTM);
       if (engine && engine.system && engine.system.toggleFullScreen) engine.system.toggleFullScreen();
@@ -752,6 +752,8 @@
   window.hostConfirm3 = hostConfirm3;
   window.shutDown = shutDown;
   window.playChime = () => {
+    // UI chimes stay silent: the host window is no longer muted (media plays).
+    return;
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;

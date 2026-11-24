@@ -243,7 +243,7 @@ button,input,textarea{font:inherit}
   document.addEventListener('pointerdown',(event)=>{if(!popup.contains(event.target)&&!event.target.closest('[data-menu]')){popup.classList.remove('open');activeMenu=null;}});
   document.addEventListener('keydown',(event)=>{
     if(event.key==='F8'){event.preventDefault();switchEra();}
-    if(event.ctrlKey&&event.key==='F5'){event.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
+    if(event.key==='F5'){event.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
     if(event.key==='Escape')popup.classList.remove('open');
   });
 })();

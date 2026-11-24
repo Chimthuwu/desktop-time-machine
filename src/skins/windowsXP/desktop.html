@@ -149,7 +149,7 @@ button,input,textarea{font:inherit}
   <button id="start">◉ start</button>
   <div id="realPinned" class="real-pinned" title="Pinned in your real Windows taskbar"></div>
   <div id="tasks"></div>
-  <div id="tray" title="Double click (or Ctrl+F5) to toggle fullscreen">
+  <div id="tray" title="Double click (or F5) to toggle fullscreen">
     <span class="tray-quick">🔊</span><span class="tray-quick">🛡️</span>
     <div id="realTray" class="real-tray"></div>
     <button id="trayOverflow" class="tray-overflow" title="Show hidden icons">▲</button>
@@ -536,7 +536,7 @@ button,input,textarea{font:inherit}
   context.addEventListener('click',(e)=>{const action=e.target.dataset.action;context.classList.remove('open');if(action==='explorer')openExplorer('');if(action==='calculator')openCalculator();if(action==='switch')switchEra();if(action==='refresh'){if(window.dtmMirrorHandle&&window.dtmMirrorHandle.refresh)window.dtmMirrorHandle.refresh();if(DTM&&DTM.desktop&&DTM.desktop.invalidate)DTM.desktop.invalidate();}});
   document.addEventListener('keydown',(e)=>{
     if(e.key==='F8'||(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='t')){e.preventDefault();switchEra();}
-    else if(e.ctrlKey&&e.key==='F5'){e.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
+    else if(e.key==='F5'){e.preventDefault();if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();}
     if(e.key==='Escape')context.classList.remove('open');
   });
   document.getElementById('tray').addEventListener('dblclick',()=>{if(DTM&&DTM.system&&DTM.system.toggleFullScreen)DTM.system.toggleFullScreen();});

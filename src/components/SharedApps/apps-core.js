@@ -504,6 +504,16 @@
     capabilities: ['media', 'filesystem'],
     mount: function (root, ctx) {
       var backend = fs(ctx);
+      // The era player (playlist, shuffle, repeat) when the skin loads it.
+      if (window.DTMMediaPlayer) {
+        var themeHost = root.closest ? root.closest('[data-dtm-theme]') : null;
+        var player = window.DTMMediaPlayer.mount(root, {
+          theme: (themeHost && themeHost.dataset.dtmTheme) || 'win98',
+          pick: function () { return backend && backend.pickMedia ? backend.pickMedia() : null; },
+          pickMany: function () { return backend && backend.pickMediaMany ? backend.pickMediaMany() : Promise.resolve([]); }
+        });
+        return { dispose: function () { player.dispose(); } };
+      }
       var bar = toolbar();
       var stage = el('div', 'dtm-app-media-stage', 'No media loaded');
       root.append(bar, stage);

@@ -71,10 +71,9 @@ if (!gotTheLock) {
     try { await session.defaultSession.clearCache(); } catch {}
 
     const mainWindow = createMainWindow();
-    // Keep the skin's UI beeps (MS-DOS prompt, macos8 chimes) silent while
-    // leaving the browser/Discord webviews audible — they have their own
-    // WebContents and are not affected by this flag.
-    try { mainWindow.webContents.setAudioMuted(true); } catch {}
+    // The window is not muted: skins are iframes of this WebContents, so a
+    // mute here silenced every skin's media player too. Skin UI chimes are
+    // disabled individually instead (see playChime in the Mac skins).
 
     // Load the engine host HTML
     const indexPath = path.join(__dirname, '../../src/index.html');

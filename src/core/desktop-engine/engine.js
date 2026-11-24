@@ -110,6 +110,7 @@ class DesktopEngine {
       desktopLayoutReset: () => (backend && backend.desktopLayoutReset) ? backend.desktopLayoutReset()
         : Promise.resolve(false),
       pickMedia: () => (backend && backend.pickMedia) ? backend.pickMedia() : Promise.resolve(null),
+      pickMediaMany: () => (backend && backend.pickMediaMany) ? backend.pickMediaMany() : Promise.resolve([]),
       pickIcon: () => (backend && backend.pickIcon) ? backend.pickIcon() : Promise.resolve(null),
       setShortcutIcon: (linkPath, iconPath) => (backend && backend.setShortcutIcon)
         ? backend.setShortcutIcon(linkPath, iconPath)

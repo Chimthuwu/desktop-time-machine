@@ -44,6 +44,7 @@ const dtmBridge = {
     desktopLayout: () => ipcRenderer.invoke('dtm:fs-desktop-layout'),
     desktopLayoutReset: () => ipcRenderer.invoke('dtm:fs-desktop-layout-reset'),
     pickMedia: () => ipcRenderer.invoke('dtm:fs-pick-media'),
+    pickMediaMany: () => ipcRenderer.invoke('dtm:fs-pick-media-many'),
     pickIcon: () => ipcRenderer.invoke('dtm:fs-pick-icon'),
     setShortcutIcon: (targetPath, iconPath) => ipcRenderer.invoke('dtm:fs-set-shortcut-icon', targetPath, iconPath)
   },
@@ -112,4 +113,22 @@ const dtmBridge = {
 };
 
 // Expose safe API to the renderer process
+// Files dragged in from Windows (Explorer, the real desktop) arrive as File
+// objects, which only the preload can turn into host paths. The paths are sent
+// to the page as a message; the desktop mirror copies them into place.
+const { webUtils } = require('electron');
+window.addEventListener('dragover', function (event) {
+  const types = event.dataTransfer ? Array.from(event.dataTransfer.types || []) : [];
+  if (types.includes('Files')) event.preventDefault();
+}, true);
+window.addEventListener('drop', function (event) {
+  const files = event.dataTransfer && event.dataTransfer.files;
+  if (!files || !files.length) return;
+  event.preventDefault();
+  const paths = Array.from(files).map(function (file) {
+    try { return webUtils.getPathForFile(file); } catch (error) { return ''; }
+  }).filter(Boolean);
+  if (paths.length) window.postMessage({ type: 'dtm:file-drop', paths: paths, x: event.clientX, y: event.clientY }, '*');
+}, true);
+
 contextBridge.exposeInMainWorld('dtmPreload', dtmBridge);

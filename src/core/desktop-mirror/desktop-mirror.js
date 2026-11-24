@@ -655,6 +655,7 @@
 
     async function load(p) {
       current = p;
+      wrap.dataset.dir = p;
       addr.value = p;
       grid.innerHTML = '<div class="dtm-loading">Reading directory…</div>';
       try {
@@ -837,6 +838,7 @@
     };
     doc.addEventListener('keydown', onKey);
 
+    wrap._refresh = () => load(current);
     load(current);
     return {
       wrap,
@@ -1325,6 +1327,29 @@
       backspace: 'remove',
       typeAhead: createTypeAhead()
     };
+
+    // Files dropped from Windows land in the Explorer window under the pointer,
+    // or on the desktop. They are copied into the real folder.
+    async function dropFiles(paths, dir, explorer) {
+      const failed = [];
+      for (const src of paths) {
+        const name = String(src).split(/[\\/]/).pop();
+        try { await DTM.fs.copy(src, joinPath(dir, name)); }
+        catch (e) { failed.push(name + ' (' + e.message + ')'); }
+      }
+      if (failed.length) alert('Could not copy: ' + failed.join('; '));
+      if (explorer && explorer._refresh) explorer._refresh();
+      else render(true);
+    }
+    track(view, 'message', (e) => {
+      const d = e.data;
+      if (!d || d.type !== 'dtm:file-drop' || !Array.isArray(d.paths) || !d.paths.length) return;
+      const hit = doc.elementFromPoint(d.x, d.y);
+      const explorer = hit && hit.closest ? hit.closest('.dtm-explorer') : null;
+      const dir = explorer && explorer.dataset.dir ? explorer.dataset.dir : desktopBase();
+      if (!dir) return;
+      dropFiles(d.paths, dir, explorer);
+    });
 
     // Delete and Backspace send the selection to the Trash, as Explorer does.
     track(doc, 'keydown', (e) => {
