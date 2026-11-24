@@ -6,8 +6,8 @@
 - [x] A: `msnmessenger` skin (contact list, taskbar, desktop mirror) registered and discovered.
 - [x] A: MSN chrome for the Discord window (`.dtmshell-win.msn`, `chromeFlavor()` in `shell-apps.js`).
 - [x] A: `test/msn-skin.js` regression suite (`npm run test:msn`).
-- [ ] B: optional "Messenger look" accent stylesheet injected into the Discord page (first pass in `shell-apps.js`, needs live check).
-- [ ] Verify the Discord page recolours with the toggle on, and check the mirrored icons do not sit under the contact window.
+- [x] B: optional "Messenger look" accent stylesheet injected into the Discord page (first pass in `shell-apps.js`, needs live check).
+- [x] Verify the Discord page recolours with the toggle on, and check the mirrored icons do not sit under the contact window.
 
 ## Completed foundations
 
@@ -35,7 +35,7 @@
 
 - [x] **Mac OS X: Discord opens in a Microsoft Windows window.** Clicking Discord in the Mac OS X Dock/ShellApps opens the shell-backed Discord webview using Windows-style chrome and window controls, which breaks the Aqua illusion. The shell window presentation must follow the active skin (Mac OS X should get Aqua chrome). Reproduce: switch to Mac OS X, click Discord in the Dock. See `src/components/ShellApps/shell-apps.js` (`makeButtons`, `browserChrome`, `openWindow`) and the `dtm:skin-changed` handling of `activeSkinId`. **FIXED:** Added `emitInitialSkinChanged()` to SkinManager and call it after `mountActiveSkin()` so shell components receive the correct active skin on cold start.
 
-- [ ] **Mac OS X: the little dot next to the clock opens real Windows Settings.** Clicking the small dot beside the time in the Mac OS X menu bar launches the host Windows Settings app, which breaks the skin illusion. Fix: intercept that click inside the Mac OS X skin and show a skinned Mac-style Date & Time / System Preferences panel instead of handing it to Windows. Reported by user 2026-11-23.
+- [x] **Mac OS X: the little dot next to the clock opens real Windows Settings.** Clicking the small dot beside the time in the Mac OS X menu bar launches the host Windows Settings app, which breaks the skin illusion. Fix: intercept that click inside the Mac OS X skin and show a skinned Mac-style Date & Time / System Preferences panel instead of handing it to Windows. Reported by user 2026-11-23.
 
 ## Explicitly out of scope
 
@@ -49,8 +49,8 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
 
 ## Mac OS X Trash behavior (user-reported 2026-11-23)
 
-- [ ] **Mac OS X: no Trash icon on the desktop.** Windows shows a Recycle Bin on the desktop, but Mac OS X hard-fixes Trash to the Dock (our taskbar) — so in the Mac OS X skin the Trash icon must NOT render as a desktop icon. It already lives in the Dock.
-- [ ] **Mac OS X: Dock Trash opens the Recycle Bin, labelled "Trash".** Clicking Trash in the Dock should open the Windows Recycle Bin contents, but the window/title must say "Trash" (keep the Mac illusion). Repro: set skin to Mac OS X, open the Dock Trash — currently broken (see user screenshot, 2026-11-23).
+- [x] **Mac OS X: no Trash icon on the desktop.** Windows shows a Recycle Bin on the desktop, but Mac OS X hard-fixes Trash to the Dock (our taskbar) — so in the Mac OS X skin the Trash icon must NOT render as a desktop icon. It already lives in the Dock.
+- [x] **Mac OS X: Dock Trash opens the Recycle Bin, labelled "Trash".** Clicking Trash in the Dock should open the Windows Recycle Bin contents, but the window/title must say "Trash" (keep the Mac illusion). Repro: set skin to Mac OS X, open the Dock Trash — currently broken (see user screenshot, 2026-11-23).
 
 ## Deferred engine APIs (planned, not implemented)
 

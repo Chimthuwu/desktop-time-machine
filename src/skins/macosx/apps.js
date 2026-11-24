@@ -485,10 +485,10 @@
     menus: { File: [{ label: 'New Note', action: () => activeWindow('stickies')?.addSticky?.() }], Edit: [{ label: 'Select All', action: () => activeWindow('stickies')?.querySelector('textarea')?.select() }] }
   });
   window.registerMacApp('trash', {
-    name: 'Trash', title: 'Trash', icon: '🗑️', width: 420, height: 300,
-    body: () => '<div class="help-body"><h3>Trash</h3><p>The Trash is empty.</p></div>',
-    menus: { Finder: [{ label: 'Empty Trash…', action: () => window.openApp('trash') }] }
-  });
+      name: 'Trash', title: 'Trash', icon: '🗑️', width: 420, height: 300,
+      body: () => '<div class="help-body"><h3>Recycle Bin</h3><p>The Recycle Bin is empty.</p></div>',
+      menus: { Finder: [{ label: 'Empty Trash…', action: () => window.openApp('trash') }] }
+    });
   window.registerMacApp('safari', {
     name: 'Safari', title: 'Safari', icon: '🧭', width: 780, height: 540,
     body: safariBody, mount: mountSafari, onClose: stopSafariWeb,

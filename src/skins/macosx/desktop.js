@@ -694,6 +694,41 @@
     const clock = document.getElementById('mb-clock');
     const updateClock = () => { if (clock) clock.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
     updateClock();
+    clock.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      showMacDateTimePanel();
+    });
+
+    function showMacDateTimePanel() {
+      const panel = document.createElement('div');
+      panel.className = 'dtm-mac-datetime-panel';
+      panel.innerHTML = `
+        <div class="dtm-mac-datetime-header">Date & Time</div>
+        <div class="dtm-mac-datetime-content">
+          <div id="dtm-mac-date" class="dtm-mac-datetime-date"></div>
+          <div id="dtm-mac-time" class="dtm-mac-datetime-time"></div>
+        </div>
+        <div class="dtm-mac-datetime-close">Close</div>
+      `;
+      panel.addEventListener('click', (e) => {
+        if (e.target.classList.contains('dtm-mac-datetime-close') || e.target.classList.contains('dtm-mac-datetime-panel')) {
+          document.body.removeChild(panel);
+        }
+      });
+      document.body.appendChild(panel);
+      requestAnimationFrame(() => updateMacDateTime(panel));
+      const timeout = setInterval(() => updateMacDateTime(panel), 60000);
+      return () => { clearInterval(timeout); document.body.removeChild(panel); };
+    }
+
+    function updateMacDateTime(panel) {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      panel.querySelector('#dtm-mac-date').textContent = dateStr;
+          panel.querySelector('#dtm-mac-time').textContent = timeStr;
+        }
     window.setInterval(updateClock, 15000);
     window.setTimeout(() => {
       document.getElementById('boot-screen')?.classList.add('done');
