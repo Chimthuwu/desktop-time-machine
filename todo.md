@@ -89,3 +89,21 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
   Why: At least 12 CSS rules set `outline: none`/`outline: 0` with no `:focus-visible` replacement, so keyboard users can lose their place.
   Done when: Every interactive control that suppresses the default outline has a visible `:focus-visible` style (or an equivalent themed focus indicator).
   Hints: UI/CSS change — leave for an interactive session, not an unattended bug-fix run.
+
+- [ ] **Explore separating era styles from colour variants** [P3] [docs] [size:M]
+  Why: A comparable retro-style project keeps one base look per era and applies tiny colour-variant patches at load time, which could make per-skin visual preferences cheaper here.
+  Done when: A short design note in `docs/` compares the current per-skin CSS layout with a base-style-plus-variant model and recommends keep/change with reasons.
+  Hints: Idea only — do not restructure skins in this run.
+  Source: https://github.com/FMXExpress/Cross-Platform-Retro-OS-Styles
+  Idea: Treat the era look and its colour variants as two layers instead of duplicating full stylesheets.
+  Licence: MIT (per the repository's licence notice in the fetched page).
+  Learn: How small variant patches avoid shipping a full stylesheet per colour scheme.
+
+- [ ] **Compare multi-environment desktop architecture notes** [P3] [docs] [size:S]
+  Why: Another browser-native multi-environment desktop uses a single persistent core with swappable presentations plus a thin Electron wrapper — close to this project's "one computer, many eras" rule, so a short comparison could expose blind spots.
+  Done when: A short `docs/` note lists concrete similarities/differences in filesystem, window and native-integration handling, with no code changes.
+  Hints: Read-only comparison; respect this project's explicit out-of-scope list.
+  Source: https://github.com/Reeyuki/YukiOS
+  Idea: Keep one persistent state core and move only presentation and native integration between environments.
+  Licence: MIT (per the repository's licence notice in the fetched page).
+  Learn: Which capabilities belong in the shared core versus the per-era shell.
