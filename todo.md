@@ -107,3 +107,19 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
   Idea: Keep one persistent state core and move only presentation and native integration between environments.
   Licence: MIT (per the repository's licence notice in the fetched page).
   Learn: Which capabilities belong in the shared core versus the per-era shell.
+
+- [ ] **Debounce window-registry collect() on mutations** [P2] [performance] [size:M]
+  Why: `src/components/WindowTracking/window-registry.js:173` and :185 call `collect()` on every DOM mutation (style/class attribute changes included) with no debounce, so a burst of class toggles triggers many full DOM re-collects back to back; there is also a redundant 700 ms `setInterval(collect)` at :200 doing the same work when nothing changed.
+  Done when: Mutation-driven collects are coalesced (e.g. requestAnimationFrame or a short timeout with a dirty flag) and a regression test asserts repeated synchronous mutations trigger at most one collect per frame/beat.
+  Hints: Behaviour-preserving optimisation only — collect() output shape must not change; watch(v) also calls collect() directly, keep that.
+
+- [ ] **Stop the browser dock-sync timer when the browser window is gone** [P2] [performance] [size:S]
+  Why: `src/components/ShellApps/shell-apps.js:1339` starts `setInterval(syncBrowserDock, 60)` and nothing ever clears `dockTimer`, so the 60 ms loop keeps running (and keeps calling `wfBridge.dock`) even when the browser window is closed or never docked.
+  Done when: The timer is cleared (or paused) when the browser shell window closes / no dock rect applies, verified by a test or a manual probe of the counter.
+  Hints: The loop also does the 3 s fullscreen re-assert; only the no-window/no-dock idle path should stop, not the re-assert while docked.
+
+- [ ] **Event-drive the Mac OS X Safari shell sync** [P3] [performance] [size:M]
+  Why: `src/skins/macosx/apps.js:298` polls `syncSafariWeb` every 120 ms while any Safari window is open; the shell already posts `dtm:safari-sync` messages on navigate/tab actions, so most beats are wasted work.
+  Done when: Syncs are triggered by the existing message/rect-change events with a low-frequency fallback (e.g. 1 s) and the visual behaviour is unchanged.
+  Hints: It is already cleared when the last Safari window closes (:78) — the fix is cadence, not a leak.
+
