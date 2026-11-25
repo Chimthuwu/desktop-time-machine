@@ -344,6 +344,7 @@
     const input = entry.body.querySelector('.t-input');
     const history = [];
     let historyIndex = 0;
+    let cwd = ''; // '' is the start folder; cd changes it
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const command = input.value.trim();
@@ -358,17 +359,45 @@
       const result = document.createElement('div');
       result.className = 't-line';
       const [verb, ...args] = command.split(/\s+/);
-      if (verb === 'help') result.textContent = 'help  ls  pwd  date  clear  open <path>';
-      else if (verb === 'pwd') result.textContent = (await DTM?.fs?.list(''))?.path || 'Macintosh HD';
+      const arg = args.join(' ');
+      const joinPath = (base, name) => {
+        if (/^([a-zA-Z]:|\/|\\)/.test(name)) return name;
+        if (!base) return name;
+        return base.replace(/[\\/]$/, '') + (base.includes('\\') ? '\\' : '/') + name;
+      };
+      const fail = (error) => { result.className += ' t-error'; result.textContent = error.message || String(error); };
+      if (verb === 'help') result.textContent = 'help  ls  cd  pwd  cat  echo  whoami  uname  history  date  clear  open <path>';
+      else if (verb === 'pwd') result.textContent = cwd || (await DTM?.fs?.list(''))?.path || 'Macintosh HD';
       else if (verb === 'date') result.textContent = new Date().toString();
+      else if (verb === 'whoami') result.textContent = 'user';
+      else if (verb === 'uname') result.textContent = 'Darwin';
+      else if (verb === 'echo') result.textContent = arg;
+      else if (verb === 'history') result.textContent = history.map((c, i) => (i + 1) + '  ' + c).join('\n');
       else if (verb === 'clear') output.replaceChildren();
       else if (verb === 'ls' || verb === 'dir') {
         try {
-          const listing = await DTM.system.listDirectory(args.join(' ') || '');
+          const listing = await DTM.system.listDirectory(arg ? joinPath(cwd, arg) : cwd);
           result.textContent = listing.items.map((item) => item.name + (item.isDirectory ? '/' : '')).join('\n') || '(empty)';
-        } catch (error) { result.className += ' t-error'; result.textContent = error.message; }
+        } catch (error) { fail(error); }
+      } else if (verb === 'cd') {
+        try {
+          // "cd" alone goes to the start folder; ".." goes up one level.
+          if (!arg || arg === '~') cwd = '';
+          else if (arg === '..') {
+            const listing = await DTM.system.listDirectory(cwd || '');
+            cwd = listing.parentPath || cwd;
+          } else {
+            const listing = await DTM.system.listDirectory(joinPath(cwd, arg));
+            cwd = listing.currentPath || joinPath(cwd, arg);
+          }
+        } catch (error) { fail(error); }
+      } else if (verb === 'cat') {
+        try {
+          const text = await DTM.fs.read(joinPath(cwd, arg));
+          result.textContent = text;
+        } catch (error) { fail(error); }
       } else if (verb === 'open') {
-        try { await DTM.system.openPath(args.join(' ')); } catch (error) { result.className += ' t-error'; result.textContent = error.message; }
+        try { await DTM.system.openPath(joinPath(cwd, arg)); } catch (error) { fail(error); }
       } else {
         result.className += ' t-error';
         result.textContent = 'command not found: ' + verb;

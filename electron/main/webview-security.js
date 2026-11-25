@@ -41,6 +41,15 @@ function hardenWebviews(contents) {
     guest.on('will-redirect', (event, url) => {
       if (!isAllowedWebUrl(url)) event.preventDefault();
     });
+    // A focused guest (Discord, the browser) swallows key presses, so F5 would
+    // do nothing there. Catch it here and run the app-wide fullscreen toggle.
+    guest.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown' && input.key === 'F5') {
+        event.preventDefault();
+        // Required lazily: window-manager already requires this module.
+        require('./window-manager').toggleFullScreen();
+      }
+    });
   });
 }
 
