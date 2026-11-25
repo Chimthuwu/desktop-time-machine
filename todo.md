@@ -80,7 +80,7 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
   Done when: Every interactive input in `src/skins/windows98/desktop.html` has an accessible name via `aria-label`, a `for`-linked label, or a wrapping label.
   Hints: Prefer `aria-label` over restructuring the markup so the retro layout is untouched.
 
-- [ ] **Add static accessibility regression suite** [P2] [tests] [size:S]
+- [x] **Add static accessibility regression suite** [P2] [tests] [size:S]
   Why: The accessibility invariants above have no automated check and regress silently when skins are edited.
   Done when: `test/accessibility.js` runs via Electron, checks the invariants above, and is wired into `npm run verify`; all suites pass.
   Hints: Follow `test/msn-skin.js` for the Electron harness and JSON summary format.
