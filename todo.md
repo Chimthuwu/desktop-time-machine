@@ -65,17 +65,17 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
 
 ## Inbox (agent-proposed)
 
-- [ ] **Give every iframe an accessible title** [P2] [accessibility] [size:S]
+- [x] **Give every iframe an accessible title** [P2] [accessibility] [size:S]
   Why: Three iframes have no `title`, so screen readers announce only "frame" — the main skin viewport, the Win95 DOOM frame and the Win98 IE frame.
   Done when: A static audit finds no iframe without a `title` in `src/`, and the regression test asserts it.
   Hints: `src/index.html` `#skin-viewport`; `src/skins/windows95/desktop.html` DOOM `body`; `src/skins/windows98/desktop.html` `#ie-frame`.
 
-- [ ] **Announce startup failure to screen readers** [P2] [accessibility] [size:S]
+- [x] **Announce startup failure to screen readers** [P2] [accessibility] [size:S]
   Why: `showStartupFailure()` in `src/index.html` injects an error overlay with no live region, so assistive tech never announces that the desktop failed to start.
   Done when: The failure message is in a `role="alert"` live region and the regression test asserts it.
   Hints: `#dtmStartupFailureDetail`; keep the Retry button's visible text.
 
-- [ ] **Label unpaired form controls in Windows 98 apps** [P3] [accessibility] [size:M]
+- [x] **Label unpaired form controls in Windows 98 apps** [P3] [accessibility] [size:M]
   Why: Several Win98 controls use a sibling `<label>` rather than a wrapping/`for`-linked label (Outlook "To:", display sliders, memory number), leaving them unnamed.
   Done when: Every interactive input in `src/skins/windows98/desktop.html` has an accessible name via `aria-label`, a `for`-linked label, or a wrapping label.
   Hints: Prefer `aria-label` over restructuring the markup so the retro layout is untouched.

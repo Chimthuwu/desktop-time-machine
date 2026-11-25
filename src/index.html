@@ -30,7 +30,7 @@
 <body>
 
   <!-- Active Retro Skin Viewport (mounted by the skin manager after init) -->
-  <iframe id="skin-viewport" class="skin-viewport" src="about:blank"></iframe>
+  <iframe id="skin-viewport" class="skin-viewport" src="about:blank" title="Active retro desktop"></iframe>
 
   <!-- Browser / Discord windows live in the shell (webview is top-frame only) -->
   <div id="shell-app-layer"></div>
@@ -50,8 +50,9 @@
       if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'dtmStartupFailure';
+        overlay.setAttribute('role', 'alert');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:#1b1b1b;color:#eee;font:14px Tahoma,Arial,sans-serif;text-align:center';
-        overlay.innerHTML = '<div><h2>Desktop Time Machine could not start</h2><p id="dtmStartupFailureDetail"></p><button id="dtmStartupRetry">Retry</button></div>';
+        overlay.innerHTML = '<div><h2>Desktop Time Machine could not start</h2><p id="dtmStartupFailureDetail" aria-live="assertive"></p><button id="dtmStartupRetry">Retry</button></div>';
         document.body.appendChild(overlay);
         overlay.querySelector('#dtmStartupRetry').addEventListener('click', async () => {
           overlay.querySelector('#dtmStartupRetry').disabled = true;
