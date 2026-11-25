@@ -62,3 +62,30 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
 - Destructive operations are blocked at service level on drive roots, system directories and profile roots.
 - Hidden-file detection uses the pinned `%SystemRoot%\System32\attrib.exe` helper (no shell).
 - `engine.fs.list()` returns `{ path, parentPath, items, truncated }` so skins can navigate upward.
+
+## Inbox (agent-proposed)
+
+- [ ] **Give every iframe an accessible title** [P2] [accessibility] [size:S]
+  Why: Three iframes have no `title`, so screen readers announce only "frame" — the main skin viewport, the Win95 DOOM frame and the Win98 IE frame.
+  Done when: A static audit finds no iframe without a `title` in `src/`, and the regression test asserts it.
+  Hints: `src/index.html` `#skin-viewport`; `src/skins/windows95/desktop.html` DOOM `body`; `src/skins/windows98/desktop.html` `#ie-frame`.
+
+- [ ] **Announce startup failure to screen readers** [P2] [accessibility] [size:S]
+  Why: `showStartupFailure()` in `src/index.html` injects an error overlay with no live region, so assistive tech never announces that the desktop failed to start.
+  Done when: The failure message is in a `role="alert"` live region and the regression test asserts it.
+  Hints: `#dtmStartupFailureDetail`; keep the Retry button's visible text.
+
+- [ ] **Label unpaired form controls in Windows 98 apps** [P3] [accessibility] [size:M]
+  Why: Several Win98 controls use a sibling `<label>` rather than a wrapping/`for`-linked label (Outlook "To:", display sliders, memory number), leaving them unnamed.
+  Done when: Every interactive input in `src/skins/windows98/desktop.html` has an accessible name via `aria-label`, a `for`-linked label, or a wrapping label.
+  Hints: Prefer `aria-label` over restructuring the markup so the retro layout is untouched.
+
+- [ ] **Add static accessibility regression suite** [P2] [tests] [size:S]
+  Why: The accessibility invariants above have no automated check and regress silently when skins are edited.
+  Done when: `test/accessibility.js` runs via Electron, checks the invariants above, and is wired into `npm run verify`; all suites pass.
+  Hints: Follow `test/msn-skin.js` for the Electron harness and JSON summary format.
+
+- [ ] **Check keyboard focus visibility across skins** [P3] [accessibility] [size:M]
+  Why: At least 12 CSS rules set `outline: none`/`outline: 0` with no `:focus-visible` replacement, so keyboard users can lose their place.
+  Done when: Every interactive control that suppresses the default outline has a visible `:focus-visible` style (or an equivalent themed focus indicator).
+  Hints: UI/CSS change — leave for an interactive session, not an unattended bug-fix run.
