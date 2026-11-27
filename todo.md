@@ -1,5 +1,43 @@
 # SkinsOS — Project Status
 
+# OPEN TASKS (checklist index, 2026-11-27)
+
+- [ ] **Stop the browser dock-sync timer when the browser window is gone** [P2] [size:S] - In `src/components/ShellApps/shell-apps.js` (~:1339) `setInterval(syncBrowserDock, 60)` is never cleared: `dockTimer` keeps running (and calling `wfBridge.dock`) after the browser shell window closes or is never docked. Clear or pause the timer on the no-window/no-dock idle path only — keep the 3 s fullscreen re-assert while docked.
+  Done when: the timer is cleared (or idles) when the browser window closes / no dock rect applies, proven by a test or a counter probe in the existing `test/shell-listeners.js` style; `npm test` passes; the matching Inbox item is ticked.
+  Source: Inbox item "Stop the browser dock-sync timer…" (2026-11-26 perf lens); handoff note says start here if the owner promotes one.
+
+- [ ] **Quarantine the known-hanging test:media out of the default verify chain** [P2] [size:S] - `package.json` `verify` chains `npm run test:media`, but `test/media-player.js` has a documented pre-existing hang ("Render frame was disposed", 2026-11-25/27 notes) so `npm run verify` can never complete. Keep `test:media` available but out of the default chain.
+  Done when: `npm run verify` runs to completion on this machine without test:media (e.g. media behind a `DTM_VERIFY_FULL=1` guard or a separate `verify:full` script); README Commands section documents both paths; no suite itself was edited.
+  Source: package.json `verify` script + handoff notes 2026-11-25 ("media suite hangs… not a regression") and 2026-11-27 ("test:media still not run (known hang)").
+
+- [ ] **Debounce window-registry collect() on mutations** [P2] [size:M] - In `src/components/WindowTracking/window-registry.js` (~:173, :185) `collect()` fires on every DOM mutation (style/class included) with no coalescing, plus a redundant 700 ms `setInterval(collect)` at ~:200. Coalesce mutation-driven collects (rAF or short-timeout + dirty flag). Behaviour-preserving only: collect() output shape unchanged, direct `watch(v)` collect kept.
+  Done when: a regression test asserts repeated synchronous mutations trigger at most one collect per frame/beat; `npm test` passes; the matching Inbox item is ticked.
+  Source: Inbox item "Debounce window-registry collect()…" (2026-11-26 perf lens).
+
+- [ ] **Keyboard focus visibility across skins: add :focus-visible replacements** [P3] [size:M] - At least 12 CSS rules across `src/index.html` and `src/skins/*/desktop.html` set `outline: none`/`outline: 0` with no `:focus-visible` replacement. Add a visible themed `:focus-visible` style wherever the default outline is suppressed; keep retro styling intact otherwise.
+  Done when: every interactive control that suppresses the default outline has a visible `:focus-visible` style, verified by extending the static audit in `test/accessibility.js` (assert no `outline: none` rule lacks a focus-visible replacement in the same stylesheet); all suites pass; the matching Inbox item is ticked.
+  Source: Inbox item "Check keyboard focus visibility across skins" (accessibility lens).
+
+- [ ] **Make Win98 Explorer show an error when fs.list stalls** [P3] [size:S] - In `src/skins/windows98/desktop.html` `setupExplorer.loadPath` leaves the grid on "Reading directory…" forever if `DTM.fs.list` never resolves (first call can exceed 1 s — attrib.exe cold spawn). Add a bounded timeout that turns the grid into an error state with a Retry affordance (or one re-issue); behaviour otherwise unchanged.
+  Done when: a stalled list produces a visible error + Retry instead of an eternal spinner; `npm run test:keys` and `test/win98-folder-terminal.js` pass; the matching Inbox item is ticked.
+  Source: Inbox item "Make Win98 Explorer show an error when fs.list stalls" (2026-11-27 code-audit lens).
+
+- [ ] **Event-drive the Mac OS X Safari shell sync** [P3] [size:M] - In `src/skins/macosx/apps.js` (~:298) `syncSafariWeb` polls every 120 ms while any Safari window is open; the shell already posts `dtm:safari-sync` messages on navigate/tab actions. Trigger syncs from those events with a low-frequency fallback (e.g. 1 s). It is already cleared when the last Safari closes (~:78) — cadence only, not a leak.
+  Done when: syncs are event-driven with a fallback beat, visual behaviour unchanged (tab/rect updates still land), `npm test` passes; the matching Inbox item is ticked.
+  Source: Inbox item "Event-drive the Mac OS X Safari shell sync" (2026-11-26 perf lens).
+
+- [ ] **Update the stale skin list in docs/ARCHITECTURE.md** [P3] [size:S] - The diagram at `docs/ARCHITECTURE.md` ~:40 says "(eight are registered)" and lists seven; nine skins are registered now (Messenger 7 missing). Update the count and the list.
+  Done when: ARCHITECTURE.md names all nine registered skins and matches README's "Available operating systems" list; docs-only change, no code touched.
+  Source: README "All nine skins are registered" vs docs/ARCHITECTURE.md:40 (gap found this run).
+
+- [ ] **README: document npm run verify, the focused suites, and the Phase 4 report link** [P3] [size:S] - README "Commands" lists only `npm test` / `npm run screenshots` plus four focused suites, but package.json has `verify`, `test:msn`, `test:keys`, `test:a11y`, `test:shell-listeners`, `test:user-fixes`, etc.; and the Documentation section links Phase 2/3 reports but not the existing `PHASE_4_REPORT.md`.
+  Done when: README's Commands section covers `npm run verify` and every focused suite script in package.json, and the Documentation section links PHASE_4_REPORT.md; docs-only change.
+  Source: README vs package.json scripts and root file list (gap found this run).
+
+- [ ] **Capture a Messenger 7 gallery screenshot and show it in README** [P3] [size:M] - `test/capture-gallery.js` captures only win95/winxp/macosx and README's gallery table shows those three; the new Messenger 7 skin (README lists it, 2026-11-25) has no screenshot. Extend `capture-gallery.js` with a Messenger 7 capture (contact-list window, toggle state optional) and embed it near the README gallery table.
+  Done when: `npm run screenshots` produces the Messenger 7 capture from the real app, the file is committed under `screenshots/`, and README embeds it; no other gallery captures change.
+  Source: README gallery section vs test/capture-gallery.js skin list (gap found this run).
+
 ## Messenger 7 skin (in progress, 2026-11-25)
 
 - [x] A: Shell windows rebuild on live skin switch: Discord/browser windows whose chrome flavour changes are closed (F4 from the 2026-11-22 audit).
