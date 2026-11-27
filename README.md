@@ -59,8 +59,15 @@ The shared engine provides capabilities; each skin owns its appearance, applicat
 ```powershell
 # From the repository root
 npm install
-npm start          # Launch the Electron application
-npm test           # Full verification suite (all skins, security, switching)
+npm start            # Launch the Electron application
+npm test             # Full verification suite (all skins, security, switching)
+npm run verify       # Every verification suite: npm test plus the security,
+                     # skin, architecture, apps, desktop, user-fixes, MSN,
+                     # keyboard, accessibility, shell-listener and
+                     # browser-timer suites
+npm run verify:full  # verify plus test:media — the media-player suite has a
+                     # known pre-existing hang ("Render frame was disposed"),
+                     # so it is kept out of the default chain
 npm run screenshots  # Regenerate the gallery screenshots
 ```
 
@@ -71,6 +78,12 @@ npx electron test/security-regressions.js
 npx electron test/phase4-security.js
 npx electron test/phase4-skins.js
 npx electron test/mirror-smoke.js
+npx electron test/msn-skin.js
+npx electron test/file-keyboard.js
+npx electron test/accessibility.js
+npx electron test/shell-listeners.js
+npx electron test/browser-timers.js
+npx electron test/media-player.js   # known hang, not part of npm run verify
 ```
 
 ### Browser development mode

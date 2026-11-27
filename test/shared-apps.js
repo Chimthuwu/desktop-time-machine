@@ -154,7 +154,9 @@ app.whenReady().then(async () => {
       skin.DTMApps.open('properties');
       const dialogShown = await fillDialog(doc, target);
       const el = doc.querySelector('.dtm-shared-app[data-app="properties"]');
-      for (let i = 0; i < 60 && !el.querySelector('.dtm-app-property-row'); i++) await new Promise(r => setTimeout(r, 50));
+      // The first fs round-trip can take several seconds (attrib.exe cold
+      // spawn), so poll for up to 20 s before reading the dialog body.
+      for (let i = 0; i < 160 && !el.querySelector('.dtm-app-property-row'); i++) await new Promise(r => setTimeout(r, 125));
       return { dialog: dialogShown, text: el.querySelector('.dtm-app-properties').textContent };
     })()`);
     assert('properties dialog opened', props.dialog, props);
