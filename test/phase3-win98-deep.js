@@ -376,6 +376,6 @@ app.whenReady().then(async () => {
     process.exitCode = 2;
   } finally {
     try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} // spec: clean up test files afterward
-    setTimeout(() => app.quit(), 300);
+    setTimeout(() => app.exit(process.exitCode || 0), 300);
   }
 });

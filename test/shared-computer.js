@@ -139,5 +139,5 @@ app.whenReady().then(async () => {
   console.log('=== SHARED COMPUTER ARCHITECTURE TEST ===');
   console.log(JSON.stringify(results, null, 2));
   win.close();
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });

@@ -220,5 +220,5 @@ app.whenReady().then(async () => {
   console.log('=== USER FIXES TEST ===');
   console.log(JSON.stringify(results, null, 2));
   win.close();
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });

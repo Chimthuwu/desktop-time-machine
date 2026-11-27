@@ -71,6 +71,6 @@ app.whenReady().then(async () => {
     const summary = { passed: results.passed, failed: results.failed, tests: results.tests };
     console.log(JSON.stringify(summary, null, 2));
     process.exitCode = results.failed ? 1 : 0;
-    app.quit();
+    app.exit(results.failed ? 1 : 0);
   }
 });

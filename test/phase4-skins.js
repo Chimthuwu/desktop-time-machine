@@ -171,5 +171,5 @@ app.whenReady().then(async () => {
   console.log('=== PHASE 4 SKIN/LIFECYCLE TEST RESULTS ===');
   console.log(JSON.stringify(results, null, 2));
   win.close();
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });

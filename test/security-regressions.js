@@ -166,5 +166,5 @@ app.whenReady().then(async () => {
   console.log(JSON.stringify(regressionResults, null, 2));
 
   win.close();
-  app.quit();
+  app.exit(regressionResults.failed ? 1 : 0);
 });

@@ -629,5 +629,15 @@ app.whenReady().then(async () => {
   console.log('=== TEST VERIFICATION RESULTS ===');
   console.log(JSON.stringify(results, null, 2));
 
-  app.quit();
+  // Propagate failure to the exit code so the npm `&&` chains stop on a
+  // failing check instead of scrolling past it (app.quit() always exits 0).
+  function checkFailed(value) {
+    if (value === false) return true;
+    if (Array.isArray(value)) return value.some(checkFailed);
+    if (value && typeof value === 'object') return Object.values(value).some(checkFailed);
+    return false;
+  }
+  const anyFailed = results.errors.length > 0 ||
+    Object.values(results).some(checkFailed);
+  app.exit(anyFailed ? 1 : 0);
 });

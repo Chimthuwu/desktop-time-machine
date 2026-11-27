@@ -106,6 +106,6 @@ app.whenReady().then(async () => {
     try { fs.rmSync(work, { recursive: true, force: true }); } catch (e) {}
     console.log(JSON.stringify({ passed: results.passed, failed: results.failed, tests: results.tests }, null, 2));
     process.exitCode = results.failed ? 1 : 0;
-    app.quit();
+    app.exit(results.failed ? 1 : 0);
   }
 });

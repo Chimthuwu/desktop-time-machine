@@ -37,10 +37,17 @@ app.whenReady().then(async () => {
     assert('Windows 98 exposes the folder and Command Prompt hooks', hooks.folder === 'function' && hooks.prompt === 'function', JSON.stringify(hooks));
 
     // Double-clicking a folder opens the skin's own Explorer at that folder.
+    // The first fs.list can take over a second on a cold start (attrib.exe
+    // spawn), so poll for the address instead of sleeping a fixed 900 ms.
     const explorer = await win.webContents.executeJavaScript(`(async () => {
       const w = document.getElementById('skin-viewport').contentWindow;
       w.dtmOpenFolder(${JSON.stringify(folder)});
-      await new Promise((r) => setTimeout(r, 900));
+      let addrVal = '';
+      for (let i = 0; i < 20 && !addrVal; i++) {
+        await new Promise((r) => setTimeout(r, 400));
+        const a = w.document.querySelector('#exp-path');
+        addrVal = a ? a.value : '';
+      }
       const win = w.document.querySelector('.window[data-app="explorer"]:last-of-type') || w.document.querySelector('.window[data-app="explorer"]');
       const addr = w.document.querySelector('#exp-path');
       return { exists: !!win, addr: addr ? addr.value : null, items: w.document.querySelectorAll('.explorer-item').length };
@@ -67,6 +74,6 @@ app.whenReady().then(async () => {
     try { fs.rmSync(work, { recursive: true, force: true }); } catch (e) {}
     console.log(JSON.stringify({ passed: results.passed, failed: results.failed, tests: results.tests }, null, 2));
     process.exitCode = results.failed ? 1 : 0;
-    app.quit();
+    app.exit(results.failed ? 1 : 0);
   }
 });

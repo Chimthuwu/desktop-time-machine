@@ -143,5 +143,5 @@ app.whenReady().then(async () => {
 
   console.log('=== PHASE 4 SECURITY TEST RESULTS ===');
   console.log(JSON.stringify(results, null, 2));
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });

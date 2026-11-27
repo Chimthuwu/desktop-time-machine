@@ -193,5 +193,5 @@ app.whenReady().then(async () => {
   console.log('=== DESKTOP AUTHENTICITY TEST ===');
   console.log(JSON.stringify(results, null, 2));
   win.close();
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });

@@ -240,5 +240,5 @@ app.whenReady().then(async () => {
   console.log('=== SHARED APPLICATION ECOSYSTEM TEST ===');
   console.log(JSON.stringify(results, null, 2));
   win.close();
-  app.quit();
+  app.exit(results.failed ? 1 : 0);
 });
