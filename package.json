@@ -15,12 +15,13 @@
     "capture:fixes": "node test/run-electron.js test/capture-fixes.js",
     "test:user-fixes": "node test/run-electron.js test/user-fixes.js",
     "capture:user-fixes": "node test/run-electron.js test/capture-user-fixes.js",
-    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps && npm run test:desktop && npm run test:user-fixes && npm run test:msn && npm run test:keys && npm run test:media && npm run test:a11y",
+    "verify": "npm test && npm run test:security && npm run test:skins && npm run test:architecture && npm run test:apps && npm run test:desktop && npm run test:user-fixes && npm run test:msn && npm run test:keys && npm run test:media && npm run test:a11y && npm run test:shell-listeners",
     "screenshots": "node test/run-electron.js test/capture-gallery.js",
     "test:msn": "node test/run-electron.js test/msn-skin.js",
     "test:keys": "node test/run-electron.js test/file-keyboard.js",
     "test:media": "node test/run-electron.js test/media-player.js",
-    "test:a11y": "node test/run-electron.js test/accessibility.js"
+    "test:a11y": "node test/run-electron.js test/accessibility.js",
+    "test:shell-listeners": "node test/run-electron.js test/shell-listeners.js"
   },
   "keywords": [
     "retro",

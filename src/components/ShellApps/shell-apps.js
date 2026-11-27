@@ -288,6 +288,12 @@
     const entry = windows.get(app);
     if (!entry) return;
     if (app === 'browser') closeMenus();
+    // The media-player menu registers a document-level dismiss handler;
+    // drop it here so closing the window does not leave it behind.
+    if (entry.menuDismiss) {
+      try { document.removeEventListener('pointerdown', entry.menuDismiss); } catch (e) {}
+      entry.menuDismiss = null;
+    }
     if (entry.video) { try { entry.video.pause(); } catch (e) {} }
     try { if (entry.webview) entry.webview.stop(); } catch (e) {}
     if (entry.waterfox && wfBridge) {
@@ -1661,9 +1667,12 @@ async function syncTabsFromBridge(entry) {
         menubar.appendChild(wrap);
       });
 
-      document.addEventListener('pointerdown', (e) => {
+      // Keep a reference so closeWindow can remove this document-level
+      // listener; an anonymous one here would leak on every window close.
+      entry.menuDismiss = (e) => {
         if (!menubar.contains(e.target)) closeAll();
-      });
+      };
+      document.addEventListener('pointerdown', entry.menuDismiss);
       win.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
     }
     setMenu();
