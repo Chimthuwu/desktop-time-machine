@@ -2,8 +2,8 @@
 
 # OPEN TASKS (checklist index, 2026-11-27)
 
-- [ ] **Stop the browser dock-sync timer when the browser window is gone** [P2] [size:S] - In `src/components/ShellApps/shell-apps.js` (~:1339) `setInterval(syncBrowserDock, 60)` is never cleared: `dockTimer` keeps running (and calling `wfBridge.dock`) after the browser shell window closes or is never docked. Clear or pause the timer on the no-window/no-dock idle path only — keep the 3 s fullscreen re-assert while docked.
-  Done when: the timer is cleared (or idles) when the browser window closes / no dock rect applies, proven by a test or a counter probe in the existing `test/shell-listeners.js` style; `npm test` passes; the matching Inbox item is ticked.
+- [x] **Stop the browser dock-sync timer when the browser window is gone** [P2] [size:S] - In `src/components/ShellApps/shell-apps.js` (~:1339) `setInterval(syncBrowserDock, 60)` is never cleared: `dockTimer` keeps running (and calling `wfBridge.dock`) after the browser shell window closes or is never docked. Clear or pause the timer on the no-window/no-dock idle path only — keep the 3 s fullscreen re-assert while docked.
+  Done when: the timer is cleared (or idles) when the browser window closes / no dock rect applies, proven by a test or a counter probe in the existing `test/shell-listeners.js` style; `npm test` passes; the matching Inbox item is ticked. (Done 2026-11-27: `syncBrowserDock` parks the loop when the window is gone, `closeWindow` clears dockTimer + the same-class 1.5 s stateTimer, new `test/browser-timers.js` in `npm run verify` — 7/7. Discovery: `buildWaterfoxBrowser` is currently uncalled — the live browser is the webview variant, so the leak was dormant; fix keeps the real-engine path correct for when it is re-wired.)
   Source: Inbox item "Stop the browser dock-sync timer…" (2026-11-26 perf lens); handoff note says start here if the owner promotes one.
 
 - [ ] **Quarantine the known-hanging test:media out of the default verify chain** [P2] [size:S] - `package.json` `verify` chains `npm run test:media`, but `test/media-player.js` has a documented pre-existing hang ("Render frame was disposed", 2026-11-25/27 notes) so `npm run verify` can never complete. Keep `test:media` available but out of the default chain.
@@ -151,9 +151,9 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
   Done when: Mutation-driven collects are coalesced (e.g. requestAnimationFrame or a short timeout with a dirty flag) and a regression test asserts repeated synchronous mutations trigger at most one collect per frame/beat.
   Hints: Behaviour-preserving optimisation only — collect() output shape must not change; watch(v) also calls collect() directly, keep that.
 
-- [ ] **Stop the browser dock-sync timer when the browser window is gone** [P2] [performance] [size:S]
+- [x] **Stop the browser dock-sync timer when the browser window is gone** [P2] [performance] [size:S]
   Why: `src/components/ShellApps/shell-apps.js:1339` starts `setInterval(syncBrowserDock, 60)` and nothing ever clears `dockTimer`, so the 60 ms loop keeps running (and keeps calling `wfBridge.dock`) even when the browser window is closed or never docked.
-  Done when: The timer is cleared (or paused) when the browser shell window closes / no dock rect applies, verified by a test or a manual probe of the counter.
+  Done when: The timer is cleared (or paused) when the browser shell window closes / no dock rect applies, verified by a test or a manual probe of the counter. (Done 2026-11-27: see the OPEN TASKS index entry; new `test/browser-timers.js` 7/7. Found: `buildWaterfoxBrowser` is currently uncalled — leak dormant, live webview browser starts no timers.)
   Hints: The loop also does the 3 s fullscreen re-assert; only the no-window/no-dock idle path should stop, not the re-assert while docked.
 
 - [ ] **Event-drive the Mac OS X Safari shell sync** [P3] [performance] [size:M]

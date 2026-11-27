@@ -301,6 +301,13 @@
       lastDockShown = null;
       try { wfBridge.close(); } catch (e) {}
     }
+    // The browser loops (60 ms dock sync, 1.5 s state poll) belong to the
+    // window: stop them here rather than waiting for their next beat to
+    // notice the entry is gone.
+    if (app === 'browser') {
+      if (dockTimer) { clearInterval(dockTimer); dockTimer = null; }
+      if (stateTimer) { clearInterval(stateTimer); stateTimer = null; }
+    }
     entry.win.remove();
     windows.delete(app);
     setActive(null);
@@ -1288,7 +1295,14 @@ async function syncTabsFromBridge(entry) {
     if (stateTimer) return;
     stateTimer = setInterval(() => {
       const entry = windows.get('browser');
-      if (!entry || !entry.waterfox || !entry.wfReady) return;
+      if (!entry) {
+        // The browser window was closed; stop polling until one reopens
+        // (startStatePolling runs again from the engine-ready path).
+        clearInterval(stateTimer);
+        stateTimer = null;
+        return;
+      }
+      if (!entry.waterfox || !entry.wfReady) return;
       if (!entry.win.classList.contains('active') || entry.win.style.display === 'none') return;
       refreshBrowserState(entry);
       // Don't sync tabs on every poll - only when user actions change them
@@ -1312,6 +1326,13 @@ async function syncTabsFromBridge(entry) {
   }
 
   function syncBrowserDock() {
+    if (!windows.has('browser')) {
+      // No browser window (closed): nothing can change until one is opened
+      // again, so park the 60 ms loop instead of spinning forever. The next
+      // openWindow() restarts it via startDockSync().
+      if (dockTimer) { clearInterval(dockTimer); dockTimer = null; }
+      return;
+    }
     bindSkinDocument();
     if (overlayHold) return;
     const entry = windows.get('browser');
