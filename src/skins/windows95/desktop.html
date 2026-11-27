@@ -280,30 +280,10 @@ window.addEventListener('keydown', (e) => {
 });
 
 // WEB BROWSER FUNCTIONS
-window.ieGo = (win) => {
-  const urlInput = win.querySelector('#ie-url');
-  let url = urlInput.value.trim();
-  if(!url.startsWith('http')) url = 'https://' + url;
-  urlInput.value = url;
-  win.querySelector('#ie-frame').src = url;
-  win.querySelector('#ie-status').textContent = 'Loading ' + url + '...';
-  setTimeout(()=> {
-    const st = win.querySelector('#ie-status');
-    if (st) st.textContent = 'Done';
-  }, 1500);
-};
-window.ieBack = (win) => { try { win.querySelector('#ie-frame').contentWindow.history.back(); } catch(e){} };
-window.ieForward = (win) => { try { win.querySelector('#ie-frame').contentWindow.history.forward(); } catch(e){} };
-window.ieStop = (win) => { win.querySelector('#ie-frame').src = 'about:blank'; win.querySelector('#ie-status').textContent = 'Stopped'; };
-window.ieRefresh = (win) => { win.querySelector('#ie-frame').src = win.querySelector('#ie-url').value; };
-window.ieOpenExternal = (win) => {
-  const url = win.querySelector('#ie-url').value;
-  if (DTM && DTM.system.openExternalUrl) {
-    DTM.system.openExternalUrl(url).catch(e => alert('Error opening URL: ' + e.message));
-  } else {
-    window.open(url, '_blank');
-  }
-};
+// The Internet delegates to the real shell browser since Phase 4 (a skin
+// iframe cannot host <webview>), so the old inline-iframe helpers (ieGo/
+// ieBack/ieForward/ieStop/ieRefresh/ieOpenExternal, which referenced a
+// #ie-frame window that no longer exists here) were removed.
 
 // MINESWEEPER LOGIC
 function setupMinesweeper(w) {

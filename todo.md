@@ -123,3 +123,27 @@ Per-skin *visual* preferences (wallpaper, icon layout, screensaver) are fine; us
   Done when: Syncs are triggered by the existing message/rect-change events with a low-frequency fallback (e.g. 1 s) and the visual behaviour is unchanged.
   Hints: It is already cleared when the last Safari window closes (:78) — the fix is cadence, not a leak.
 
+- [x] **Remove the per-window media-player menu dismiss listener leak** [P2] [bugs] [size:S]
+  Why: `setMenu()` in `src/components/ShellApps/shell-apps.js` registered an anonymous document-level `pointerdown` handler per WMP window and `closeWindow` never removed it — one leaked listener per open/close cycle.
+  Done when: The handler is stored on the entry, removed in `closeWindow`, and `test/shell-listeners.js` (in `npm run verify`) proves repeated open/close cycles leave zero listeners behind. (Fixed 2026-11-27.)
+  Hints: Found via code-audit lens.
+
+- [ ] **Make Win98 Explorer show an error when fs.list stalls** [P3] [UX/robustness] [size:S]
+  Why: `setupExplorer.loadPath` leaves the grid on "Reading directory..." forever if `DTM.fs.list` never resolves (cold-start latency can exceed a second); there is no timeout, error or retry.
+  Done when: A bounded timeout turns the grid into an error state with a Retry affordance (or re-issues the list once); behaviour otherwise unchanged.
+  Hints: UI change — left for an interactive session; the underlying cold-start latency was measured during the 2026-11-27 run (attrib.exe first spawn).
+
+- [x] **Deduplicate the exp-* IDs shared by Win98 My Documents and Explorer bodies** [P3] [lint] [size:S]
+  Why: `mydocs` and `explorer` in `src/skins/windows98/desktop.html` both render `id="exp-up"`, `exp-path`, `exp-status` etc., so two open windows carry duplicate IDs (invalid HTML; wiring only survives because `setupExplorer` uses scoped `win.querySelector`, and its `win.querySelector('#exp-up')` calls have no null guard).
+  Done when: Each body's controls are identified without duplicate DOM IDs (e.g. class-based hooks) and `setupExplorer` guards its lookups; `npm run test:keys` and `win98-folder-terminal.js` still pass. (Done 2026-11-27: My Documents uses `data-exp` hooks, `setupExplorer` resolves both forms and guards its lookups; dup-ID audit across all skins is clean.)
+  Hints: Keep the retro markup untouched otherwise; no behaviour change intended.
+
+- [x] **Remove or wire the dead ie* helpers in the Win95 skin** [P3] [lint] [size:S]
+  Why: `src/skins/windows95/desktop.html` still defines `window.ieBack/ieForward/ieStop/ieRefresh/ieOpenExternal` referencing `#ie-frame`, but no Win95 IE window with that iframe exists any more (The Internet delegates to the shell browser).
+  Done when: The dead helpers are deleted (or the delegation path reuses them); no remaining reference to `#ie-frame` in the Win95 skin; `npm test` passes. (Done 2026-11-27: helpers removed with a note; `npm test` passes.)
+  Hints: Pure cleanup; verify-all's Win95 block no longer depends on them.
+
+## Decisions made (review me)
+
+- 2026-11-27: Win95 'The Internet' stale test vs Phase-4 architecture — updated the test to assert the `dtm:launch-webapp(app:browser)` delegation instead of an in-skin `#ie-frame` window (option 1). The delegation is deliberate shipped behaviour; restoring an inline iframe would duplicate the real browser. Checkpoint SHA fd613cd.
+
