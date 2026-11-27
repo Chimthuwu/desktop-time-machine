@@ -208,8 +208,8 @@ app.whenReady().then(async () => {
     await sleep(200);
     const taskCount = await frameJS(`(W,D) => D.querySelectorAll('#taskButtons .task-button, #taskList .task-btn').length`);
     check('taskbar shows buttons for open windows', taskCount >= 2, String(taskCount));
-    const clock = await frameJS(`(W,D) => (D.getElementById('trayClock')||D.querySelector('.tray-clock, .tray #clock, .tray span:last-child')||{}).textContent || ''`);
-    check('tray live clock format', /\d{1,2}:\d{2}/.test(clock), clock.trim());
+    const clockEl = await frameJS(`(W,D) => { const el = D.querySelector('.tray .clock') || D.querySelector('.tray-clock') || D.getElementById('trayClock') || {}; return { clock: el.textContent || '', tag: el.tagName || null }; }`);
+    check('tray live clock format', /\d{1,2}:\d{2}/.test(clockEl.clock), JSON.stringify(clockEl));
 
     // minimize notepad then restore via task button
     await frameJS(`(W,D) => { const w = ${findWinSrc('Notepad')}(); const b = w.querySelector('[data-min]') || w.querySelector('.title-controls button'); b.click(); }`);
