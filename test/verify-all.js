@@ -136,10 +136,16 @@ app.whenReady().then(async () => {
         const compWin = doc.querySelector('.window[data-app="computer"]');
         out.myComputer = !!compWin && compWin.querySelectorAll('.computer-item').length >= 6;
 
-        // 5. Internet Explorer
-        wObj.openApp('internet');
+        // 5. The Internet — since Phase 4 the real browser engine lives in the
+        // shell (a skin iframe cannot host <webview>), so Win95 must delegate:
+        // post a launch-webapp message and build no in-skin IE window.
+        const ieLaunches = [];
+        const origPost = window.postMessage.bind(window);
+        window.postMessage = (msg, target) => { ieLaunches.push(msg); return origPost(msg, target); };
+        try { wObj.openApp('internet'); } finally { window.postMessage = origPost; }
         const ieWin = doc.querySelector('.window[data-app="internet"]');
-        out.internetExplorer = !!ieWin && !!ieWin.querySelector('#ie-frame');
+        out.internetExplorer =
+          ieLaunches.some((m) => m && m.type === 'dtm:launch-webapp' && m.app === 'browser') && !ieWin;
 
         // 6. Display Properties & Screensaver
         wObj.openApp('display');
